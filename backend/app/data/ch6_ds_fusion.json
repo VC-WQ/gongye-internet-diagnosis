@@ -1,0 +1,2872 @@
+{
+  "A_clean": {
+    "n": 1881,
+    "accuracy": {
+      "cnn_only": 1.0,
+      "legacy": 1.0,
+      "ds": 1.0
+    },
+    "mean_confidence": {
+      "cnn_only": 0.9961,
+      "legacy": 0.9976,
+      "ds": 0.9541
+    },
+    "per_class": {
+      "normal": {
+        "n": 473,
+        "cnn_only": 1.0,
+        "legacy": 1.0,
+        "ds": 1.0
+      },
+      "inner_race": {
+        "n": 469,
+        "cnn_only": 1.0,
+        "legacy": 1.0,
+        "ds": 1.0
+      },
+      "outer_race": {
+        "n": 471,
+        "cnn_only": 1.0,
+        "legacy": 1.0,
+        "ds": 1.0
+      },
+      "ball": {
+        "n": 468,
+        "cnn_only": 1.0,
+        "legacy": 1.0,
+        "ds": 1.0
+      }
+    },
+    "K": {
+      "mean": 0.0035,
+      "std": 0.033,
+      "min": 0.0,
+      "max": 0.765,
+      "median": 0.0004,
+      "p90": 0.0037,
+      "frac_gt_0.5": 0.0027,
+      "frac_gt_0.7": 0.0011
+    },
+    "flips": []
+  },
+  "C_cnn_degraded": {
+    "n": 1881,
+    "accuracy": {
+      "cnn_only": 0.2515,
+      "legacy": 0.2515,
+      "ds": 0.6194
+    },
+    "mean_confidence": {
+      "cnn_only": 1.0,
+      "legacy": 1.0,
+      "ds": 0.6365
+    },
+    "per_class": {
+      "normal": {
+        "n": 473,
+        "cnn_only": 1.0,
+        "legacy": 1.0,
+        "ds": 1.0
+      },
+      "inner_race": {
+        "n": 469,
+        "cnn_only": 0.0,
+        "legacy": 0.0,
+        "ds": 0.4819
+      },
+      "outer_race": {
+        "n": 471,
+        "cnn_only": 0.0,
+        "legacy": 0.0,
+        "ds": 0.9873
+      },
+      "ball": {
+        "n": 468,
+        "cnn_only": 0.0,
+        "legacy": 0.0,
+        "ds": 0.0021
+      }
+    },
+    "K": {
+      "mean": 0.2533,
+      "std": 0.1789,
+      "min": 0.0,
+      "max": 0.4775,
+      "median": 0.2,
+      "p90": 0.4775,
+      "frac_gt_0.5": 0.0,
+      "frac_gt_0.7": 0.0
+    },
+    "flips": [
+      {
+        "index": 0,
+        "true": "inner_race",
+        "cnn": "normal",
+        "cnn_conf": 1.0,
+        "signal": "BPFI/medium",
+        "dominant": "BPFI",
+        "reliability": "medium",
+        "physics": "severe",
+        "ds": "inner_race",
+        "ds_conf": 0.6458,
+        "dist": {
+          "normal": 0.1339,
+          "inner_race": 0.6458,
+          "outer_race": 0.1101,
+          "ball": 0.1101
+        },
+        "K": 0.44,
+        "corrected": true
+      },
+      {
+        "index": 1,
+        "true": "inner_race",
+        "cnn": "normal",
+        "cnn_conf": 1.0,
+        "signal": "BPFI/medium",
+        "dominant": "BPFI",
+        "reliability": "medium",
+        "physics": "severe",
+        "ds": "inner_race",
+        "ds_conf": 0.6458,
+        "dist": {
+          "normal": 0.1339,
+          "inner_race": 0.6458,
+          "outer_race": 0.1101,
+          "ball": 0.1101
+        },
+        "K": 0.44,
+        "corrected": true
+      },
+      {
+        "index": 2,
+        "true": "inner_race",
+        "cnn": "normal",
+        "cnn_conf": 1.0,
+        "signal": "BPFI/medium",
+        "dominant": "BPFI",
+        "reliability": "medium",
+        "physics": "severe",
+        "ds": "inner_race",
+        "ds_conf": 0.6458,
+        "dist": {
+          "normal": 0.1339,
+          "inner_race": 0.6458,
+          "outer_race": 0.1101,
+          "ball": 0.1101
+        },
+        "K": 0.44,
+        "corrected": true
+      },
+      {
+        "index": 3,
+        "true": "inner_race",
+        "cnn": "normal",
+        "cnn_conf": 1.0,
+        "signal": "BPFI/medium",
+        "dominant": "BPFI",
+        "reliability": "medium",
+        "physics": "severe",
+        "ds": "inner_race",
+        "ds_conf": 0.6458,
+        "dist": {
+          "normal": 0.1339,
+          "inner_race": 0.6458,
+          "outer_race": 0.1101,
+          "ball": 0.1101
+        },
+        "K": 0.44,
+        "corrected": true
+      },
+      {
+        "index": 4,
+        "true": "inner_race",
+        "cnn": "normal",
+        "cnn_conf": 1.0,
+        "signal": "BPFI/medium",
+        "dominant": "BPFI",
+        "reliability": "medium",
+        "physics": "severe",
+        "ds": "inner_race",
+        "ds_conf": 0.6458,
+        "dist": {
+          "normal": 0.1339,
+          "inner_race": 0.6458,
+          "outer_race": 0.1101,
+          "ball": 0.1101
+        },
+        "K": 0.44,
+        "corrected": true
+      },
+      {
+        "index": 5,
+        "true": "inner_race",
+        "cnn": "normal",
+        "cnn_conf": 1.0,
+        "signal": "BPFI/medium",
+        "dominant": "BPFI",
+        "reliability": "medium",
+        "physics": "severe",
+        "ds": "inner_race",
+        "ds_conf": 0.6458,
+        "dist": {
+          "normal": 0.1339,
+          "inner_race": 0.6458,
+          "outer_race": 0.1101,
+          "ball": 0.1101
+        },
+        "K": 0.44,
+        "corrected": true
+      },
+      {
+        "index": 6,
+        "true": "inner_race",
+        "cnn": "normal",
+        "cnn_conf": 1.0,
+        "signal": "BPFI/medium",
+        "dominant": "BPFI",
+        "reliability": "medium",
+        "physics": "severe",
+        "ds": "inner_race",
+        "ds_conf": 0.6458,
+        "dist": {
+          "normal": 0.1339,
+          "inner_race": 0.6458,
+          "outer_race": 0.1101,
+          "ball": 0.1101
+        },
+        "K": 0.44,
+        "corrected": true
+      },
+      {
+        "index": 7,
+        "true": "inner_race",
+        "cnn": "normal",
+        "cnn_conf": 1.0,
+        "signal": "BPFI/medium",
+        "dominant": "BPFI",
+        "reliability": "medium",
+        "physics": "severe",
+        "ds": "inner_race",
+        "ds_conf": 0.6458,
+        "dist": {
+          "normal": 0.1339,
+          "inner_race": 0.6458,
+          "outer_race": 0.1101,
+          "ball": 0.1101
+        },
+        "K": 0.44,
+        "corrected": true
+      },
+      {
+        "index": 8,
+        "true": "inner_race",
+        "cnn": "normal",
+        "cnn_conf": 1.0,
+        "signal": "BPFI/medium",
+        "dominant": "BPFI",
+        "reliability": "medium",
+        "physics": "severe",
+        "ds": "inner_race",
+        "ds_conf": 0.6458,
+        "dist": {
+          "normal": 0.1339,
+          "inner_race": 0.6458,
+          "outer_race": 0.1101,
+          "ball": 0.1101
+        },
+        "K": 0.44,
+        "corrected": true
+      },
+      {
+        "index": 9,
+        "true": "inner_race",
+        "cnn": "normal",
+        "cnn_conf": 1.0,
+        "signal": "BPFI/medium",
+        "dominant": "BPFI",
+        "reliability": "medium",
+        "physics": "severe",
+        "ds": "inner_race",
+        "ds_conf": 0.6458,
+        "dist": {
+          "normal": 0.1339,
+          "inner_race": 0.6458,
+          "outer_race": 0.1101,
+          "ball": 0.1101
+        },
+        "K": 0.44,
+        "corrected": true
+      },
+      {
+        "index": 10,
+        "true": "inner_race",
+        "cnn": "normal",
+        "cnn_conf": 1.0,
+        "signal": "BPFI/medium",
+        "dominant": "BPFI",
+        "reliability": "medium",
+        "physics": "severe",
+        "ds": "inner_race",
+        "ds_conf": 0.6458,
+        "dist": {
+          "normal": 0.1339,
+          "inner_race": 0.6458,
+          "outer_race": 0.1101,
+          "ball": 0.1101
+        },
+        "K": 0.44,
+        "corrected": true
+      },
+      {
+        "index": 11,
+        "true": "inner_race",
+        "cnn": "normal",
+        "cnn_conf": 1.0,
+        "signal": "BPFI/medium",
+        "dominant": "BPFI",
+        "reliability": "medium",
+        "physics": "severe",
+        "ds": "inner_race",
+        "ds_conf": 0.6458,
+        "dist": {
+          "normal": 0.1339,
+          "inner_race": 0.6458,
+          "outer_race": 0.1101,
+          "ball": 0.1101
+        },
+        "K": 0.44,
+        "corrected": true
+      },
+      {
+        "index": 12,
+        "true": "inner_race",
+        "cnn": "normal",
+        "cnn_conf": 1.0,
+        "signal": "BPFI/medium",
+        "dominant": "BPFI",
+        "reliability": "medium",
+        "physics": "severe",
+        "ds": "inner_race",
+        "ds_conf": 0.6458,
+        "dist": {
+          "normal": 0.1339,
+          "inner_race": 0.6458,
+          "outer_race": 0.1101,
+          "ball": 0.1101
+        },
+        "K": 0.44,
+        "corrected": true
+      },
+      {
+        "index": 13,
+        "true": "inner_race",
+        "cnn": "normal",
+        "cnn_conf": 1.0,
+        "signal": "BPFI/medium",
+        "dominant": "BPFI",
+        "reliability": "medium",
+        "physics": "severe",
+        "ds": "inner_race",
+        "ds_conf": 0.6458,
+        "dist": {
+          "normal": 0.1339,
+          "inner_race": 0.6458,
+          "outer_race": 0.1101,
+          "ball": 0.1101
+        },
+        "K": 0.44,
+        "corrected": true
+      },
+      {
+        "index": 14,
+        "true": "inner_race",
+        "cnn": "normal",
+        "cnn_conf": 1.0,
+        "signal": "BPFI/medium",
+        "dominant": "BPFI",
+        "reliability": "medium",
+        "physics": "severe",
+        "ds": "inner_race",
+        "ds_conf": 0.6458,
+        "dist": {
+          "normal": 0.1339,
+          "inner_race": 0.6458,
+          "outer_race": 0.1101,
+          "ball": 0.1101
+        },
+        "K": 0.44,
+        "corrected": true
+      },
+      {
+        "index": 17,
+        "true": "inner_race",
+        "cnn": "normal",
+        "cnn_conf": 1.0,
+        "signal": "BPFI/medium",
+        "dominant": "BPFI",
+        "reliability": "medium",
+        "physics": "severe",
+        "ds": "inner_race",
+        "ds_conf": 0.6458,
+        "dist": {
+          "normal": 0.1339,
+          "inner_race": 0.6458,
+          "outer_race": 0.1101,
+          "ball": 0.1101
+        },
+        "K": 0.44,
+        "corrected": true
+      },
+      {
+        "index": 18,
+        "true": "inner_race",
+        "cnn": "normal",
+        "cnn_conf": 1.0,
+        "signal": "BPFI/medium",
+        "dominant": "BPFI",
+        "reliability": "medium",
+        "physics": "severe",
+        "ds": "inner_race",
+        "ds_conf": 0.6458,
+        "dist": {
+          "normal": 0.1339,
+          "inner_race": 0.6458,
+          "outer_race": 0.1101,
+          "ball": 0.1101
+        },
+        "K": 0.44,
+        "corrected": true
+      },
+      {
+        "index": 19,
+        "true": "inner_race",
+        "cnn": "normal",
+        "cnn_conf": 1.0,
+        "signal": "BPFI/medium",
+        "dominant": "BPFI",
+        "reliability": "medium",
+        "physics": "severe",
+        "ds": "inner_race",
+        "ds_conf": 0.6458,
+        "dist": {
+          "normal": 0.1339,
+          "inner_race": 0.6458,
+          "outer_race": 0.1101,
+          "ball": 0.1101
+        },
+        "K": 0.44,
+        "corrected": true
+      },
+      {
+        "index": 20,
+        "true": "inner_race",
+        "cnn": "normal",
+        "cnn_conf": 1.0,
+        "signal": "BPFI/medium",
+        "dominant": "BPFI",
+        "reliability": "medium",
+        "physics": "severe",
+        "ds": "inner_race",
+        "ds_conf": 0.6458,
+        "dist": {
+          "normal": 0.1339,
+          "inner_race": 0.6458,
+          "outer_race": 0.1101,
+          "ball": 0.1101
+        },
+        "K": 0.44,
+        "corrected": true
+      },
+      {
+        "index": 21,
+        "true": "inner_race",
+        "cnn": "normal",
+        "cnn_conf": 1.0,
+        "signal": "BPFI/medium",
+        "dominant": "BPFI",
+        "reliability": "medium",
+        "physics": "severe",
+        "ds": "inner_race",
+        "ds_conf": 0.6458,
+        "dist": {
+          "normal": 0.1339,
+          "inner_race": 0.6458,
+          "outer_race": 0.1101,
+          "ball": 0.1101
+        },
+        "K": 0.44,
+        "corrected": true
+      },
+      {
+        "index": 22,
+        "true": "inner_race",
+        "cnn": "normal",
+        "cnn_conf": 1.0,
+        "signal": "BPFI/medium",
+        "dominant": "BPFI",
+        "reliability": "medium",
+        "physics": "severe",
+        "ds": "inner_race",
+        "ds_conf": 0.6458,
+        "dist": {
+          "normal": 0.1339,
+          "inner_race": 0.6458,
+          "outer_race": 0.1101,
+          "ball": 0.1101
+        },
+        "K": 0.44,
+        "corrected": true
+      },
+      {
+        "index": 23,
+        "true": "inner_race",
+        "cnn": "normal",
+        "cnn_conf": 1.0,
+        "signal": "BPFI/medium",
+        "dominant": "BPFI",
+        "reliability": "medium",
+        "physics": "severe",
+        "ds": "inner_race",
+        "ds_conf": 0.6458,
+        "dist": {
+          "normal": 0.1339,
+          "inner_race": 0.6458,
+          "outer_race": 0.1101,
+          "ball": 0.1101
+        },
+        "K": 0.44,
+        "corrected": true
+      },
+      {
+        "index": 24,
+        "true": "inner_race",
+        "cnn": "normal",
+        "cnn_conf": 1.0,
+        "signal": "BPFI/medium",
+        "dominant": "BPFI",
+        "reliability": "medium",
+        "physics": "severe",
+        "ds": "inner_race",
+        "ds_conf": 0.6458,
+        "dist": {
+          "normal": 0.1339,
+          "inner_race": 0.6458,
+          "outer_race": 0.1101,
+          "ball": 0.1101
+        },
+        "K": 0.44,
+        "corrected": true
+      },
+      {
+        "index": 25,
+        "true": "inner_race",
+        "cnn": "normal",
+        "cnn_conf": 1.0,
+        "signal": "BPFI/medium",
+        "dominant": "BPFI",
+        "reliability": "medium",
+        "physics": "severe",
+        "ds": "inner_race",
+        "ds_conf": 0.6458,
+        "dist": {
+          "normal": 0.1339,
+          "inner_race": 0.6458,
+          "outer_race": 0.1101,
+          "ball": 0.1101
+        },
+        "K": 0.44,
+        "corrected": true
+      },
+      {
+        "index": 26,
+        "true": "inner_race",
+        "cnn": "normal",
+        "cnn_conf": 1.0,
+        "signal": "BPFI/medium",
+        "dominant": "BPFI",
+        "reliability": "medium",
+        "physics": "severe",
+        "ds": "inner_race",
+        "ds_conf": 0.6458,
+        "dist": {
+          "normal": 0.1339,
+          "inner_race": 0.6458,
+          "outer_race": 0.1101,
+          "ball": 0.1101
+        },
+        "K": 0.44,
+        "corrected": true
+      },
+      {
+        "index": 27,
+        "true": "inner_race",
+        "cnn": "normal",
+        "cnn_conf": 1.0,
+        "signal": "BPFI/medium",
+        "dominant": "BPFI",
+        "reliability": "medium",
+        "physics": "severe",
+        "ds": "inner_race",
+        "ds_conf": 0.6458,
+        "dist": {
+          "normal": 0.1339,
+          "inner_race": 0.6458,
+          "outer_race": 0.1101,
+          "ball": 0.1101
+        },
+        "K": 0.44,
+        "corrected": true
+      },
+      {
+        "index": 28,
+        "true": "inner_race",
+        "cnn": "normal",
+        "cnn_conf": 1.0,
+        "signal": "BPFI/medium",
+        "dominant": "BPFI",
+        "reliability": "medium",
+        "physics": "severe",
+        "ds": "inner_race",
+        "ds_conf": 0.6458,
+        "dist": {
+          "normal": 0.1339,
+          "inner_race": 0.6458,
+          "outer_race": 0.1101,
+          "ball": 0.1101
+        },
+        "K": 0.44,
+        "corrected": true
+      },
+      {
+        "index": 29,
+        "true": "inner_race",
+        "cnn": "normal",
+        "cnn_conf": 1.0,
+        "signal": "BPFI/medium",
+        "dominant": "BPFI",
+        "reliability": "medium",
+        "physics": "severe",
+        "ds": "inner_race",
+        "ds_conf": 0.6458,
+        "dist": {
+          "normal": 0.1339,
+          "inner_race": 0.6458,
+          "outer_race": 0.1101,
+          "ball": 0.1101
+        },
+        "K": 0.44,
+        "corrected": true
+      },
+      {
+        "index": 31,
+        "true": "inner_race",
+        "cnn": "normal",
+        "cnn_conf": 1.0,
+        "signal": "BPFI/medium",
+        "dominant": "BPFI",
+        "reliability": "medium",
+        "physics": "severe",
+        "ds": "inner_race",
+        "ds_conf": 0.6458,
+        "dist": {
+          "normal": 0.1339,
+          "inner_race": 0.6458,
+          "outer_race": 0.1101,
+          "ball": 0.1101
+        },
+        "K": 0.44,
+        "corrected": true
+      },
+      {
+        "index": 32,
+        "true": "inner_race",
+        "cnn": "normal",
+        "cnn_conf": 1.0,
+        "signal": "BPFI/medium",
+        "dominant": "BPFI",
+        "reliability": "medium",
+        "physics": "severe",
+        "ds": "inner_race",
+        "ds_conf": 0.6458,
+        "dist": {
+          "normal": 0.1339,
+          "inner_race": 0.6458,
+          "outer_race": 0.1101,
+          "ball": 0.1101
+        },
+        "K": 0.44,
+        "corrected": true
+      },
+      {
+        "index": 33,
+        "true": "inner_race",
+        "cnn": "normal",
+        "cnn_conf": 1.0,
+        "signal": "BPFI/medium",
+        "dominant": "BPFI",
+        "reliability": "medium",
+        "physics": "severe",
+        "ds": "inner_race",
+        "ds_conf": 0.6458,
+        "dist": {
+          "normal": 0.1339,
+          "inner_race": 0.6458,
+          "outer_race": 0.1101,
+          "ball": 0.1101
+        },
+        "K": 0.44,
+        "corrected": true
+      },
+      {
+        "index": 34,
+        "true": "inner_race",
+        "cnn": "normal",
+        "cnn_conf": 1.0,
+        "signal": "BPFI/medium",
+        "dominant": "BPFI",
+        "reliability": "medium",
+        "physics": "severe",
+        "ds": "inner_race",
+        "ds_conf": 0.6458,
+        "dist": {
+          "normal": 0.1339,
+          "inner_race": 0.6458,
+          "outer_race": 0.1101,
+          "ball": 0.1101
+        },
+        "K": 0.44,
+        "corrected": true
+      },
+      {
+        "index": 35,
+        "true": "inner_race",
+        "cnn": "normal",
+        "cnn_conf": 1.0,
+        "signal": "BPFI/medium",
+        "dominant": "BPFI",
+        "reliability": "medium",
+        "physics": "severe",
+        "ds": "inner_race",
+        "ds_conf": 0.6458,
+        "dist": {
+          "normal": 0.1339,
+          "inner_race": 0.6458,
+          "outer_race": 0.1101,
+          "ball": 0.1101
+        },
+        "K": 0.44,
+        "corrected": true
+      },
+      {
+        "index": 37,
+        "true": "inner_race",
+        "cnn": "normal",
+        "cnn_conf": 1.0,
+        "signal": "BPFI/medium",
+        "dominant": "BPFI",
+        "reliability": "medium",
+        "physics": "severe",
+        "ds": "inner_race",
+        "ds_conf": 0.6458,
+        "dist": {
+          "normal": 0.1339,
+          "inner_race": 0.6458,
+          "outer_race": 0.1101,
+          "ball": 0.1101
+        },
+        "K": 0.44,
+        "corrected": true
+      },
+      {
+        "index": 38,
+        "true": "inner_race",
+        "cnn": "normal",
+        "cnn_conf": 1.0,
+        "signal": "BPFI/medium",
+        "dominant": "BPFI",
+        "reliability": "medium",
+        "physics": "severe",
+        "ds": "inner_race",
+        "ds_conf": 0.6458,
+        "dist": {
+          "normal": 0.1339,
+          "inner_race": 0.6458,
+          "outer_race": 0.1101,
+          "ball": 0.1101
+        },
+        "K": 0.44,
+        "corrected": true
+      },
+      {
+        "index": 40,
+        "true": "inner_race",
+        "cnn": "normal",
+        "cnn_conf": 1.0,
+        "signal": "BPFI/medium",
+        "dominant": "BPFI",
+        "reliability": "medium",
+        "physics": "severe",
+        "ds": "inner_race",
+        "ds_conf": 0.6458,
+        "dist": {
+          "normal": 0.1339,
+          "inner_race": 0.6458,
+          "outer_race": 0.1101,
+          "ball": 0.1101
+        },
+        "K": 0.44,
+        "corrected": true
+      },
+      {
+        "index": 41,
+        "true": "inner_race",
+        "cnn": "normal",
+        "cnn_conf": 1.0,
+        "signal": "BPFI/medium",
+        "dominant": "BPFI",
+        "reliability": "medium",
+        "physics": "severe",
+        "ds": "inner_race",
+        "ds_conf": 0.6458,
+        "dist": {
+          "normal": 0.1339,
+          "inner_race": 0.6458,
+          "outer_race": 0.1101,
+          "ball": 0.1101
+        },
+        "K": 0.44,
+        "corrected": true
+      },
+      {
+        "index": 42,
+        "true": "inner_race",
+        "cnn": "normal",
+        "cnn_conf": 1.0,
+        "signal": "BPFI/medium",
+        "dominant": "BPFI",
+        "reliability": "medium",
+        "physics": "severe",
+        "ds": "inner_race",
+        "ds_conf": 0.6458,
+        "dist": {
+          "normal": 0.1339,
+          "inner_race": 0.6458,
+          "outer_race": 0.1101,
+          "ball": 0.1101
+        },
+        "K": 0.44,
+        "corrected": true
+      },
+      {
+        "index": 43,
+        "true": "inner_race",
+        "cnn": "normal",
+        "cnn_conf": 1.0,
+        "signal": "BPFI/medium",
+        "dominant": "BPFI",
+        "reliability": "medium",
+        "physics": "severe",
+        "ds": "inner_race",
+        "ds_conf": 0.6458,
+        "dist": {
+          "normal": 0.1339,
+          "inner_race": 0.6458,
+          "outer_race": 0.1101,
+          "ball": 0.1101
+        },
+        "K": 0.44,
+        "corrected": true
+      },
+      {
+        "index": 46,
+        "true": "inner_race",
+        "cnn": "normal",
+        "cnn_conf": 1.0,
+        "signal": "BPFI/medium",
+        "dominant": "BPFI",
+        "reliability": "medium",
+        "physics": "severe",
+        "ds": "inner_race",
+        "ds_conf": 0.6458,
+        "dist": {
+          "normal": 0.1339,
+          "inner_race": 0.6458,
+          "outer_race": 0.1101,
+          "ball": 0.1101
+        },
+        "K": 0.44,
+        "corrected": true
+      }
+    ]
+  },
+  "B_noise": {
+    "snr_20dB": {
+      "n": 1881,
+      "accuracy": {
+        "cnn_only": 1.0,
+        "legacy": 1.0,
+        "ds": 1.0
+      },
+      "mean_confidence": {
+        "cnn_only": 0.9937,
+        "legacy": 0.9946,
+        "ds": 0.9522
+      },
+      "per_class": {
+        "normal": {
+          "n": 473,
+          "cnn_only": 1.0,
+          "legacy": 1.0,
+          "ds": 1.0
+        },
+        "inner_race": {
+          "n": 469,
+          "cnn_only": 1.0,
+          "legacy": 1.0,
+          "ds": 1.0
+        },
+        "outer_race": {
+          "n": 471,
+          "cnn_only": 1.0,
+          "legacy": 1.0,
+          "ds": 1.0
+        },
+        "ball": {
+          "n": 468,
+          "cnn_only": 1.0,
+          "legacy": 1.0,
+          "ds": 1.0
+        }
+      },
+      "K": {
+        "mean": 0.0033,
+        "std": 0.0283,
+        "min": 0.0,
+        "max": 0.7649,
+        "median": 0.0001,
+        "p90": 0.0042,
+        "frac_gt_0.5": 0.0021,
+        "frac_gt_0.7": 0.0005
+      },
+      "flips": []
+    },
+    "snr_10dB": {
+      "n": 1881,
+      "accuracy": {
+        "cnn_only": 0.807,
+        "legacy": 0.807,
+        "ds": 0.8363
+      },
+      "mean_confidence": {
+        "cnn_only": 0.9408,
+        "legacy": 0.9415,
+        "ds": 0.8995
+      },
+      "per_class": {
+        "normal": {
+          "n": 473,
+          "cnn_only": 1.0,
+          "legacy": 1.0,
+          "ds": 1.0
+        },
+        "inner_race": {
+          "n": 469,
+          "cnn_only": 0.226,
+          "legacy": 0.226,
+          "ds": 0.3433
+        },
+        "outer_race": {
+          "n": 471,
+          "cnn_only": 1.0,
+          "legacy": 1.0,
+          "ds": 1.0
+        },
+        "ball": {
+          "n": 468,
+          "cnn_only": 1.0,
+          "legacy": 1.0,
+          "ds": 1.0
+        }
+      },
+      "K": {
+        "mean": 0.049,
+        "std": 0.1305,
+        "min": 0.0,
+        "max": 0.5401,
+        "median": 0.0003,
+        "p90": 0.2066,
+        "frac_gt_0.5": 0.0425,
+        "frac_gt_0.7": 0.0
+      },
+      "flips": [
+        {
+          "index": 0,
+          "true": "inner_race",
+          "cnn": "outer_race",
+          "cnn_conf": 0.647,
+          "signal": "BPFI/medium",
+          "dominant": "BPFI",
+          "reliability": "medium",
+          "physics": "severe",
+          "ds": "inner_race",
+          "ds_conf": 0.5988,
+          "dist": {
+            "normal": 0.0047,
+            "inner_race": 0.5988,
+            "outer_race": 0.3774,
+            "ball": 0.0191
+          },
+          "K": 0.3501,
+          "corrected": true
+        },
+        {
+          "index": 4,
+          "true": "inner_race",
+          "cnn": "outer_race",
+          "cnn_conf": 0.638,
+          "signal": "BPFI/medium",
+          "dominant": "BPFI",
+          "reliability": "medium",
+          "physics": "severe",
+          "ds": "inner_race",
+          "ds_conf": 0.6067,
+          "dist": {
+            "normal": 0.0047,
+            "inner_race": 0.6067,
+            "outer_race": 0.3696,
+            "ball": 0.0189
+          },
+          "K": 0.3453,
+          "corrected": true
+        },
+        {
+          "index": 5,
+          "true": "inner_race",
+          "cnn": "outer_race",
+          "cnn_conf": 0.6303,
+          "signal": "BPFI/medium",
+          "dominant": "BPFI",
+          "reliability": "medium",
+          "physics": "severe",
+          "ds": "inner_race",
+          "ds_conf": 0.6132,
+          "dist": {
+            "normal": 0.0047,
+            "inner_race": 0.6132,
+            "outer_race": 0.3632,
+            "ball": 0.0189
+          },
+          "K": 0.3413,
+          "corrected": true
+        },
+        {
+          "index": 8,
+          "true": "inner_race",
+          "cnn": "outer_race",
+          "cnn_conf": 0.6745,
+          "signal": "BPFI/medium",
+          "dominant": "BPFI",
+          "reliability": "medium",
+          "physics": "severe",
+          "ds": "inner_race",
+          "ds_conf": 0.5737,
+          "dist": {
+            "normal": 0.0049,
+            "inner_race": 0.5737,
+            "outer_race": 0.4019,
+            "ball": 0.0195
+          },
+          "K": 0.3651,
+          "corrected": true
+        },
+        {
+          "index": 10,
+          "true": "inner_race",
+          "cnn": "outer_race",
+          "cnn_conf": 0.6008,
+          "signal": "BPFI/medium",
+          "dominant": "BPFI",
+          "reliability": "medium",
+          "physics": "severe",
+          "ds": "inner_race",
+          "ds_conf": 0.6384,
+          "dist": {
+            "normal": 0.0045,
+            "inner_race": 0.6384,
+            "outer_race": 0.3387,
+            "ball": 0.0183
+          },
+          "K": 0.325,
+          "corrected": true
+        },
+        {
+          "index": 11,
+          "true": "inner_race",
+          "cnn": "outer_race",
+          "cnn_conf": 0.6567,
+          "signal": "BPFI/medium",
+          "dominant": "BPFI",
+          "reliability": "medium",
+          "physics": "severe",
+          "ds": "inner_race",
+          "ds_conf": 0.5903,
+          "dist": {
+            "normal": 0.0048,
+            "inner_race": 0.5903,
+            "outer_race": 0.3858,
+            "ball": 0.0192
+          },
+          "K": 0.3552,
+          "corrected": true
+        },
+        {
+          "index": 14,
+          "true": "inner_race",
+          "cnn": "outer_race",
+          "cnn_conf": 0.6648,
+          "signal": "BPFI/medium",
+          "dominant": "BPFI",
+          "reliability": "medium",
+          "physics": "severe",
+          "ds": "inner_race",
+          "ds_conf": 0.5828,
+          "dist": {
+            "normal": 0.0048,
+            "inner_race": 0.5828,
+            "outer_race": 0.3931,
+            "ball": 0.0194
+          },
+          "K": 0.3597,
+          "corrected": true
+        },
+        {
+          "index": 17,
+          "true": "inner_race",
+          "cnn": "outer_race",
+          "cnn_conf": 0.5039,
+          "signal": "BPFI/medium",
+          "dominant": "BPFI",
+          "reliability": "medium",
+          "physics": "severe",
+          "ds": "inner_race",
+          "ds_conf": 0.7122,
+          "dist": {
+            "normal": 0.0043,
+            "inner_race": 0.7122,
+            "outer_race": 0.2665,
+            "ball": 0.0171
+          },
+          "K": 0.273,
+          "corrected": true
+        },
+        {
+          "index": 19,
+          "true": "inner_race",
+          "cnn": "outer_race",
+          "cnn_conf": 0.5533,
+          "signal": "BPFI/medium",
+          "dominant": "BPFI",
+          "reliability": "medium",
+          "physics": "severe",
+          "ds": "inner_race",
+          "ds_conf": 0.6759,
+          "dist": {
+            "normal": 0.0044,
+            "inner_race": 0.6759,
+            "outer_race": 0.302,
+            "ball": 0.0177
+          },
+          "K": 0.2995,
+          "corrected": true
+        },
+        {
+          "index": 20,
+          "true": "inner_race",
+          "cnn": "outer_race",
+          "cnn_conf": 0.5868,
+          "signal": "BPFI/medium",
+          "dominant": "BPFI",
+          "reliability": "medium",
+          "physics": "severe",
+          "ds": "inner_race",
+          "ds_conf": 0.6496,
+          "dist": {
+            "normal": 0.0046,
+            "inner_race": 0.6496,
+            "outer_race": 0.3277,
+            "ball": 0.0182
+          },
+          "K": 0.3178,
+          "corrected": true
+        },
+        {
+          "index": 22,
+          "true": "inner_race",
+          "cnn": "outer_race",
+          "cnn_conf": 0.6322,
+          "signal": "BPFI/medium",
+          "dominant": "BPFI",
+          "reliability": "medium",
+          "physics": "severe",
+          "ds": "inner_race",
+          "ds_conf": 0.6121,
+          "dist": {
+            "normal": 0.0046,
+            "inner_race": 0.6121,
+            "outer_race": 0.3644,
+            "ball": 0.0188
+          },
+          "K": 0.3417,
+          "corrected": true
+        },
+        {
+          "index": 23,
+          "true": "inner_race",
+          "cnn": "outer_race",
+          "cnn_conf": 0.7527,
+          "signal": "BPFI/medium",
+          "dominant": "BPFI",
+          "reliability": "medium",
+          "physics": "severe",
+          "ds": "inner_race",
+          "ds_conf": 0.4961,
+          "dist": {
+            "normal": 0.0052,
+            "inner_race": 0.4961,
+            "outer_race": 0.4778,
+            "ball": 0.0209
+          },
+          "K": 0.4071,
+          "corrected": true
+        },
+        {
+          "index": 25,
+          "true": "inner_race",
+          "cnn": "outer_race",
+          "cnn_conf": 0.6252,
+          "signal": "BPFI/medium",
+          "dominant": "BPFI",
+          "reliability": "medium",
+          "physics": "severe",
+          "ds": "inner_race",
+          "ds_conf": 0.6177,
+          "dist": {
+            "normal": 0.0047,
+            "inner_race": 0.6177,
+            "outer_race": 0.3589,
+            "ball": 0.0188
+          },
+          "K": 0.3385,
+          "corrected": true
+        },
+        {
+          "index": 28,
+          "true": "inner_race",
+          "cnn": "outer_race",
+          "cnn_conf": 0.7563,
+          "signal": "BPFI/medium",
+          "dominant": "BPFI",
+          "reliability": "medium",
+          "physics": "severe",
+          "ds": "inner_race",
+          "ds_conf": 0.4923,
+          "dist": {
+            "normal": 0.0052,
+            "inner_race": 0.4923,
+            "outer_race": 0.4815,
+            "ball": 0.021
+          },
+          "K": 0.409,
+          "corrected": true
+        },
+        {
+          "index": 32,
+          "true": "inner_race",
+          "cnn": "outer_race",
+          "cnn_conf": 0.5986,
+          "signal": "BPFI/medium",
+          "dominant": "BPFI",
+          "reliability": "medium",
+          "physics": "severe",
+          "ds": "inner_race",
+          "ds_conf": 0.6402,
+          "dist": {
+            "normal": 0.0045,
+            "inner_race": 0.6402,
+            "outer_race": 0.3369,
+            "ball": 0.0183
+          },
+          "K": 0.3239,
+          "corrected": true
+        },
+        {
+          "index": 33,
+          "true": "inner_race",
+          "cnn": "outer_race",
+          "cnn_conf": 0.7032,
+          "signal": "BPFI/medium",
+          "dominant": "BPFI",
+          "reliability": "medium",
+          "physics": "severe",
+          "ds": "inner_race",
+          "ds_conf": 0.5466,
+          "dist": {
+            "normal": 0.005,
+            "inner_race": 0.5466,
+            "outer_race": 0.4285,
+            "ball": 0.02
+          },
+          "K": 0.3804,
+          "corrected": true
+        },
+        {
+          "index": 36,
+          "true": "inner_race",
+          "cnn": "outer_race",
+          "cnn_conf": 0.68,
+          "signal": "BPFI/medium",
+          "dominant": "BPFI",
+          "reliability": "medium",
+          "physics": "severe",
+          "ds": "inner_race",
+          "ds_conf": 0.5687,
+          "dist": {
+            "normal": 0.0049,
+            "inner_race": 0.5687,
+            "outer_race": 0.4068,
+            "ball": 0.0196
+          },
+          "K": 0.3679,
+          "corrected": true
+        },
+        {
+          "index": 38,
+          "true": "inner_race",
+          "cnn": "outer_race",
+          "cnn_conf": 0.675,
+          "signal": "BPFI/medium",
+          "dominant": "BPFI",
+          "reliability": "medium",
+          "physics": "severe",
+          "ds": "inner_race",
+          "ds_conf": 0.5735,
+          "dist": {
+            "normal": 0.0048,
+            "inner_race": 0.5735,
+            "outer_race": 0.4022,
+            "ball": 0.0195
+          },
+          "K": 0.3651,
+          "corrected": true
+        },
+        {
+          "index": 39,
+          "true": "inner_race",
+          "cnn": "outer_race",
+          "cnn_conf": 0.5533,
+          "signal": "BPFI/medium",
+          "dominant": "BPFI",
+          "reliability": "medium",
+          "physics": "severe",
+          "ds": "inner_race",
+          "ds_conf": 0.6761,
+          "dist": {
+            "normal": 0.0044,
+            "inner_race": 0.6761,
+            "outer_race": 0.3019,
+            "ball": 0.0177
+          },
+          "K": 0.2993,
+          "corrected": true
+        },
+        {
+          "index": 40,
+          "true": "inner_race",
+          "cnn": "outer_race",
+          "cnn_conf": 0.5269,
+          "signal": "BPFI/medium",
+          "dominant": "BPFI",
+          "reliability": "medium",
+          "physics": "severe",
+          "ds": "inner_race",
+          "ds_conf": 0.6958,
+          "dist": {
+            "normal": 0.0043,
+            "inner_race": 0.6958,
+            "outer_race": 0.2826,
+            "ball": 0.0173
+          },
+          "K": 0.285,
+          "corrected": true
+        },
+        {
+          "index": 41,
+          "true": "inner_race",
+          "cnn": "outer_race",
+          "cnn_conf": 0.5313,
+          "signal": "BPFI/medium",
+          "dominant": "BPFI",
+          "reliability": "medium",
+          "physics": "severe",
+          "ds": "inner_race",
+          "ds_conf": 0.6924,
+          "dist": {
+            "normal": 0.0043,
+            "inner_race": 0.6924,
+            "outer_race": 0.2858,
+            "ball": 0.0174
+          },
+          "K": 0.2876,
+          "corrected": true
+        },
+        {
+          "index": 42,
+          "true": "inner_race",
+          "cnn": "outer_race",
+          "cnn_conf": 0.6799,
+          "signal": "BPFI/medium",
+          "dominant": "BPFI",
+          "reliability": "medium",
+          "physics": "severe",
+          "ds": "inner_race",
+          "ds_conf": 0.5689,
+          "dist": {
+            "normal": 0.0049,
+            "inner_race": 0.5689,
+            "outer_race": 0.4067,
+            "ball": 0.0196
+          },
+          "K": 0.3678,
+          "corrected": true
+        },
+        {
+          "index": 53,
+          "true": "inner_race",
+          "cnn": "outer_race",
+          "cnn_conf": 0.6347,
+          "signal": "BPFI/medium",
+          "dominant": "BPFI",
+          "reliability": "medium",
+          "physics": "severe",
+          "ds": "inner_race",
+          "ds_conf": 0.6097,
+          "dist": {
+            "normal": 0.0047,
+            "inner_race": 0.6097,
+            "outer_race": 0.3668,
+            "ball": 0.0189
+          },
+          "K": 0.3434,
+          "corrected": true
+        },
+        {
+          "index": 55,
+          "true": "inner_race",
+          "cnn": "outer_race",
+          "cnn_conf": 0.5308,
+          "signal": "BPFI/medium",
+          "dominant": "BPFI",
+          "reliability": "medium",
+          "physics": "severe",
+          "ds": "inner_race",
+          "ds_conf": 0.6928,
+          "dist": {
+            "normal": 0.0043,
+            "inner_race": 0.6928,
+            "outer_race": 0.2854,
+            "ball": 0.0174
+          },
+          "K": 0.2874,
+          "corrected": true
+        },
+        {
+          "index": 63,
+          "true": "inner_race",
+          "cnn": "outer_race",
+          "cnn_conf": 0.6783,
+          "signal": "BPFI/medium",
+          "dominant": "BPFI",
+          "reliability": "medium",
+          "physics": "severe",
+          "ds": "inner_race",
+          "ds_conf": 0.5705,
+          "dist": {
+            "normal": 0.0048,
+            "inner_race": 0.5705,
+            "outer_race": 0.4051,
+            "ball": 0.0196
+          },
+          "K": 0.3668,
+          "corrected": true
+        },
+        {
+          "index": 67,
+          "true": "inner_race",
+          "cnn": "outer_race",
+          "cnn_conf": 0.7092,
+          "signal": "BPFI/medium",
+          "dominant": "BPFI",
+          "reliability": "medium",
+          "physics": "severe",
+          "ds": "inner_race",
+          "ds_conf": 0.541,
+          "dist": {
+            "normal": 0.0049,
+            "inner_race": 0.541,
+            "outer_race": 0.434,
+            "ball": 0.0201
+          },
+          "K": 0.3833,
+          "corrected": true
+        },
+        {
+          "index": 70,
+          "true": "inner_race",
+          "cnn": "outer_race",
+          "cnn_conf": 0.6252,
+          "signal": "BPFI/medium",
+          "dominant": "BPFI",
+          "reliability": "medium",
+          "physics": "severe",
+          "ds": "inner_race",
+          "ds_conf": 0.618,
+          "dist": {
+            "normal": 0.0046,
+            "inner_race": 0.618,
+            "outer_race": 0.3587,
+            "ball": 0.0187
+          },
+          "K": 0.338,
+          "corrected": true
+        },
+        {
+          "index": 74,
+          "true": "inner_race",
+          "cnn": "outer_race",
+          "cnn_conf": 0.5456,
+          "signal": "BPFI/medium",
+          "dominant": "BPFI",
+          "reliability": "medium",
+          "physics": "severe",
+          "ds": "inner_race",
+          "ds_conf": 0.6818,
+          "dist": {
+            "normal": 0.0044,
+            "inner_race": 0.6818,
+            "outer_race": 0.2962,
+            "ball": 0.0176
+          },
+          "K": 0.2953,
+          "corrected": true
+        },
+        {
+          "index": 77,
+          "true": "inner_race",
+          "cnn": "outer_race",
+          "cnn_conf": 0.5907,
+          "signal": "BPFI/medium",
+          "dominant": "BPFI",
+          "reliability": "medium",
+          "physics": "severe",
+          "ds": "inner_race",
+          "ds_conf": 0.6465,
+          "dist": {
+            "normal": 0.0045,
+            "inner_race": 0.6465,
+            "outer_race": 0.3307,
+            "ball": 0.0182
+          },
+          "K": 0.3197,
+          "corrected": true
+        },
+        {
+          "index": 89,
+          "true": "inner_race",
+          "cnn": "outer_race",
+          "cnn_conf": 0.7164,
+          "signal": "BPFI/medium",
+          "dominant": "BPFI",
+          "reliability": "medium",
+          "physics": "severe",
+          "ds": "inner_race",
+          "ds_conf": 0.5338,
+          "dist": {
+            "normal": 0.005,
+            "inner_race": 0.5338,
+            "outer_race": 0.441,
+            "ball": 0.0202
+          },
+          "K": 0.3873,
+          "corrected": true
+        },
+        {
+          "index": 90,
+          "true": "inner_race",
+          "cnn": "outer_race",
+          "cnn_conf": 0.5863,
+          "signal": "BPFI/medium",
+          "dominant": "BPFI",
+          "reliability": "medium",
+          "physics": "severe",
+          "ds": "inner_race",
+          "ds_conf": 0.6503,
+          "dist": {
+            "normal": 0.0045,
+            "inner_race": 0.6503,
+            "outer_race": 0.3271,
+            "ball": 0.0181
+          },
+          "K": 0.317,
+          "corrected": true
+        },
+        {
+          "index": 101,
+          "true": "inner_race",
+          "cnn": "outer_race",
+          "cnn_conf": 0.6898,
+          "signal": "BPFI/medium",
+          "dominant": "BPFI",
+          "reliability": "medium",
+          "physics": "severe",
+          "ds": "inner_race",
+          "ds_conf": 0.5596,
+          "dist": {
+            "normal": 0.0049,
+            "inner_race": 0.5596,
+            "outer_race": 0.4157,
+            "ball": 0.0197
+          },
+          "K": 0.373,
+          "corrected": true
+        },
+        {
+          "index": 104,
+          "true": "inner_race",
+          "cnn": "outer_race",
+          "cnn_conf": 0.6609,
+          "signal": "BPFI/medium",
+          "dominant": "BPFI",
+          "reliability": "medium",
+          "physics": "severe",
+          "ds": "inner_race",
+          "ds_conf": 0.5864,
+          "dist": {
+            "normal": 0.0048,
+            "inner_race": 0.5864,
+            "outer_race": 0.3895,
+            "ball": 0.0193
+          },
+          "K": 0.3576,
+          "corrected": true
+        },
+        {
+          "index": 122,
+          "true": "inner_race",
+          "cnn": "outer_race",
+          "cnn_conf": 0.565,
+          "signal": "BPFI/medium",
+          "dominant": "BPFI",
+          "reliability": "medium",
+          "physics": "severe",
+          "ds": "inner_race",
+          "ds_conf": 0.6672,
+          "dist": {
+            "normal": 0.0044,
+            "inner_race": 0.6672,
+            "outer_race": 0.3106,
+            "ball": 0.0178
+          },
+          "K": 0.3055,
+          "corrected": true
+        },
+        {
+          "index": 128,
+          "true": "inner_race",
+          "cnn": "outer_race",
+          "cnn_conf": 0.5857,
+          "signal": "BPFI/medium",
+          "dominant": "BPFI",
+          "reliability": "medium",
+          "physics": "severe",
+          "ds": "inner_race",
+          "ds_conf": 0.6506,
+          "dist": {
+            "normal": 0.0045,
+            "inner_race": 0.6506,
+            "outer_race": 0.3267,
+            "ball": 0.0181
+          },
+          "K": 0.3169,
+          "corrected": true
+        },
+        {
+          "index": 133,
+          "true": "inner_race",
+          "cnn": "outer_race",
+          "cnn_conf": 0.5086,
+          "signal": "BPFI/medium",
+          "dominant": "BPFI",
+          "reliability": "medium",
+          "physics": "severe",
+          "ds": "inner_race",
+          "ds_conf": 0.7088,
+          "dist": {
+            "normal": 0.0043,
+            "inner_race": 0.7088,
+            "outer_race": 0.2697,
+            "ball": 0.0171
+          },
+          "K": 0.2755,
+          "corrected": true
+        },
+        {
+          "index": 136,
+          "true": "inner_race",
+          "cnn": "outer_race",
+          "cnn_conf": 0.562,
+          "signal": "BPFI/medium",
+          "dominant": "BPFI",
+          "reliability": "medium",
+          "physics": "severe",
+          "ds": "inner_race",
+          "ds_conf": 0.6693,
+          "dist": {
+            "normal": 0.0044,
+            "inner_race": 0.6693,
+            "outer_race": 0.3085,
+            "ball": 0.0178
+          },
+          "K": 0.3041,
+          "corrected": true
+        },
+        {
+          "index": 148,
+          "true": "inner_race",
+          "cnn": "outer_race",
+          "cnn_conf": 0.7201,
+          "signal": "BPFI/medium",
+          "dominant": "BPFI",
+          "reliability": "medium",
+          "physics": "severe",
+          "ds": "inner_race",
+          "ds_conf": 0.5297,
+          "dist": {
+            "normal": 0.0051,
+            "inner_race": 0.5297,
+            "outer_race": 0.4449,
+            "ball": 0.0203
+          },
+          "K": 0.3896,
+          "corrected": true
+        },
+        {
+          "index": 153,
+          "true": "inner_race",
+          "cnn": "outer_race",
+          "cnn_conf": 0.5566,
+          "signal": "BPFI/medium",
+          "dominant": "BPFI",
+          "reliability": "medium",
+          "physics": "severe",
+          "ds": "inner_race",
+          "ds_conf": 0.6734,
+          "dist": {
+            "normal": 0.0044,
+            "inner_race": 0.6734,
+            "outer_race": 0.3044,
+            "ball": 0.0177
+          },
+          "K": 0.3013,
+          "corrected": true
+        },
+        {
+          "index": 154,
+          "true": "inner_race",
+          "cnn": "outer_race",
+          "cnn_conf": 0.5782,
+          "signal": "BPFI/medium",
+          "dominant": "BPFI",
+          "reliability": "medium",
+          "physics": "severe",
+          "ds": "inner_race",
+          "ds_conf": 0.6565,
+          "dist": {
+            "normal": 0.0045,
+            "inner_race": 0.6565,
+            "outer_race": 0.3209,
+            "ball": 0.0181
+          },
+          "K": 0.313,
+          "corrected": true
+        }
+      ]
+    },
+    "snr_5dB": {
+      "n": 1881,
+      "accuracy": {
+        "cnn_only": 0.3796,
+        "legacy": 0.3796,
+        "ds": 0.496
+      },
+      "mean_confidence": {
+        "cnn_only": 0.8878,
+        "legacy": 0.8878,
+        "ds": 0.8559
+      },
+      "per_class": {
+        "normal": {
+          "n": 473,
+          "cnn_only": 0.5137,
+          "legacy": 0.5137,
+          "ds": 0.9767
+        },
+        "inner_race": {
+          "n": 469,
+          "cnn_only": 0.0,
+          "legacy": 0.0,
+          "ds": 0.0
+        },
+        "outer_race": {
+          "n": 471,
+          "cnn_only": 1.0,
+          "legacy": 1.0,
+          "ds": 1.0
+        },
+        "ball": {
+          "n": 468,
+          "cnn_only": 0.0,
+          "legacy": 0.0,
+          "ds": 0.0
+        }
+      },
+      "K": {
+        "mean": 0.1264,
+        "std": 0.1875,
+        "min": 0.0,
+        "max": 0.765,
+        "median": 0.0002,
+        "p90": 0.54,
+        "frac_gt_0.5": 0.1148,
+        "frac_gt_0.7": 0.0021
+      },
+      "flips": [
+        {
+          "index": 1408,
+          "true": "normal",
+          "cnn": "outer_race",
+          "cnn_conf": 0.6385,
+          "signal": "none/low",
+          "dominant": "none",
+          "reliability": "low",
+          "physics": "normal",
+          "ds": "normal",
+          "ds_conf": 0.5478,
+          "dist": {
+            "normal": 0.5478,
+            "inner_race": 0.0182,
+            "outer_race": 0.4024,
+            "ball": 0.0316
+          },
+          "K": 0.3294,
+          "corrected": true
+        },
+        {
+          "index": 1411,
+          "true": "normal",
+          "cnn": "outer_race",
+          "cnn_conf": 0.5651,
+          "signal": "none/low",
+          "dominant": "none",
+          "reliability": "low",
+          "physics": "normal",
+          "ds": "normal",
+          "ds_conf": 0.6154,
+          "dist": {
+            "normal": 0.6154,
+            "inner_race": 0.0173,
+            "outer_race": 0.339,
+            "ball": 0.0283
+          },
+          "K": 0.2917,
+          "corrected": true
+        },
+        {
+          "index": 1412,
+          "true": "normal",
+          "cnn": "outer_race",
+          "cnn_conf": 0.5816,
+          "signal": "none/low",
+          "dominant": "none",
+          "reliability": "low",
+          "physics": "normal",
+          "ds": "normal",
+          "ds_conf": 0.6083,
+          "dist": {
+            "normal": 0.6083,
+            "inner_race": 0.017,
+            "outer_race": 0.3505,
+            "ball": 0.0242
+          },
+          "K": 0.2958,
+          "corrected": true
+        },
+        {
+          "index": 1414,
+          "true": "normal",
+          "cnn": "outer_race",
+          "cnn_conf": 0.6751,
+          "signal": "none/low",
+          "dominant": "none",
+          "reliability": "low",
+          "physics": "normal",
+          "ds": "normal",
+          "ds_conf": 0.5121,
+          "dist": {
+            "normal": 0.5121,
+            "inner_race": 0.0183,
+            "outer_race": 0.4364,
+            "ball": 0.0331
+          },
+          "K": 0.3477,
+          "corrected": true
+        },
+        {
+          "index": 1417,
+          "true": "normal",
+          "cnn": "outer_race",
+          "cnn_conf": 0.53,
+          "signal": "none/low",
+          "dominant": "none",
+          "reliability": "low",
+          "physics": "normal",
+          "ds": "normal",
+          "ds_conf": 0.6381,
+          "dist": {
+            "normal": 0.6381,
+            "inner_race": 0.0177,
+            "outer_race": 0.3129,
+            "ball": 0.0313
+          },
+          "K": 0.2781,
+          "corrected": true
+        },
+        {
+          "index": 1419,
+          "true": "normal",
+          "cnn": "outer_race",
+          "cnn_conf": 0.5491,
+          "signal": "none/low",
+          "dominant": "none",
+          "reliability": "low",
+          "physics": "normal",
+          "ds": "normal",
+          "ds_conf": 0.6139,
+          "dist": {
+            "normal": 0.6139,
+            "inner_race": 0.0172,
+            "outer_race": 0.3303,
+            "ball": 0.0386
+          },
+          "K": 0.2926,
+          "corrected": true
+        },
+        {
+          "index": 1420,
+          "true": "normal",
+          "cnn": "outer_race",
+          "cnn_conf": 0.6913,
+          "signal": "none/low",
+          "dominant": "none",
+          "reliability": "low",
+          "physics": "normal",
+          "ds": "normal",
+          "ds_conf": 0.4972,
+          "dist": {
+            "normal": 0.4972,
+            "inner_race": 0.019,
+            "outer_race": 0.4516,
+            "ball": 0.0322
+          },
+          "K": 0.3551,
+          "corrected": true
+        },
+        {
+          "index": 1422,
+          "true": "normal",
+          "cnn": "outer_race",
+          "cnn_conf": 0.6181,
+          "signal": "none/low",
+          "dominant": "none",
+          "reliability": "low",
+          "physics": "normal",
+          "ds": "normal",
+          "ds_conf": 0.5634,
+          "dist": {
+            "normal": 0.5634,
+            "inner_race": 0.018,
+            "outer_race": 0.3853,
+            "ball": 0.0333
+          },
+          "K": 0.3211,
+          "corrected": true
+        },
+        {
+          "index": 1430,
+          "true": "normal",
+          "cnn": "outer_race",
+          "cnn_conf": 0.5609,
+          "signal": "none/low",
+          "dominant": "none",
+          "reliability": "low",
+          "physics": "normal",
+          "ds": "normal",
+          "ds_conf": 0.6111,
+          "dist": {
+            "normal": 0.6111,
+            "inner_race": 0.0178,
+            "outer_race": 0.3378,
+            "ball": 0.0333
+          },
+          "K": 0.2942,
+          "corrected": true
+        },
+        {
+          "index": 1432,
+          "true": "normal",
+          "cnn": "outer_race",
+          "cnn_conf": 0.7002,
+          "signal": "none/low",
+          "dominant": "none",
+          "reliability": "low",
+          "physics": "normal",
+          "ds": "normal",
+          "ds_conf": 0.4827,
+          "dist": {
+            "normal": 0.4827,
+            "inner_race": 0.0188,
+            "outer_race": 0.4622,
+            "ball": 0.0364
+          },
+          "K": 0.3621,
+          "corrected": true
+        },
+        {
+          "index": 1435,
+          "true": "normal",
+          "cnn": "outer_race",
+          "cnn_conf": 0.5053,
+          "signal": "none/low",
+          "dominant": "none",
+          "reliability": "low",
+          "physics": "normal",
+          "ds": "normal",
+          "ds_conf": 0.6561,
+          "dist": {
+            "normal": 0.6561,
+            "inner_race": 0.0178,
+            "outer_race": 0.2945,
+            "ball": 0.0316
+          },
+          "K": 0.2669,
+          "corrected": true
+        },
+        {
+          "index": 1438,
+          "true": "normal",
+          "cnn": "outer_race",
+          "cnn_conf": 0.5905,
+          "signal": "none/low",
+          "dominant": "none",
+          "reliability": "low",
+          "physics": "normal",
+          "ds": "normal",
+          "ds_conf": 0.5931,
+          "dist": {
+            "normal": 0.5931,
+            "inner_race": 0.0176,
+            "outer_race": 0.3601,
+            "ball": 0.0292
+          },
+          "K": 0.3046,
+          "corrected": true
+        },
+        {
+          "index": 1439,
+          "true": "normal",
+          "cnn": "outer_race",
+          "cnn_conf": 0.4867,
+          "signal": "none/low",
+          "dominant": "none",
+          "reliability": "low",
+          "physics": "normal",
+          "ds": "normal",
+          "ds_conf": 0.6696,
+          "dist": {
+            "normal": 0.6696,
+            "inner_race": 0.0178,
+            "outer_race": 0.2809,
+            "ball": 0.0317
+          },
+          "K": 0.2582,
+          "corrected": true
+        },
+        {
+          "index": 1440,
+          "true": "normal",
+          "cnn": "outer_race",
+          "cnn_conf": 0.6702,
+          "signal": "none/low",
+          "dominant": "none",
+          "reliability": "low",
+          "physics": "normal",
+          "ds": "normal",
+          "ds_conf": 0.5213,
+          "dist": {
+            "normal": 0.5213,
+            "inner_race": 0.0186,
+            "outer_race": 0.4303,
+            "ball": 0.0297
+          },
+          "K": 0.3431,
+          "corrected": true
+        },
+        {
+          "index": 1441,
+          "true": "normal",
+          "cnn": "outer_race",
+          "cnn_conf": 0.5832,
+          "signal": "none/low",
+          "dominant": "none",
+          "reliability": "low",
+          "physics": "normal",
+          "ds": "normal",
+          "ds_conf": 0.6011,
+          "dist": {
+            "normal": 0.6011,
+            "inner_race": 0.0175,
+            "outer_race": 0.3535,
+            "ball": 0.0279
+          },
+          "K": 0.3,
+          "corrected": true
+        },
+        {
+          "index": 1442,
+          "true": "normal",
+          "cnn": "outer_race",
+          "cnn_conf": 0.4915,
+          "signal": "none/low",
+          "dominant": "none",
+          "reliability": "low",
+          "physics": "normal",
+          "ds": "normal",
+          "ds_conf": 0.6706,
+          "dist": {
+            "normal": 0.6706,
+            "inner_race": 0.0167,
+            "outer_race": 0.2833,
+            "ball": 0.0294
+          },
+          "K": 0.2576,
+          "corrected": true
+        },
+        {
+          "index": 1444,
+          "true": "normal",
+          "cnn": "outer_race",
+          "cnn_conf": 0.5138,
+          "signal": "none/low",
+          "dominant": "none",
+          "reliability": "low",
+          "physics": "normal",
+          "ds": "normal",
+          "ds_conf": 0.6507,
+          "dist": {
+            "normal": 0.6507,
+            "inner_race": 0.017,
+            "outer_race": 0.3006,
+            "ball": 0.0317
+          },
+          "K": 0.2703,
+          "corrected": true
+        },
+        {
+          "index": 1446,
+          "true": "normal",
+          "cnn": "outer_race",
+          "cnn_conf": 0.505,
+          "signal": "none/low",
+          "dominant": "none",
+          "reliability": "low",
+          "physics": "normal",
+          "ds": "normal",
+          "ds_conf": 0.6611,
+          "dist": {
+            "normal": 0.6611,
+            "inner_race": 0.0167,
+            "outer_race": 0.2931,
+            "ball": 0.0291
+          },
+          "K": 0.2637,
+          "corrected": true
+        },
+        {
+          "index": 1447,
+          "true": "normal",
+          "cnn": "outer_race",
+          "cnn_conf": 0.5801,
+          "signal": "none/low",
+          "dominant": "none",
+          "reliability": "low",
+          "physics": "normal",
+          "ds": "normal",
+          "ds_conf": 0.605,
+          "dist": {
+            "normal": 0.605,
+            "inner_race": 0.017,
+            "outer_race": 0.3506,
+            "ball": 0.0274
+          },
+          "K": 0.2978,
+          "corrected": true
+        },
+        {
+          "index": 1452,
+          "true": "normal",
+          "cnn": "outer_race",
+          "cnn_conf": 0.521,
+          "signal": "none/low",
+          "dominant": "none",
+          "reliability": "low",
+          "physics": "normal",
+          "ds": "normal",
+          "ds_conf": 0.6524,
+          "dist": {
+            "normal": 0.6524,
+            "inner_race": 0.0172,
+            "outer_race": 0.3041,
+            "ball": 0.0263
+          },
+          "K": 0.2692,
+          "corrected": true
+        },
+        {
+          "index": 1460,
+          "true": "normal",
+          "cnn": "outer_race",
+          "cnn_conf": 0.6902,
+          "signal": "none/low",
+          "dominant": "none",
+          "reliability": "low",
+          "physics": "normal",
+          "ds": "normal",
+          "ds_conf": 0.5002,
+          "dist": {
+            "normal": 0.5002,
+            "inner_race": 0.0183,
+            "outer_race": 0.4498,
+            "ball": 0.0316
+          },
+          "K": 0.3536,
+          "corrected": true
+        },
+        {
+          "index": 1461,
+          "true": "normal",
+          "cnn": "outer_race",
+          "cnn_conf": 0.6228,
+          "signal": "none/low",
+          "dominant": "none",
+          "reliability": "low",
+          "physics": "normal",
+          "ds": "normal",
+          "ds_conf": 0.5722,
+          "dist": {
+            "normal": 0.5722,
+            "inner_race": 0.0179,
+            "outer_race": 0.3854,
+            "ball": 0.0246
+          },
+          "K": 0.3163,
+          "corrected": true
+        },
+        {
+          "index": 1464,
+          "true": "normal",
+          "cnn": "outer_race",
+          "cnn_conf": 0.5052,
+          "signal": "none/low",
+          "dominant": "none",
+          "reliability": "low",
+          "physics": "normal",
+          "ds": "normal",
+          "ds_conf": 0.6519,
+          "dist": {
+            "normal": 0.6519,
+            "inner_race": 0.018,
+            "outer_race": 0.2955,
+            "ball": 0.0346
+          },
+          "K": 0.2695,
+          "corrected": true
+        },
+        {
+          "index": 1465,
+          "true": "normal",
+          "cnn": "outer_race",
+          "cnn_conf": 0.4831,
+          "signal": "none/low",
+          "dominant": "none",
+          "reliability": "low",
+          "physics": "normal",
+          "ds": "normal",
+          "ds_conf": 0.671,
+          "dist": {
+            "normal": 0.671,
+            "inner_race": 0.0182,
+            "outer_race": 0.2786,
+            "ball": 0.0322
+          },
+          "K": 0.2574,
+          "corrected": true
+        },
+        {
+          "index": 1466,
+          "true": "normal",
+          "cnn": "outer_race",
+          "cnn_conf": 0.513,
+          "signal": "none/low",
+          "dominant": "none",
+          "reliability": "low",
+          "physics": "normal",
+          "ds": "normal",
+          "ds_conf": 0.6507,
+          "dist": {
+            "normal": 0.6507,
+            "inner_race": 0.0172,
+            "outer_race": 0.3002,
+            "ball": 0.0319
+          },
+          "K": 0.2703,
+          "corrected": true
+        },
+        {
+          "index": 1469,
+          "true": "normal",
+          "cnn": "outer_race",
+          "cnn_conf": 0.5641,
+          "signal": "none/low",
+          "dominant": "none",
+          "reliability": "low",
+          "physics": "normal",
+          "ds": "normal",
+          "ds_conf": 0.6138,
+          "dist": {
+            "normal": 0.6138,
+            "inner_race": 0.0174,
+            "outer_race": 0.3389,
+            "ball": 0.0299
+          },
+          "K": 0.2926,
+          "corrected": true
+        },
+        {
+          "index": 1470,
+          "true": "normal",
+          "cnn": "outer_race",
+          "cnn_conf": 0.5052,
+          "signal": "none/low",
+          "dominant": "none",
+          "reliability": "low",
+          "physics": "normal",
+          "ds": "normal",
+          "ds_conf": 0.6625,
+          "dist": {
+            "normal": 0.6625,
+            "inner_race": 0.0168,
+            "outer_race": 0.2928,
+            "ball": 0.0278
+          },
+          "K": 0.2628,
+          "corrected": true
+        },
+        {
+          "index": 1471,
+          "true": "normal",
+          "cnn": "outer_race",
+          "cnn_conf": 0.4924,
+          "signal": "none/low",
+          "dominant": "none",
+          "reliability": "low",
+          "physics": "normal",
+          "ds": "normal",
+          "ds_conf": 0.67,
+          "dist": {
+            "normal": 0.67,
+            "inner_race": 0.0169,
+            "outer_race": 0.284,
+            "ball": 0.0292
+          },
+          "K": 0.258,
+          "corrected": true
+        },
+        {
+          "index": 1473,
+          "true": "normal",
+          "cnn": "outer_race",
+          "cnn_conf": 0.6341,
+          "signal": "none/low",
+          "dominant": "none",
+          "reliability": "low",
+          "physics": "normal",
+          "ds": "normal",
+          "ds_conf": 0.5505,
+          "dist": {
+            "normal": 0.5505,
+            "inner_race": 0.0179,
+            "outer_race": 0.3989,
+            "ball": 0.0327
+          },
+          "K": 0.3279,
+          "corrected": true
+        },
+        {
+          "index": 1474,
+          "true": "normal",
+          "cnn": "outer_race",
+          "cnn_conf": 0.551,
+          "signal": "none/low",
+          "dominant": "none",
+          "reliability": "low",
+          "physics": "normal",
+          "ds": "normal",
+          "ds_conf": 0.6171,
+          "dist": {
+            "normal": 0.6171,
+            "inner_race": 0.018,
+            "outer_race": 0.3305,
+            "ball": 0.0344
+          },
+          "K": 0.2907,
+          "corrected": true
+        },
+        {
+          "index": 1476,
+          "true": "normal",
+          "cnn": "outer_race",
+          "cnn_conf": 0.5835,
+          "signal": "none/low",
+          "dominant": "none",
+          "reliability": "low",
+          "physics": "normal",
+          "ds": "normal",
+          "ds_conf": 0.5956,
+          "dist": {
+            "normal": 0.5956,
+            "inner_race": 0.018,
+            "outer_race": 0.3553,
+            "ball": 0.0311
+          },
+          "K": 0.3032,
+          "corrected": true
+        },
+        {
+          "index": 1477,
+          "true": "normal",
+          "cnn": "outer_race",
+          "cnn_conf": 0.5835,
+          "signal": "none/low",
+          "dominant": "none",
+          "reliability": "low",
+          "physics": "normal",
+          "ds": "normal",
+          "ds_conf": 0.5945,
+          "dist": {
+            "normal": 0.5945,
+            "inner_race": 0.0177,
+            "outer_race": 0.3556,
+            "ball": 0.0322
+          },
+          "K": 0.3038,
+          "corrected": true
+        },
+        {
+          "index": 1483,
+          "true": "normal",
+          "cnn": "outer_race",
+          "cnn_conf": 0.4904,
+          "signal": "none/low",
+          "dominant": "none",
+          "reliability": "low",
+          "physics": "normal",
+          "ds": "normal",
+          "ds_conf": 0.6627,
+          "dist": {
+            "normal": 0.6627,
+            "inner_race": 0.0174,
+            "outer_race": 0.2846,
+            "ball": 0.0352
+          },
+          "K": 0.2627,
+          "corrected": true
+        },
+        {
+          "index": 1484,
+          "true": "normal",
+          "cnn": "outer_race",
+          "cnn_conf": 0.4944,
+          "signal": "none/low",
+          "dominant": "none",
+          "reliability": "low",
+          "physics": "normal",
+          "ds": "normal",
+          "ds_conf": 0.6653,
+          "dist": {
+            "normal": 0.6653,
+            "inner_race": 0.0173,
+            "outer_race": 0.2862,
+            "ball": 0.0312
+          },
+          "K": 0.2611,
+          "corrected": true
+        },
+        {
+          "index": 1485,
+          "true": "normal",
+          "cnn": "outer_race",
+          "cnn_conf": 0.5542,
+          "signal": "none/low",
+          "dominant": "none",
+          "reliability": "low",
+          "physics": "normal",
+          "ds": "normal",
+          "ds_conf": 0.6209,
+          "dist": {
+            "normal": 0.6209,
+            "inner_race": 0.0172,
+            "outer_race": 0.3313,
+            "ball": 0.0306
+          },
+          "K": 0.2884,
+          "corrected": true
+        },
+        {
+          "index": 1491,
+          "true": "normal",
+          "cnn": "outer_race",
+          "cnn_conf": 0.5766,
+          "signal": "none/low",
+          "dominant": "none",
+          "reliability": "low",
+          "physics": "normal",
+          "ds": "normal",
+          "ds_conf": 0.6016,
+          "dist": {
+            "normal": 0.6016,
+            "inner_race": 0.0173,
+            "outer_race": 0.3495,
+            "ball": 0.0315
+          },
+          "K": 0.2997,
+          "corrected": true
+        },
+        {
+          "index": 1499,
+          "true": "normal",
+          "cnn": "outer_race",
+          "cnn_conf": 0.7156,
+          "signal": "none/low",
+          "dominant": "none",
+          "reliability": "low",
+          "physics": "normal",
+          "ds": "normal",
+          "ds_conf": 0.4797,
+          "dist": {
+            "normal": 0.4797,
+            "inner_race": 0.0185,
+            "outer_race": 0.473,
+            "ball": 0.0288
+          },
+          "K": 0.3635,
+          "corrected": true
+        },
+        {
+          "index": 1500,
+          "true": "normal",
+          "cnn": "outer_race",
+          "cnn_conf": 0.4982,
+          "signal": "none/low",
+          "dominant": "none",
+          "reliability": "low",
+          "physics": "normal",
+          "ds": "normal",
+          "ds_conf": 0.6631,
+          "dist": {
+            "normal": 0.6631,
+            "inner_race": 0.0168,
+            "outer_race": 0.2888,
+            "ball": 0.0313
+          },
+          "K": 0.2624,
+          "corrected": true
+        },
+        {
+          "index": 1504,
+          "true": "normal",
+          "cnn": "outer_race",
+          "cnn_conf": 0.5522,
+          "signal": "none/low",
+          "dominant": "none",
+          "reliability": "low",
+          "physics": "normal",
+          "ds": "normal",
+          "ds_conf": 0.6251,
+          "dist": {
+            "normal": 0.6251,
+            "inner_race": 0.0175,
+            "outer_race": 0.3289,
+            "ball": 0.0284
+          },
+          "K": 0.2859,
+          "corrected": true
+        },
+        {
+          "index": 1505,
+          "true": "normal",
+          "cnn": "outer_race",
+          "cnn_conf": 0.5906,
+          "signal": "none/low",
+          "dominant": "none",
+          "reliability": "low",
+          "physics": "normal",
+          "ds": "normal",
+          "ds_conf": 0.5865,
+          "dist": {
+            "normal": 0.5865,
+            "inner_race": 0.0186,
+            "outer_race": 0.3621,
+            "ball": 0.0329
+          },
+          "K": 0.3083,
+          "corrected": true
+        }
+      ]
+    },
+    "snr_0dB": {
+      "n": 1881,
+      "accuracy": {
+        "cnn_only": 0.2504,
+        "legacy": 0.2504,
+        "ds": 0.2504
+      },
+      "mean_confidence": {
+        "cnn_only": 0.9994,
+        "legacy": 0.9994,
+        "ds": 0.9229
+      },
+      "per_class": {
+        "normal": {
+          "n": 473,
+          "cnn_only": 0.0,
+          "legacy": 0.0,
+          "ds": 0.0
+        },
+        "inner_race": {
+          "n": 469,
+          "cnn_only": 0.0,
+          "legacy": 0.0,
+          "ds": 0.0
+        },
+        "outer_race": {
+          "n": 471,
+          "cnn_only": 1.0,
+          "legacy": 1.0,
+          "ds": 1.0
+        },
+        "ball": {
+          "n": 468,
+          "cnn_only": 0.0,
+          "legacy": 0.0,
+          "ds": 0.0
+        }
+      },
+      "K": {
+        "mean": 0.0681,
+        "std": 0.1822,
+        "min": 0.0,
+        "max": 0.765,
+        "median": 0.0,
+        "p90": 0.54,
+        "frac_gt_0.5": 0.1228,
+        "frac_gt_0.7": 0.0069
+      },
+      "flips": []
+    }
+  },
+  "D_alpha": {
+    "high_0.85_medium_0.6": {
+      "clean": {
+        "ds": 1.0,
+        "cnn_only": 1.0,
+        "K_mean": 0.0035
+      },
+      "cnn_degraded": {
+        "ds": 0.6194,
+        "cnn_only": 0.2515,
+        "K_mean": 0.2533
+      },
+      "snr_5dB": {
+        "ds": 0.496,
+        "cnn_only": 0.3796,
+        "K_mean": 0.1264
+      }
+    },
+    "high_0.6_medium_0.45": {
+      "clean": {
+        "ds": 1.0,
+        "cnn_only": 1.0,
+        "K_mean": 0.0028
+      },
+      "cnn_degraded": {
+        "ds": 0.6194,
+        "cnn_only": 0.2515,
+        "K_mean": 0.2422
+      },
+      "snr_5dB": {
+        "ds": 0.496,
+        "cnn_only": 0.3796,
+        "K_mean": 0.1107
+      }
+    },
+    "high_0.4_medium_0.3": {
+      "clean": {
+        "ds": 1.0,
+        "cnn_only": 1.0,
+        "K_mean": 0.0021
+      },
+      "cnn_degraded": {
+        "ds": 0.5885,
+        "cnn_only": 0.2515,
+        "K_mean": 0.2322
+      },
+      "snr_5dB": {
+        "ds": 0.496,
+        "cnn_only": 0.3796,
+        "K_mean": 0.0951
+      }
+    },
+    "high_0.2_medium_0.1": {
+      "clean": {
+        "ds": 1.0,
+        "cnn_only": 1.0,
+        "K_mean": 0.0013
+      },
+      "cnn_degraded": {
+        "ds": 0.5885,
+        "cnn_only": 0.2515,
+        "K_mean": 0.2201
+      },
+      "snr_5dB": {
+        "ds": 0.496,
+        "cnn_only": 0.3796,
+        "K_mean": 0.0744
+      }
+    },
+    "high_0.0_medium_0.0": {
+      "clean": {
+        "ds": 1.0,
+        "cnn_only": 1.0,
+        "K_mean": 0.0008
+      },
+      "cnn_degraded": {
+        "ds": 0.2515,
+        "cnn_only": 0.2515,
+        "K_mean": 0.2121
+      },
+      "snr_5dB": {
+        "ds": 0.496,
+        "cnn_only": 0.3796,
+        "K_mean": 0.0639
+      }
+    }
+  },
+  "E_ablation": {
+    "full": {
+      "clean": {
+        "ds": 1.0,
+        "cnn_only": 1.0
+      },
+      "cnn_degraded": {
+        "ds": 0.6194,
+        "cnn_only": 0.2515
+      },
+      "snr_5dB": {
+        "ds": 0.496,
+        "cnn_only": 0.3796
+      }
+    },
+    "no_physics": {
+      "clean": {
+        "ds": 1.0,
+        "cnn_only": 1.0
+      },
+      "cnn_degraded": {
+        "ds": 0.6194,
+        "cnn_only": 0.2515
+      },
+      "snr_5dB": {
+        "ds": 0.3796,
+        "cnn_only": 0.3796
+      }
+    },
+    "no_signal": {
+      "clean": {
+        "ds": 1.0,
+        "cnn_only": 1.0
+      },
+      "cnn_degraded": {
+        "ds": 0.2515,
+        "cnn_only": 0.2515
+      },
+      "snr_5dB": {
+        "ds": 0.496,
+        "cnn_only": 0.3796
+      }
+    },
+    "cnn_only_evidence": {
+      "clean": {
+        "ds": 1.0,
+        "cnn_only": 1.0
+      },
+      "cnn_degraded": {
+        "ds": 0.2515,
+        "cnn_only": 0.2515
+      },
+      "snr_5dB": {
+        "ds": 0.3796,
+        "cnn_only": 0.3796
+      }
+    }
+  },
+  "config": {
+    "dataset": "CWRU 驱动端 DE，12kHz",
+    "split": "物理文件分层划分 train0.7/val0.15/test0.15，seed=42（与第4章一致）",
+    "n_test": 1881,
+    "rules": {
+      "cnn_only": "直接取 CNN softmax argmax",
+      "legacy": "原经验规则：信号与CNN一致则置信度+0.02，否则保持原值（从不改变判定类别）",
+      "ds": "CNN/信号/物理三路 Shafer 折扣后 Dempster 合成"
+    },
+    "alpha_default": {
+      "cnn_trained": 0.9,
+      "cnn_heuristic": 0.5,
+      "signal_high": 0.85,
+      "signal_medium": 0.6,
+      "signal_low": 0.0,
+      "physics_normal": 0.55,
+      "physics_mild": 0.4,
+      "physics_severe": 0.7
+    }
+  }
+}

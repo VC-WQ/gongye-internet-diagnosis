@@ -1,0 +1,35 @@
+﻿杞藉叆娴嬭瘯闆?...
+娴嬭瘯鏍锋湰 1881锛岀被鍒垎甯冿細
+  normal: 473
+  inner_race: 469
+  outer_race: 471
+  ball: 468
+
+[鍗忚 A] 骞插噣娴嬭瘯闆嗚瘉鎹瀯閫?...
+  浠匔NN=1.0  鍘熻鍒?1.0  D-S=1.0
+  K: mean=0.0035 max=0.765 frac>0.5=0.0027
+
+[鍗忚 C] CNN 闄嶇骇涓哄惎鍙戝紡 ...
+  浠匔NN=0.2515  鍘熻鍒?0.2515  D-S=0.6194
+
+[鍗忚 B] 鍣０椴佹鎬?...
+  SNR= 20dB  浠匔NN=1.0  鍘熻鍒?1.0  D-S=1.0  K鍧囧€?0.0033
+  SNR= 10dB  浠匔NN=0.807  鍘熻鍒?0.807  D-S=0.8363  K鍧囧€?0.049
+  SNR=  5dB  浠匔NN=0.3796  鍘熻鍒?0.3796  D-S=0.496  K鍧囧€?0.1264
+  SNR=  0dB  浠匔NN=0.2504  鍘熻鍒?0.2504  D-S=0.2504  K鍧囧€?0.0681
+
+[鍗忚 D] 鎶樻墸鍥犲瓙鏁忔劅鎬э紙涓夌鏉′欢涓嬶級...
+  伪(high/medium)=0.85/0.6: clean=1.0  cnn_degraded=0.6194  snr_5dB=0.496
+  伪(high/medium)=0.6/0.45: clean=1.0  cnn_degraded=0.6194  snr_5dB=0.496
+  伪(high/medium)=0.4/0.3: clean=1.0  cnn_degraded=0.5885  snr_5dB=0.496
+  伪(high/medium)=0.2/0.1: clean=1.0  cnn_degraded=0.5885  snr_5dB=0.496
+  伪(high/medium)=0.0/0.0: clean=1.0  cnn_degraded=0.2515  snr_5dB=0.496
+
+[鍗忚 E] 璇佹嵁娑堣瀺锛堜笁绉嶆潯浠朵笅锛?..
+  full              : clean=1.0  cnn_degraded=0.6194  snr_5dB=0.496
+  no_physics        : clean=1.0  cnn_degraded=0.6194  snr_5dB=0.3796
+  no_signal         : clean=1.0  cnn_degraded=0.2515  snr_5dB=0.496
+  cnn_only_evidence : clean=1.0  cnn_degraded=0.2515  snr_5dB=0.3796
+
+杈撳嚭: D:\浼佷笟浜戠郴缁焅宸ヤ笟浜掕仈缃戠郴缁焅backend\app\data\ch6_ds_fusion.json
+EXIT=0

@@ -1,0 +1,144 @@
+=== 接口总数（/api 前缀）: 73 ===
+
+=== 按二级前缀分组 ===
+  api/v1/acoustic                    3 个
+  api/v1/anomaly-detect              2 个
+  api/v1/auth                        3 个
+  api/v1/command-loop                8 个
+  api/v1/devices                     7 个
+  api/v1/digital-twin                2 个
+  api/v1/edge-inference              2 个
+  api/v1/feedback                    2 个
+  api/v1/mqtt-pipeline               6 个
+  api/v1/multi-agent                 2 个
+  api/v1/records                     3 个
+  api/v1/reports                     3 个
+  api/v1/self-eval                   2 个
+  api/v1/threshold                   6 个
+  api/v1/timeline                    2 个
+  api/v1/users                       4 个
+  api/v1/vision                      4 个
+  api/v1/viz                         12 个
+  分组数: 18
+
+=== 完整接口清单 ===
+  POST    /api/v1/acoustic/fuse
+  GET     /api/v1/acoustic/fuse-device/{device_id}
+  GET     /api/v1/acoustic/spectrum/{device_id}
+  POST    /api/v1/anomaly-detect/{device_id}/detect
+  POST    /api/v1/anomaly-detect/{device_id}/residual
+  POST    /api/v1/auth/login
+  GET     /api/v1/auth/me
+  POST    /api/v1/auth/register
+  GET     /api/v1/command-loop/events
+  POST    /api/v1/command-loop/events
+  GET     /api/v1/command-loop/events/{event_id}
+  POST    /api/v1/command-loop/events/{event_id}/confirm
+  POST    /api/v1/command-loop/events/{event_id}/execute
+  POST    /api/v1/command-loop/events/{event_id}/reject
+  POST    /api/v1/command-loop/events/{event_id}/revise
+  GET     /api/v1/command-loop/events/{event_id}/timeline
+  GET     /api/v1/devices
+  POST    /api/v1/devices
+  DELETE  /api/v1/devices/{device_id}
+  GET     /api/v1/devices/{device_id}
+  PUT     /api/v1/devices/{device_id}
+  GET     /api/v1/devices/{device_id}/health-history
+  POST    /api/v1/devices/{device_id}/inject
+  POST    /api/v1/digital-twin/{device_id}/simulate
+  GET     /api/v1/digital-twin/{device_id}/snapshot
+  POST    /api/v1/edge-inference/{device_id}/infer
+  POST    /api/v1/edge-inference/{device_id}/register
+  POST    /api/v1/feedback/{diagnosis_id}
+  GET     /api/v1/feedback/{diagnosis_id}/evaluate
+  GET     /api/v1/mqtt-pipeline/devices
+  POST    /api/v1/mqtt-pipeline/start
+  POST    /api/v1/mqtt-pipeline/stop
+  GET     /api/v1/mqtt-pipeline/window/{device_id}
+          /api/v1/mqtt-pipeline/ws
+  POST    /api/v1/mqtt-pipeline/{device_id}/command
+  GET     /api/v1/multi-agent/agents
+  POST    /api/v1/multi-agent/consult
+  GET     /api/v1/records
+  DELETE  /api/v1/records/{record_id}
+  GET     /api/v1/records/{record_id}
+  POST    /api/v1/reports/event/{event_id}
+  POST    /api/v1/reports/flash
+  GET     /api/v1/reports/self-eval
+  GET     /api/v1/self-eval/loops
+  GET     /api/v1/self-eval/metrics
+  GET     /api/v1/threshold/effects
+  GET     /api/v1/threshold/effects/{suggestion_id}
+  GET     /api/v1/threshold/history/{device_id}
+  GET     /api/v1/threshold/suggestions
+  POST    /api/v1/threshold/suggestions/{suggestion_id}/accept
+  POST    /api/v1/threshold/suggestions/{suggestion_id}/reject
+  GET     /api/v1/timeline/device/{device_id}
+  GET     /api/v1/timeline/event/{event_id}
+  GET     /api/v1/users
+  POST    /api/v1/users
+  DELETE  /api/v1/users/{user_id}
+  PUT     /api/v1/users/{user_id}
+  GET     /api/v1/vision/comparison
+  POST    /api/v1/vision/detect
+  GET     /api/v1/vision/models
+  GET     /api/v1/vision/samples
+  GET     /api/v1/viz/classification
+  GET     /api/v1/viz/cwru-signal
+  GET     /api/v1/viz/dataset-registry
+  GET     /api/v1/viz/domain-adapt
+  GET     /api/v1/viz/fp-cnn-compare
+  GET     /api/v1/viz/pump-phm
+  GET     /api/v1/viz/rul-ml
+  GET     /api/v1/viz/rul-sde-pf
+  GET     /api/v1/viz/smartfactory
+  GET     /api/v1/viz/steam
+  GET     /api/v1/viz/steam-ml
+  GET     /api/v1/viz/xjtu-rul
+
+
+=== multi_agent: graph.py ===
+--- 节点/边关键字计数 ---
+  add_node: 9, add_edge: 13, conditional_edges: 0
+  USE_LANGGRAPH/LANGGRAPH 相关: ['    _HAS_LANGGRAPH = True', '    _HAS_LANGGRAPH = False', '        self._compiled = self._build_graph() if _HAS_LANGGRAPH else None']
+
+=== multi_agent: agents.py 类与角色 ===
+  PhysicalResidualAgent(BaseAgent)
+  FaultDiagnosisAgent(BaseAgent)
+  DecisionAgent(BaseAgent)
+--- ROLE/name 定义 ---
+  physical_residual
+  物理残差 Agent
+  fault_diagnosis
+  故障分类 Agent
+  decision
+  决策 Agent
+
+=== multi_agent: schemas.py ===
+  行数 201
+  class FaultType
+
+=== command_loop: state_machine.py ===
+  状态枚举: []
+  TRANSITIONS: EventState.NORMAL:     {EventState.WARNING, EventState.ALARM},   # 允许骤降跳过预警（决策4）
+    EventState.WARNING:    {EventState.NORMAL, EventState.ALARM},
+    EventState.ALARM:      {EventState.WARNING, EventState.CONSULTING},
+    EventState.CONSULTING: {EventState.PENDING},
+    EventState.PENDING:    {EventState.HANDLING, EventState.ALARM},  # 确认→处置 / 拒绝→回告警
+    EventState.HANDLING:   {EventState.OBSERVING},
+    EventState.OBSERVING:  {EventState.RECOVERED, EventState.RELAPSED},
+    EventState.RELAPSED:   {EventState.CONSULTING},                  # 复发→再诊断
+    EventState.RECOVERED:  {EventState.NORMAL},
+
+=== 降级路径关键字 ===
+  cnn_classifier.py: ['    import torch', '    import torch.nn as nn', '    _HAS_TORCH = True', 'except ImportError:  # pragma: no cover', '    _HAS_TORCH = False', 'class FaultCNN(nn.Module if _HAS_TORCH else object):']
+  pinn_residual.py: ['    import torch', '    import torch.nn as nn', '    _HAS_TORCH = True', 'except ImportError:  # pragma: no cover', '    _HAS_TORCH = False', 'class PhysicsInformedNN(nn.Module if _HAS_TORCH else object):']
+
+=== simulators ===
+  edge_inference.py  310 行
+  local_broker.py  40 行
+  virtual_device.py  547 行
+
+=== frontend 页面 ===
+  路由 path: ['/', '/dashboard', '/diagnose', '/devices', '/device/:deviceId', '/lab', '/ops', '/admin/users', '/admin/devices', '/admin/records', '*', '/login', '*']
+  页面数(import pages): 10

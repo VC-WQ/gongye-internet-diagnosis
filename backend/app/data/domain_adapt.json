@@ -1,0 +1,312 @@
+{
+  "experiment": "跨域自适应：CWRU 试验台 → 离心泵/电机/空压机三类仿真设备",
+  "problem": "故障分类 CNN 在 CWRU 实验室试验台（SKF-6205、1797rpm、12kHz、低噪声、近乎无环境干扰）上训练，直接用于现场三类设备时，因转速、结构共振频率、传感器增益与噪声底全面不同而产生分布漂移。",
+  "source_domain": {
+    "name": "CWRU 轴承数据集（实验室电机试验台）",
+    "profile": {
+      "shaft_rpm": 1797.0,
+      "fs": 12000.0,
+      "n_balls": 9,
+      "ball_diam_mm": 7.94,
+      "pitch_diam_mm": 39.04,
+      "resonance_hz": 4200.0,
+      "damping": 1200.0,
+      "snr_db": 18.0,
+      "load_modulation": 0.25
+    },
+    "freqs": {
+      "FTF": 11.929367315573769,
+      "BPFO": 107.36430584016391,
+      "BPFI": 162.1856941598361,
+      "BSF": 70.58459401582566
+    },
+    "n_train": 7525,
+    "n_test": 1881
+  },
+  "target_construction": "目标域不是从零合成的独立数据集，而是对 CWRU 源域样本施加四类物理可解释的工况变换得到：① 转速变化（时间轴缩放，频率按比例平移）；② 结构共振差异（频域带通整形）；③ 传感器增益；④ 现场噪声底（按设备信噪比叠加带限噪声）。这是域自适应研究构造目标域的标准做法（CWRU 不同载荷/转速本身即为公认的跨域基准），既保留了'同一类故障在不同设备上表现不同'的物理语义，又保证目标域本身可学习。",
+  "target_domains": {
+    "PUMP-01": {
+      "name": "离心泵 PUMP-01",
+      "shaft_rpm": 1780.0,
+      "fs": 12000.0,
+      "resonance_hz": 3900.0,
+      "snr_db": 15.0,
+      "sensor_gain": 1.0,
+      "bearing": {
+        "n_balls": 8,
+        "ball_diam_mm": 9.525,
+        "pitch_diam_mm": 46.4
+      },
+      "freqs": {
+        "FTF": 11.79,
+        "BPFO": 94.31,
+        "BPFI": 143.03,
+        "BSF": 69.21
+      },
+      "n_train_unlabeled": 1500,
+      "n_test": 600
+    },
+    "MOTOR-02": {
+      "name": "三相异步电机 MOTOR-02",
+      "shaft_rpm": 1880.0,
+      "fs": 12000.0,
+      "resonance_hz": 4500.0,
+      "snr_db": 17.0,
+      "sensor_gain": 1.08,
+      "bearing": {
+        "n_balls": 9,
+        "ball_diam_mm": 7.94,
+        "pitch_diam_mm": 39.04
+      },
+      "freqs": {
+        "FTF": 12.48,
+        "BPFO": 112.32,
+        "BPFI": 169.68,
+        "BSF": 73.84
+      },
+      "n_train_unlabeled": 1500,
+      "n_test": 600
+    },
+    "COMP-03": {
+      "name": "螺杆空压机 COMP-03",
+      "shaft_rpm": 1700.0,
+      "fs": 12000.0,
+      "resonance_hz": 3600.0,
+      "snr_db": 13.0,
+      "sensor_gain": 0.95,
+      "bearing": {
+        "n_balls": 7,
+        "ball_diam_mm": 12.7,
+        "pitch_diam_mm": 58.5
+      },
+      "freqs": {
+        "FTF": 11.09,
+        "BPFO": 77.64,
+        "BPFI": 120.7,
+        "BSF": 62.18
+      },
+      "n_train_unlabeled": 1500,
+      "n_test": 600
+    }
+  },
+  "class_labels": {
+    "Normal": "正常",
+    "IR": "内圈故障",
+    "OR": "外圈故障",
+    "Ball": "滚动体故障"
+  },
+  "methods": {
+    "none": "仅用源域有标签数据训练，直接迁移（下界）",
+    "coral": "CORAL：对齐源域与目标域特征的二阶统计量（协方差），无需目标域标签",
+    "dann": "DANN：梯度反转层 + 域判别器，对抗学习域不变特征，无需目标域标签",
+    "oracle": "目标域带标签训练（性能上界，现场通常不可得）"
+  },
+  "results": [
+    {
+      "id": "V0",
+      "title": "V0 源域直接迁移（无自适应）",
+      "model": "cnn",
+      "method": "none",
+      "source_test_accuracy": 1.0,
+      "target_macro_accuracy": 0.2695,
+      "per_device": {
+        "PUMP-01": {
+          "name": "离心泵 PUMP-01",
+          "accuracy": 0.265,
+          "per_class": {
+            "Normal": 0.0067,
+            "IR": 0.0,
+            "OR": 1.0,
+            "Ball": 0.0
+          }
+        },
+        "MOTOR-02": {
+          "name": "三相异步电机 MOTOR-02",
+          "accuracy": 0.2767,
+          "per_class": {
+            "Normal": 0.0,
+            "IR": 0.0,
+            "OR": 1.0,
+            "Ball": 0.0
+          }
+        },
+        "COMP-03": {
+          "name": "螺杆空压机 COMP-03",
+          "accuracy": 0.2667,
+          "per_class": {
+            "Normal": 0.0671,
+            "IR": 0.0,
+            "OR": 1.0,
+            "Ball": 0.0
+          }
+        }
+      },
+      "gain_vs_v0": 0.0
+    },
+    {
+      "id": "V1",
+      "title": "V1 FaultCNN + CORAL",
+      "model": "cnn",
+      "method": "coral",
+      "source_test_accuracy": 0.8219,
+      "target_macro_accuracy": 0.6322,
+      "per_device": {
+        "PUMP-01": {
+          "name": "离心泵 PUMP-01",
+          "accuracy": 0.76,
+          "per_class": {
+            "Normal": 1.0,
+            "IR": 0.5548,
+            "OR": 0.5,
+            "Ball": 1.0
+          }
+        },
+        "MOTOR-02": {
+          "name": "三相异步电机 MOTOR-02",
+          "accuracy": 0.6567,
+          "per_class": {
+            "Normal": 1.0,
+            "IR": 0.549,
+            "OR": 1.0,
+            "Ball": 0.0
+          }
+        },
+        "COMP-03": {
+          "name": "螺杆空压机 COMP-03",
+          "accuracy": 0.48,
+          "per_class": {
+            "Normal": 1.0,
+            "IR": 0.4257,
+            "OR": 0.4094,
+            "Ball": 0.0
+          }
+        }
+      },
+      "gain_vs_v0": 0.3627
+    },
+    {
+      "id": "V2",
+      "title": "V2 FaultCNN + DANN",
+      "model": "cnn",
+      "method": "dann",
+      "source_test_accuracy": 0.7501,
+      "target_macro_accuracy": 0.6361,
+      "per_device": {
+        "PUMP-01": {
+          "name": "离心泵 PUMP-01",
+          "accuracy": 0.755,
+          "per_class": {
+            "Normal": 1.0,
+            "IR": 0.0,
+            "OR": 0.9937,
+            "Ball": 1.0
+          }
+        },
+        "MOTOR-02": {
+          "name": "三相异步电机 MOTOR-02",
+          "accuracy": 0.6333,
+          "per_class": {
+            "Normal": 1.0,
+            "IR": 0.4575,
+            "OR": 1.0,
+            "Ball": 0.0
+          }
+        },
+        "COMP-03": {
+          "name": "螺杆空压机 COMP-03",
+          "accuracy": 0.52,
+          "per_class": {
+            "Normal": 1.0,
+            "IR": 0.0068,
+            "OR": 0.9799,
+            "Ball": 0.0072
+          }
+        }
+      },
+      "gain_vs_v0": 0.3666
+    },
+    {
+      "id": "V3",
+      "title": "V3 FP-CNN + CORAL（组合创新）",
+      "model": "fp_cnn",
+      "method": "coral",
+      "source_test_accuracy": 0.7496,
+      "target_macro_accuracy": 0.6478,
+      "per_device": {
+        "PUMP-01": {
+          "name": "离心泵 PUMP-01",
+          "accuracy": 0.7617,
+          "per_class": {
+            "Normal": 1.0,
+            "IR": 0.5685,
+            "OR": 0.4937,
+            "Ball": 1.0
+          }
+        },
+        "MOTOR-02": {
+          "name": "三相异步电机 MOTOR-02",
+          "accuracy": 0.7083,
+          "per_class": {
+            "Normal": 0.9375,
+            "IR": 0.549,
+            "OR": 1.0,
+            "Ball": 0.292
+          }
+        },
+        "COMP-03": {
+          "name": "螺杆空压机 COMP-03",
+          "accuracy": 0.4733,
+          "per_class": {
+            "Normal": 1.0,
+            "IR": 0.5135,
+            "OR": 0.2953,
+            "Ball": 0.0
+          }
+        }
+      },
+      "gain_vs_v0": 0.3783
+    },
+    {
+      "id": "V4",
+      "title": "V4 目标域 Oracle（带标签训练·上界）",
+      "model": "cnn",
+      "method": "oracle",
+      "source_test_accuracy": null,
+      "target_macro_accuracy": 0.9716,
+      "per_device": {
+        "PUMP-01": {
+          "name": "离心泵 PUMP-01",
+          "accuracy": 0.9783,
+          "per_class": {
+            "Normal": 1.0,
+            "IR": 0.911,
+            "OR": 1.0,
+            "Ball": 1.0
+          }
+        },
+        "MOTOR-02": {
+          "name": "三相异步电机 MOTOR-02",
+          "accuracy": 0.9683,
+          "per_class": {
+            "Normal": 1.0,
+            "IR": 0.8758,
+            "OR": 1.0,
+            "Ball": 1.0
+          }
+        },
+        "COMP-03": {
+          "name": "螺杆空压机 COMP-03",
+          "accuracy": 0.9683,
+          "per_class": {
+            "Normal": 1.0,
+            "IR": 0.8716,
+            "OR": 1.0,
+            "Ball": 1.0
+          }
+        }
+      },
+      "gain_vs_v0": 0.7021
+    }
+  ],
+  "conclusion": "源域直接迁移在目标域仅 27.0% 宏平均准确率（四分类随机水平为 25%），证实存在严重域漂移；采用 V3 FP-CNN + CORAL（组合创新） 后提升到 64.8%（+37.8%），且全程不需要任何目标域标签。但该值仅为目标域带标签训练上界 97.2% 的 67%，说明无监督自适应可大幅缓解 domain shift、但尚未完全解决，仍有明确改进空间。"
+}

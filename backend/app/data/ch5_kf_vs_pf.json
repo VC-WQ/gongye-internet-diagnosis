@@ -1,0 +1,178 @@
+{
+  "method": "对数域线性 Kalman 滤波 与 SDE-粒子滤波 的同构对比",
+  "note": "两者共用同一状态方程、噪声参数、观测方程、初始化与留一法协议；差异仅在于后验的表示方式（高斯矩 vs 粒子云）。",
+  "metrics": {
+    "sde_pf": {
+      "mse": 0.0507,
+      "rmse": 0.2253,
+      "mae": 0.1694,
+      "r2": 0.1063,
+      "n_points": 3573
+    },
+    "kalman": {
+      "mse": 0.0755,
+      "rmse": 0.2748,
+      "mae": 0.2078,
+      "r2": -0.3295,
+      "n_points": 3573
+    }
+  },
+  "uncertainty": {
+    "interval": "粒子云 RUL 的 [5%, 95%] 加权分位数区间",
+    "picp": 0.4926,
+    "mpiw": 0.212,
+    "n_points": 3573
+  },
+  "per_bearing": [
+    {
+      "id": "Bearing1_1",
+      "condition": "35Hz12kN",
+      "lifetime": 123,
+      "start": 24,
+      "pf_r2": 0.3487,
+      "kf_r2": 0.1339,
+      "pf_rmse": 0.189,
+      "kf_rmse": 0.218
+    },
+    {
+      "id": "Bearing1_2",
+      "condition": "35Hz12kN",
+      "lifetime": 161,
+      "start": 38,
+      "pf_r2": 0.2904,
+      "kf_r2": -1.2647,
+      "pf_rmse": 0.1869,
+      "kf_rmse": 0.334
+    },
+    {
+      "id": "Bearing1_3",
+      "condition": "35Hz12kN",
+      "lifetime": 158,
+      "start": 63,
+      "pf_r2": 0.2859,
+      "kf_r2": 0.3866,
+      "pf_rmse": 0.1476,
+      "kf_rmse": 0.1368
+    },
+    {
+      "id": "Bearing1_4",
+      "condition": "35Hz12kN",
+      "lifetime": 122,
+      "start": 89,
+      "pf_r2": -49.0929,
+      "kf_r2": -64.3649,
+      "pf_rmse": 0.557,
+      "kf_rmse": 0.6362
+    },
+    {
+      "id": "Bearing1_5",
+      "condition": "35Hz12kN",
+      "lifetime": 52,
+      "start": 34,
+      "pf_r2": -33.328,
+      "kf_r2": 0.0491,
+      "pf_rmse": 0.596,
+      "kf_rmse": 0.0992
+    },
+    {
+      "id": "Bearing2_1",
+      "condition": "37.5Hz11kN",
+      "lifetime": 491,
+      "start": 452,
+      "pf_r2": -125.024,
+      "kf_r2": -1.1552,
+      "pf_rmse": 0.2578,
+      "kf_rmse": 0.0337
+    },
+    {
+      "id": "Bearing2_2",
+      "condition": "37.5Hz11kN",
+      "lifetime": 161,
+      "start": 46,
+      "pf_r2": 0.3759,
+      "kf_r2": -1.5999,
+      "pf_rmse": 0.1639,
+      "kf_rmse": 0.3345
+    },
+    {
+      "id": "Bearing2_3",
+      "condition": "37.5Hz11kN",
+      "lifetime": 533,
+      "start": 130,
+      "pf_r2": 0.3789,
+      "kf_r2": -0.0016,
+      "pf_rmse": 0.1723,
+      "kf_rmse": 0.2188
+    },
+    {
+      "id": "Bearing2_4",
+      "condition": "37.5Hz11kN",
+      "lifetime": 42,
+      "start": 12,
+      "pf_r2": -1.9432,
+      "kf_r2": -0.3015,
+      "pf_rmse": 0.3622,
+      "kf_rmse": 0.2408
+    },
+    {
+      "id": "Bearing2_5",
+      "condition": "37.5Hz11kN",
+      "lifetime": 339,
+      "start": 130,
+      "pf_r2": -0.1521,
+      "kf_r2": -0.7357,
+      "pf_rmse": 0.1916,
+      "kf_rmse": 0.2352
+    },
+    {
+      "id": "Bearing3_1",
+      "condition": "40Hz10kN",
+      "lifetime": 2538,
+      "start": 2346,
+      "pf_r2": -0.9269,
+      "kf_r2": -8.8128,
+      "pf_rmse": 0.0303,
+      "kf_rmse": 0.0684
+    },
+    {
+      "id": "Bearing3_2",
+      "condition": "40Hz10kN",
+      "lifetime": 2496,
+      "start": 499,
+      "pf_r2": -0.1128,
+      "kf_r2": -0.6039,
+      "pf_rmse": 0.2437,
+      "kf_rmse": 0.2926
+    },
+    {
+      "id": "Bearing3_3",
+      "condition": "40Hz10kN",
+      "lifetime": 371,
+      "start": 341,
+      "pf_r2": -194.6591,
+      "kf_r2": -1.9197,
+      "pf_rmse": 0.3272,
+      "kf_rmse": 0.04
+    },
+    {
+      "id": "Bearing3_4",
+      "condition": "40Hz10kN",
+      "lifetime": 1515,
+      "start": 1417,
+      "pf_r2": 0.02,
+      "kf_r2": -1.8024,
+      "pf_rmse": 0.0185,
+      "kf_rmse": 0.0313
+    },
+    {
+      "id": "Bearing3_5",
+      "condition": "40Hz10kN",
+      "lifetime": 114,
+      "start": 22,
+      "pf_r2": 0.323,
+      "kf_r2": -2.6263,
+      "pf_rmse": 0.1934,
+      "kf_rmse": 0.4475
+    }
+  ]
+}

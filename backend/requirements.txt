@@ -1,0 +1,32 @@
+# Web框架
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20
+
+# 数据与配置
+sqlalchemy==2.0.36
+pydantic==2.10.4
+pydantic-settings==2.7.0
+
+# MQTT通信
+paho-mqtt==2.1.0
+
+# ML/DL
+torch==2.5.1
+numpy==1.26.4
+scipy==1.13.1
+
+# 多Agent框架
+langgraph==0.2.60
+langchain==0.3.13
+
+# LLM SDK（DeepSeek 兼容 OpenAI）
+openai==3.14.1
+
+# 认证与 MySQL
+pymysql==1.2.3
+PyJWT==2.15.1
+bcrypt==5.0.0
+
+# 工具
+python-dotenv==1.0.1

@@ -1,0 +1,51 @@
+{
+  "clean": {
+    "signal_available_rate": 0.3705,
+    "signal_directed_correct_rate": 0.9928,
+    "physics_non_normal_rate": 0.7485,
+    "severity_dist": {
+      "severe": 0.4157,
+      "mild": 0.3328,
+      "normal": 0.2515
+    }
+  },
+  "20dB": {
+    "signal_available_rate": 0.3674,
+    "signal_directed_correct_rate": 0.9942,
+    "physics_non_normal_rate": 0.7485,
+    "severity_dist": {
+      "severe": 0.4195,
+      "mild": 0.3291,
+      "normal": 0.2515
+    }
+  },
+  "10dB": {
+    "signal_available_rate": 0.344,
+    "signal_directed_correct_rate": 0.9969,
+    "physics_non_normal_rate": 0.7485,
+    "severity_dist": {
+      "severe": 0.4556,
+      "mild": 0.2929,
+      "normal": 0.2515
+    }
+  },
+  "5dB": {
+    "signal_available_rate": 0.3179,
+    "signal_directed_correct_rate": 0.9983,
+    "physics_non_normal_rate": 0.7485,
+    "severity_dist": {
+      "severe": 0.496,
+      "mild": 0.2525,
+      "normal": 0.2515
+    }
+  },
+  "0dB": {
+    "signal_available_rate": 0.3094,
+    "signal_directed_correct_rate": 0.9536,
+    "physics_non_normal_rate": 1.0,
+    "severity_dist": {
+      "severe": 0.5752,
+      "mild": 0.4248
+    }
+  }
+}

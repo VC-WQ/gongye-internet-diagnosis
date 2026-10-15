@@ -1,0 +1,42 @@
+﻿python.exe : D:\浼佷笟浜戠郴缁焅宸ヤ笟浜掕仈缃戠郴缁焅backend\app\modules\multi_agent\signal_tools.py:18: UserWarning: A NumPy version >=1
+.22.4 and <2.3.0 is required for this version of SciPy (detected version 2.4.6)
+所在位置 行:449 字符: 1
++ & $py -u "scripts\ch6_ds_fusion.py" *>&1 | Out-File -FilePath $log -E ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (D:\浼佷笟浜戠郴缁焅宸ヤ笟浜... version 2.4.6):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  from scipy.signal import find_peaks, hilbert
+杞藉叆娴嬭瘯闆?...
+娴嬭瘯鏍锋湰 1881锛岀被鍒垎甯冿細
+  normal: 473
+  inner_race: 469
+  outer_race: 471
+  ball: 468
+
+[鍗忚 A] 骞插噣娴嬭瘯闆嗚瘉鎹瀯閫?...
+  浠匔NN=1.0  鍘熻鍒?1.0  D-S=1.0
+  K: mean=0.0035 max=0.765 frac>0.5=0.0027
+
+[鍗忚 C] CNN 闄嶇骇涓哄惎鍙戝紡 ...
+  浠匔NN=0.2515  鍘熻鍒?0.2515  D-S=0.6194
+
+[鍗忚 B] 鍣０椴佹鎬?...
+  SNR= 20dB  浠匔NN=1.0  鍘熻鍒?1.0  D-S=1.0  K鍧囧€?0.0033
+  SNR= 10dB  浠匔NN=0.807  鍘熻鍒?0.807  D-S=0.8363  K鍧囧€?0.049
+  SNR=  5dB  浠匔NN=0.3796  鍘熻鍒?0.3796  D-S=0.496  K鍧囧€?0.1264
+  SNR=  0dB  浠匔NN=0.2504  鍘熻鍒?0.2504  D-S=0.2504  K鍧囧€?0.0681
+
+[鍗忚 D] 鎶樻墸鍥犲瓙鏁忔劅鎬э紙骞插噣鏁版嵁锛岄噸鐢ㄩ€?A 鐨勮瘉鎹級...
+  伪(high/medium)=0.85/0.6: D-S=1.0  浠匔NN=1.0
+  伪(high/medium)=0.6/0.45: D-S=1.0  浠匔NN=1.0
+  伪(high/medium)=0.4/0.3: D-S=1.0  浠匔NN=1.0
+  伪(high/medium)=0.2/0.1: D-S=1.0  浠匔NN=1.0
+  伪(high/medium)=0.0/0.0: D-S=1.0  浠匔NN=1.0
+
+[鍗忚 E] 鐗╃悊璇佹嵁娑堣瀺 ...
+  鍘荤墿鐞嗚瘉鎹? D-S=1.0
+  鍘讳俊鍙疯瘉鎹? D-S=1.0
+
+杈撳嚭: D:\浼佷笟浜戠郴缁焅宸ヤ笟浜掕仈缃戠郴缁焅backend\app\data\ch6_ds_fusion.json
+EXIT=0

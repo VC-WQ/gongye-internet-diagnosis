@@ -1,0 +1,117 @@
+/* 全局样式：深色科技大屏主题 */
+
+body {
+  margin: 0;
+  /* 深蓝近黑底 + 两处冷青环境光，营造科技驾驶舱纵深 */
+  background:
+    radial-gradient(1200px 600px at 85% -10%, rgba(34, 211, 238, 0.08), transparent 60%),
+    radial-gradient(1000px 700px at -10% 110%, rgba(56, 132, 255, 0.10), transparent 55%),
+    #0b1220;
+  background-attachment: fixed;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  color: #e6edf7;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 数据看板：所有数字启用等宽表格数字，对齐更专业 */
+.ant-statistic-content,
+.ant-statistic-content-value {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 顶部导航：深色悬浮玻璃 + 底部细分隔线，去掉蓝色渐变 */
+.ant-layout-header {
+  background: rgba(13, 20, 36, 0.82) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+/* 内容区背景透明，露出全局深色环境光 */
+.ant-layout-content {
+  background: transparent !important;
+}
+
+/* 卡片：暗色面板 + 细描边 + 微妙阴影，深色下用描边表达层级 */
+.ant-card {
+  border-radius: 12px !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(148, 163, 184, 0.14) !important;
+  background: rgba(17, 26, 46, 0.72);
+  transition: border-color 0.22s ease, transform 0.22s ease, box-shadow 0.22s ease;
+}
+
+.ant-card-hoverable:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.45);
+  border-color: rgba(34, 211, 238, 0.35) !important;
+}
+
+/* 健康分大数字：青蓝渐变填充 */
+.health-big {
+  font-size: 46px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -1px;
+  font-variant-numeric: tabular-nums;
+  background-clip: text;
+  -webkit-background-clip: text;
+}
+
+/* 状态圆点呼吸光环（真实语义状态指示） */
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  position: relative;
+}
+
+.status-dot::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  animation: statusPulse 1.8s ease-out infinite;
+  background: inherit;
+}
+
+@keyframes statusPulse {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.55;
+  }
+  70% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
+
+/* 品牌标题 */
+.app-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #e6edf7;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-right: 32px;
+  white-space: nowrap;
+}
+
+.app-title .logo-dot {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #22d3ee 0%, #38bdf8 100%);
+  box-shadow: 0 0 14px rgba(34, 211, 238, 0.55);
+}

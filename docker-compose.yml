@@ -1,0 +1,54 @@
+services:
+  backend:
+    build: ./backend
+    container_name: diagnosis-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:////app/data/industrial_diagnosis.db
+      - MQTT_HOST=mqtt
+      - MQTT_PORT=1883
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+      - DEEPSEEK_BASE_URL=${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
+      - DEEPSEEK_MODEL=${DEEPSEEK_MODEL:-deepseek-chat}
+    volumes:
+      - ./backend/data:/app/data
+      - ./models:/models
+      - ./datasets:/datasets
+    depends_on:
+      - mqtt
+    networks:
+      - diagnosis-net
+
+  frontend:
+    build: ./frontend
+    container_name: diagnosis-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - diagnosis-net
+
+  mqtt:
+    image: eclipse-mosquitto:2
+    container_name: diagnosis-mqtt
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mqtt/mosquitto.conf:/mosquitto/config/mosquitto.conf
+    networks:
+      - diagnosis-net
+
+  simulator:
+    build: ./simulators
+    container_name: diagnosis-simulator
+    depends_on:
+      - mqtt
+    networks:
+      - diagnosis-net
+
+networks:
+  diagnosis-net:
+    driver: bridge

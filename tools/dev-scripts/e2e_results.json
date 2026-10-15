@@ -1,0 +1,4246 @@
+[
+  {
+    "class": "Normal",
+    "index": 11004,
+    "result": {
+      "device_id": "e2e-Normal-11004",
+      "fault_type": "normal",
+      "fault_label": "正常",
+      "confidence": 0.9996,
+      "health_score": 97.65,
+      "health_level": "healthy",
+      "level_label": "正常",
+      "available_channels": [
+        "vibration"
+      ],
+      "agent_results": [
+        {
+          "agent_role": "signal_analyst",
+          "agent_name": "信号分析 Agent",
+          "conclusion": "包络谱无显著特征频率峰值，提示正常工况",
+          "fault_type": "normal",
+          "confidence": 0.4,
+          "evidence": "BPFO=107.666Hz 幅值0.002313（理论107.365Hz，偏差0.281%） | BPFI=159.668Hz 幅值0.004893（理论162.185Hz，偏差1.552%） | BSF=69.58Hz 幅值0.006187（理论70.583Hz，偏差1.421%） | 2xBSF=143.555Hz 幅值0.007594（理论141.166Hz，偏差1.692%）",
+          "details": {
+            "rpm": 1797.0,
+            "horsepower": null,
+            "spectrum_peaks": [
+              {
+                "frequency": 2103.516,
+                "amplitude": 0.0377
+              },
+              {
+                "frequency": 1066.406,
+                "amplitude": 0.0273
+              },
+              {
+                "frequency": 87.891,
+                "amplitude": 0.02442
+              },
+              {
+                "frequency": 1037.109,
+                "amplitude": 0.02419
+              },
+              {
+                "frequency": 351.562,
+                "amplitude": 0.01546
+              }
+            ],
+            "envelope_peaks": [
+              {
+                "frequency": 27.1,
+                "amplitude": 0.01436
+              },
+              {
+                "frequency": 2011.963,
+                "amplitude": 0.01098
+              },
+              {
+                "frequency": 1004.15,
+                "amplitude": 0.01006
+              },
+              {
+                "frequency": 945.557,
+                "amplitude": 0.00978
+              },
+              {
+                "frequency": 1036.377,
+                "amplitude": 0.00952
+              }
+            ],
+            "signal_evidence": {
+              "dominant_peak": "none",
+              "peaks": {
+                "BPFO": {
+                  "freq": 107.666,
+                  "theoretical": 107.365,
+                  "deviation_pct": 0.281,
+                  "magnitude": 0.002313,
+                  "significant": false
+                },
+                "BPFI": {
+                  "freq": 159.668,
+                  "theoretical": 162.185,
+                  "deviation_pct": 1.552,
+                  "magnitude": 0.004893,
+                  "significant": false
+                },
+                "BSF": {
+                  "freq": 69.58,
+                  "theoretical": 70.583,
+                  "deviation_pct": 1.421,
+                  "magnitude": 0.006187,
+                  "significant": false
+                },
+                "2xBSF": {
+                  "freq": 143.555,
+                  "theoretical": 141.166,
+                  "deviation_pct": 1.692,
+                  "magnitude": 0.007594,
+                  "significant": false
+                }
+              },
+              "significance_ratio": 1.2274,
+              "evidence": [
+                "BPFO=107.666Hz 幅值0.002313（理论107.365Hz，偏差0.281%）",
+                "BPFI=159.668Hz 幅值0.004893（理论162.185Hz，偏差1.552%）",
+                "BSF=69.58Hz 幅值0.006187（理论70.583Hz，偏差1.421%）",
+                "2xBSF=143.555Hz 幅值0.007594（理论141.166Hz，偏差1.692%）"
+              ],
+              "signal_reliability": "low"
+            }
+          }
+        },
+        {
+          "agent_role": "physical_residual",
+          "agent_name": "物理残差 Agent",
+          "conclusion": "PINN 物理残差处于正常基线范围内",
+          "fault_type": "normal",
+          "confidence": 0.6,
+          "evidence": "PINN残差0.0191，接近Normal基线0.019",
+          "details": {
+            "residual": 0.0191,
+            "pinn_source": "trained_model",
+            "residual_severity": "normal",
+            "residual_ratio": 1.0
+          }
+        },
+        {
+          "agent_role": "knowledge_retrieval",
+          "agent_name": "知识检索 Agent",
+          "conclusion": "知识库检索到「正常」故障模式，提供频谱特征与维护依据",
+          "fault_type": "normal",
+          "confidence": 1.0,
+          "evidence": "故障类型「normal」知识库引用：",
+          "details": {
+            "kb_entry": {},
+            "matched": true,
+            "citation": "故障类型「normal」知识库引用：",
+            "recommendation": ""
+          }
+        },
+        {
+          "agent_role": "fault_diagnosis",
+          "agent_name": "故障分类 Agent",
+          "conclusion": "故障分类结论：正常（置信度 0.9996）",
+          "fault_type": "normal",
+          "confidence": 0.9996,
+          "evidence": "CNN 判定为正常工况",
+          "details": {
+            "cnn_source": "trained_model",
+            "probabilities": {
+              "normal": 0.9995757937431335,
+              "inner_race": 0.000268448464339599,
+              "outer_race": 6.212748121470213e-05,
+              "ball": 9.364174911752343e-05
+            }
+          }
+        },
+        {
+          "agent_role": "decision",
+          "agent_name": "决策 Agent",
+          "conclusion": "设备判定为「正常」，信号/物理/知识证据交叉验证一致（置信度 0.9996）。",
+          "fault_type": "normal",
+          "confidence": 0.9996,
+          "evidence": "健康分=97.65，参与 Agent=['signal_analyst', 'physical_residual', 'knowledge_retrieval', 'fault_diagnosis']",
+          "details": {
+            "report": {
+              "summary": "设备判定为「正常」，信号/物理/知识证据交叉验证一致（置信度 0.9996）。",
+              "physical_evidence": "PINN残差0.0191，接近Normal基线0.019",
+              "signal_evidence": "信号证据不足（无显著特征频率峰）",
+              "knowledge_basis": "故障类型「normal」知识库引用：",
+              "diagnosis": {
+                "fault_type": "normal",
+                "confidence": 0.9996,
+                "reasoning": "以 1D-CNN 分类为主判断：正常（置信度 0.9996）；信号分析未提供充分主导峰证据；物理残差严重度 normal，健康分等级 healthy。"
+              },
+              "impact": "当前设备运行参数正常（健康分 97.65），未发现明显异常迹象。",
+              "recommendation": "设备运行正常，持续监测并保持定期润滑即可。",
+              "follow_up_questions": [
+                "近期是否出现异常振动、异响或温升？",
+                "润滑周期是否按计划执行？"
+              ]
+            },
+            "conflict_detected": false,
+            "conflicts": [],
+            "resolution": "各诊断 Agent 结论一致，无需仲裁",
+            "signal_evidence": "insufficient"
+          }
+        }
+      ],
+      "recommendation": "设备运行正常，持续监测并保持定期润滑即可。",
+      "report": {
+        "summary": "设备判定为「正常」，信号/物理/知识证据交叉验证一致（置信度 0.9996）。",
+        "physical_evidence": "PINN残差0.0191，接近Normal基线0.019",
+        "signal_evidence": "信号证据不足（无显著特征频率峰）",
+        "knowledge_basis": "故障类型「normal」知识库引用：",
+        "diagnosis": {
+          "fault_type": "normal",
+          "confidence": 0.9996,
+          "reasoning": "以 1D-CNN 分类为主判断：正常（置信度 0.9996）；信号分析未提供充分主导峰证据；物理残差严重度 normal，健康分等级 healthy。"
+        },
+        "impact": "当前设备运行参数正常（健康分 97.65），未发现明显异常迹象。",
+        "recommendation": "设备运行正常，持续监测并保持定期润滑即可。",
+        "follow_up_questions": [
+          "近期是否出现异常振动、异响或温升？",
+          "润滑周期是否按计划执行？"
+        ]
+      },
+      "conflicts": [],
+      "conflict_detected": false
+    }
+  },
+  {
+    "class": "Normal",
+    "index": 9899,
+    "result": {
+      "device_id": "e2e-Normal-9899",
+      "fault_type": "normal",
+      "fault_label": "正常",
+      "confidence": 0.9998,
+      "health_score": 97.51,
+      "health_level": "healthy",
+      "level_label": "正常",
+      "available_channels": [
+        "vibration"
+      ],
+      "agent_results": [
+        {
+          "agent_role": "signal_analyst",
+          "agent_name": "信号分析 Agent",
+          "conclusion": "包络谱无显著特征频率峰值，提示正常工况",
+          "fault_type": "normal",
+          "confidence": 0.4,
+          "evidence": "BPFO=109.131Hz 幅值0.00484（理论107.365Hz，偏差1.645%） | BPFI=160.4Hz 幅值0.003433（理论162.185Hz，偏差1.101%） | BSF=68.115Hz 幅值0.002842（理论70.583Hz，偏差3.496%） | 2xBSF=143.555Hz 幅值0.003361（理论141.166Hz，偏差1.692%）",
+          "details": {
+            "rpm": 1797.0,
+            "horsepower": null,
+            "spectrum_peaks": [
+              {
+                "frequency": 2103.516,
+                "amplitude": 0.04133
+              },
+              {
+                "frequency": 1066.406,
+                "amplitude": 0.02595
+              },
+              {
+                "frequency": 87.891,
+                "amplitude": 0.0252
+              },
+              {
+                "frequency": 234.375,
+                "amplitude": 0.02029
+              },
+              {
+                "frequency": 1007.812,
+                "amplitude": 0.01874
+              }
+            ],
+            "envelope_peaks": [
+              {
+                "frequency": 1035.645,
+                "amplitude": 0.01135
+              },
+              {
+                "frequency": 859.131,
+                "amplitude": 0.01091
+              },
+              {
+                "frequency": 2012.695,
+                "amplitude": 0.01078
+              },
+              {
+                "frequency": 27.832,
+                "amplitude": 0.00966
+              },
+              {
+                "frequency": 976.318,
+                "amplitude": 0.00947
+              }
+            ],
+            "signal_evidence": {
+              "dominant_peak": "none",
+              "peaks": {
+                "BPFO": {
+                  "freq": 109.131,
+                  "theoretical": 107.365,
+                  "deviation_pct": 1.645,
+                  "magnitude": 0.00484,
+                  "significant": false
+                },
+                "BPFI": {
+                  "freq": 160.4,
+                  "theoretical": 162.185,
+                  "deviation_pct": 1.101,
+                  "magnitude": 0.003433,
+                  "significant": false
+                },
+                "BSF": {
+                  "freq": 68.115,
+                  "theoretical": 70.583,
+                  "deviation_pct": 3.496,
+                  "magnitude": 0.002842,
+                  "significant": false
+                },
+                "2xBSF": {
+                  "freq": 143.555,
+                  "theoretical": 141.166,
+                  "deviation_pct": 1.692,
+                  "magnitude": 0.003361,
+                  "significant": false
+                }
+              },
+              "significance_ratio": 1.4098,
+              "evidence": [
+                "BPFO=109.131Hz 幅值0.00484（理论107.365Hz，偏差1.645%）",
+                "BPFI=160.4Hz 幅值0.003433（理论162.185Hz，偏差1.101%）",
+                "BSF=68.115Hz 幅值0.002842（理论70.583Hz，偏差3.496%）",
+                "2xBSF=143.555Hz 幅值0.003361（理论141.166Hz，偏差1.692%）"
+              ],
+              "signal_reliability": "low"
+            }
+          }
+        },
+        {
+          "agent_role": "physical_residual",
+          "agent_name": "物理残差 Agent",
+          "conclusion": "PINN 物理残差处于正常基线范围内",
+          "fault_type": "normal",
+          "confidence": 0.6,
+          "evidence": "PINN残差0.0203，接近Normal基线0.019",
+          "details": {
+            "residual": 0.0203,
+            "pinn_source": "trained_model",
+            "residual_severity": "normal",
+            "residual_ratio": 1.1
+          }
+        },
+        {
+          "agent_role": "knowledge_retrieval",
+          "agent_name": "知识检索 Agent",
+          "conclusion": "知识库检索到「正常」故障模式，提供频谱特征与维护依据",
+          "fault_type": "normal",
+          "confidence": 1.0,
+          "evidence": "故障类型「normal」知识库引用：",
+          "details": {
+            "kb_entry": {},
+            "matched": true,
+            "citation": "故障类型「normal」知识库引用：",
+            "recommendation": ""
+          }
+        },
+        {
+          "agent_role": "fault_diagnosis",
+          "agent_name": "故障分类 Agent",
+          "conclusion": "故障分类结论：正常（置信度 0.9998）",
+          "fault_type": "normal",
+          "confidence": 0.9998,
+          "evidence": "CNN 判定为正常工况",
+          "details": {
+            "cnn_source": "trained_model",
+            "probabilities": {
+              "normal": 0.9997714161872864,
+              "inner_race": 0.00011632730456767604,
+              "outer_race": 5.537164906854741e-05,
+              "ball": 5.6887725804699585e-05
+            }
+          }
+        },
+        {
+          "agent_role": "decision",
+          "agent_name": "决策 Agent",
+          "conclusion": "设备判定为「正常」，信号/物理/知识证据交叉验证一致（置信度 0.9998）。",
+          "fault_type": "normal",
+          "confidence": 0.9998,
+          "evidence": "健康分=97.51，参与 Agent=['signal_analyst', 'physical_residual', 'knowledge_retrieval', 'fault_diagnosis']",
+          "details": {
+            "report": {
+              "summary": "设备判定为「正常」，信号/物理/知识证据交叉验证一致（置信度 0.9998）。",
+              "physical_evidence": "PINN残差0.0203，接近Normal基线0.019",
+              "signal_evidence": "信号证据不足（无显著特征频率峰）",
+              "knowledge_basis": "故障类型「normal」知识库引用：",
+              "diagnosis": {
+                "fault_type": "normal",
+                "confidence": 0.9998,
+                "reasoning": "以 1D-CNN 分类为主判断：正常（置信度 0.9998）；信号分析未提供充分主导峰证据；物理残差严重度 normal，健康分等级 healthy。"
+              },
+              "impact": "当前设备运行参数正常（健康分 97.51），未发现明显异常迹象。",
+              "recommendation": "设备运行正常，持续监测并保持定期润滑即可。",
+              "follow_up_questions": [
+                "近期是否出现异常振动、异响或温升？",
+                "润滑周期是否按计划执行？"
+              ]
+            },
+            "conflict_detected": false,
+            "conflicts": [],
+            "resolution": "各诊断 Agent 结论一致，无需仲裁",
+            "signal_evidence": "insufficient"
+          }
+        }
+      ],
+      "recommendation": "设备运行正常，持续监测并保持定期润滑即可。",
+      "report": {
+        "summary": "设备判定为「正常」，信号/物理/知识证据交叉验证一致（置信度 0.9998）。",
+        "physical_evidence": "PINN残差0.0203，接近Normal基线0.019",
+        "signal_evidence": "信号证据不足（无显著特征频率峰）",
+        "knowledge_basis": "故障类型「normal」知识库引用：",
+        "diagnosis": {
+          "fault_type": "normal",
+          "confidence": 0.9998,
+          "reasoning": "以 1D-CNN 分类为主判断：正常（置信度 0.9998）；信号分析未提供充分主导峰证据；物理残差严重度 normal，健康分等级 healthy。"
+        },
+        "impact": "当前设备运行参数正常（健康分 97.51），未发现明显异常迹象。",
+        "recommendation": "设备运行正常，持续监测并保持定期润滑即可。",
+        "follow_up_questions": [
+          "近期是否出现异常振动、异响或温升？",
+          "润滑周期是否按计划执行？"
+        ]
+      },
+      "conflicts": [],
+      "conflict_detected": false
+    }
+  },
+  {
+    "class": "Normal",
+    "index": 10611,
+    "result": {
+      "device_id": "e2e-Normal-10611",
+      "fault_type": "normal",
+      "fault_label": "正常",
+      "confidence": 0.9997,
+      "health_score": 97.51,
+      "health_level": "healthy",
+      "level_label": "正常",
+      "available_channels": [
+        "vibration"
+      ],
+      "agent_results": [
+        {
+          "agent_role": "signal_analyst",
+          "agent_name": "信号分析 Agent",
+          "conclusion": "包络谱无显著特征频率峰值，提示正常工况",
+          "fault_type": "normal",
+          "confidence": 0.4,
+          "evidence": "BPFO=109.863Hz 幅值0.004252（理论107.365Hz，偏差2.327%） | BPFI=159.668Hz 幅值0.001531（理论162.185Hz，偏差1.552%） | BSF=71.045Hz 幅值0.004062（理论70.583Hz，偏差0.654%） | 2xBSF=143.555Hz 幅值0.006795（理论141.166Hz，偏差1.692%）",
+          "details": {
+            "rpm": 1797.0,
+            "horsepower": null,
+            "spectrum_peaks": [
+              {
+                "frequency": 2103.516,
+                "amplitude": 0.04052
+              },
+              {
+                "frequency": 93.75,
+                "amplitude": 0.02703
+              },
+              {
+                "frequency": 1037.109,
+                "amplitude": 0.02573
+              },
+              {
+                "frequency": 1066.406,
+                "amplitude": 0.0246
+              },
+              {
+                "frequency": 234.375,
+                "amplitude": 0.01605
+              }
+            ],
+            "envelope_peaks": [
+              {
+                "frequency": 28.564,
+                "amplitude": 0.0205
+              },
+              {
+                "frequency": 2009.766,
+                "amplitude": 0.01379
+              },
+              {
+                "frequency": 777.832,
+                "amplitude": 0.01072
+              },
+              {
+                "frequency": 229.248,
+                "amplitude": 0.01028
+              },
+              {
+                "frequency": 946.289,
+                "amplitude": 0.01027
+              }
+            ],
+            "signal_evidence": {
+              "dominant_peak": "none",
+              "peaks": {
+                "BPFO": {
+                  "freq": 109.863,
+                  "theoretical": 107.365,
+                  "deviation_pct": 2.327,
+                  "magnitude": 0.004252,
+                  "significant": false
+                },
+                "BPFI": {
+                  "freq": 159.668,
+                  "theoretical": 162.185,
+                  "deviation_pct": 1.552,
+                  "magnitude": 0.001531,
+                  "significant": false
+                },
+                "BSF": {
+                  "freq": 71.045,
+                  "theoretical": 70.583,
+                  "deviation_pct": 0.654,
+                  "magnitude": 0.004062,
+                  "significant": false
+                },
+                "2xBSF": {
+                  "freq": 143.555,
+                  "theoretical": 141.166,
+                  "deviation_pct": 1.692,
+                  "magnitude": 0.006795,
+                  "significant": false
+                }
+              },
+              "significance_ratio": 1.5981,
+              "evidence": [
+                "BPFO=109.863Hz 幅值0.004252（理论107.365Hz，偏差2.327%）",
+                "BPFI=159.668Hz 幅值0.001531（理论162.185Hz，偏差1.552%）",
+                "BSF=71.045Hz 幅值0.004062（理论70.583Hz，偏差0.654%）",
+                "2xBSF=143.555Hz 幅值0.006795（理论141.166Hz，偏差1.692%）"
+              ],
+              "signal_reliability": "low"
+            }
+          }
+        },
+        {
+          "agent_role": "physical_residual",
+          "agent_name": "物理残差 Agent",
+          "conclusion": "PINN 物理残差处于正常基线范围内",
+          "fault_type": "normal",
+          "confidence": 0.6,
+          "evidence": "PINN残差0.0203，接近Normal基线0.019",
+          "details": {
+            "residual": 0.0203,
+            "pinn_source": "trained_model",
+            "residual_severity": "normal",
+            "residual_ratio": 1.1
+          }
+        },
+        {
+          "agent_role": "knowledge_retrieval",
+          "agent_name": "知识检索 Agent",
+          "conclusion": "知识库检索到「正常」故障模式，提供频谱特征与维护依据",
+          "fault_type": "normal",
+          "confidence": 1.0,
+          "evidence": "故障类型「normal」知识库引用：",
+          "details": {
+            "kb_entry": {},
+            "matched": true,
+            "citation": "故障类型「normal」知识库引用：",
+            "recommendation": ""
+          }
+        },
+        {
+          "agent_role": "fault_diagnosis",
+          "agent_name": "故障分类 Agent",
+          "conclusion": "故障分类结论：正常（置信度 0.9997）",
+          "fault_type": "normal",
+          "confidence": 0.9997,
+          "evidence": "CNN 判定为正常工况",
+          "details": {
+            "cnn_source": "trained_model",
+            "probabilities": {
+              "normal": 0.999685525894165,
+              "inner_race": 0.00019733532099053264,
+              "outer_race": 5.3104689868632704e-05,
+              "ball": 6.39496065559797e-05
+            }
+          }
+        },
+        {
+          "agent_role": "decision",
+          "agent_name": "决策 Agent",
+          "conclusion": "设备判定为「正常」，信号/物理/知识证据交叉验证一致（置信度 0.9997）。",
+          "fault_type": "normal",
+          "confidence": 0.9997,
+          "evidence": "健康分=97.51，参与 Agent=['signal_analyst', 'physical_residual', 'knowledge_retrieval', 'fault_diagnosis']",
+          "details": {
+            "report": {
+              "summary": "设备判定为「正常」，信号/物理/知识证据交叉验证一致（置信度 0.9997）。",
+              "physical_evidence": "PINN残差0.0203，接近Normal基线0.019",
+              "signal_evidence": "信号证据不足（无显著特征频率峰）",
+              "knowledge_basis": "故障类型「normal」知识库引用：",
+              "diagnosis": {
+                "fault_type": "normal",
+                "confidence": 0.9997,
+                "reasoning": "以 1D-CNN 分类为主判断：正常（置信度 0.9997）；信号分析未提供充分主导峰证据；物理残差严重度 normal，健康分等级 healthy。"
+              },
+              "impact": "当前设备运行参数正常（健康分 97.51），未发现明显异常迹象。",
+              "recommendation": "设备运行正常，持续监测并保持定期润滑即可。",
+              "follow_up_questions": [
+                "近期是否出现异常振动、异响或温升？",
+                "润滑周期是否按计划执行？"
+              ]
+            },
+            "conflict_detected": false,
+            "conflicts": [],
+            "resolution": "各诊断 Agent 结论一致，无需仲裁",
+            "signal_evidence": "insufficient"
+          }
+        }
+      ],
+      "recommendation": "设备运行正常，持续监测并保持定期润滑即可。",
+      "report": {
+        "summary": "设备判定为「正常」，信号/物理/知识证据交叉验证一致（置信度 0.9997）。",
+        "physical_evidence": "PINN残差0.0203，接近Normal基线0.019",
+        "signal_evidence": "信号证据不足（无显著特征频率峰）",
+        "knowledge_basis": "故障类型「normal」知识库引用：",
+        "diagnosis": {
+          "fault_type": "normal",
+          "confidence": 0.9997,
+          "reasoning": "以 1D-CNN 分类为主判断：正常（置信度 0.9997）；信号分析未提供充分主导峰证据；物理残差严重度 normal，健康分等级 healthy。"
+        },
+        "impact": "当前设备运行参数正常（健康分 97.51），未发现明显异常迹象。",
+        "recommendation": "设备运行正常，持续监测并保持定期润滑即可。",
+        "follow_up_questions": [
+          "近期是否出现异常振动、异响或温升？",
+          "润滑周期是否按计划执行？"
+        ]
+      },
+      "conflicts": [],
+      "conflict_detected": false
+    }
+  },
+  {
+    "class": "Normal",
+    "index": 8744,
+    "result": {
+      "device_id": "e2e-Normal-8744",
+      "fault_type": "normal",
+      "fault_label": "正常",
+      "confidence": 0.9962,
+      "health_score": 97.43,
+      "health_level": "healthy",
+      "level_label": "正常",
+      "available_channels": [
+        "vibration"
+      ],
+      "agent_results": [
+        {
+          "agent_role": "signal_analyst",
+          "agent_name": "信号分析 Agent",
+          "conclusion": "包络谱无显著特征频率峰值，提示正常工况",
+          "fault_type": "normal",
+          "confidence": 0.4,
+          "evidence": "BPFO=108.398Hz 幅值0.004109（理论107.365Hz，偏差0.963%） | BPFI=161.865Hz 幅值0.004899（理论162.185Hz，偏差0.197%） | BSF=68.848Hz 幅值0.006434（理论70.583Hz，偏差2.459%） | 2xBSF=142.822Hz 幅值0.005123（理论141.166Hz，偏差1.173%）",
+          "details": {
+            "rpm": 1797.0,
+            "horsepower": null,
+            "spectrum_peaks": [
+              {
+                "frequency": 1037.109,
+                "amplitude": 0.05928
+              },
+              {
+                "frequency": 1066.406,
+                "amplitude": 0.04694
+              },
+              {
+                "frequency": 164.062,
+                "amplitude": 0.02311
+              },
+              {
+                "frequency": 2103.516,
+                "amplitude": 0.02155
+              },
+              {
+                "frequency": 87.891,
+                "amplitude": 0.02053
+              }
+            ],
+            "envelope_peaks": [
+              {
+                "frequency": 30.762,
+                "amplitude": 0.02696
+              },
+              {
+                "frequency": 56.396,
+                "amplitude": 0.01826
+              },
+              {
+                "frequency": 920.654,
+                "amplitude": 0.01461
+              },
+              {
+                "frequency": 873.779,
+                "amplitude": 0.01363
+              },
+              {
+                "frequency": 884.766,
+                "amplitude": 0.01206
+              }
+            ],
+            "signal_evidence": {
+              "dominant_peak": "none",
+              "peaks": {
+                "BPFO": {
+                  "freq": 108.398,
+                  "theoretical": 107.365,
+                  "deviation_pct": 0.963,
+                  "magnitude": 0.004109,
+                  "significant": false
+                },
+                "BPFI": {
+                  "freq": 161.865,
+                  "theoretical": 162.185,
+                  "deviation_pct": 0.197,
+                  "magnitude": 0.004899,
+                  "significant": false
+                },
+                "BSF": {
+                  "freq": 68.848,
+                  "theoretical": 70.583,
+                  "deviation_pct": 2.459,
+                  "magnitude": 0.006434,
+                  "significant": false
+                },
+                "2xBSF": {
+                  "freq": 142.822,
+                  "theoretical": 141.166,
+                  "deviation_pct": 1.173,
+                  "magnitude": 0.005123,
+                  "significant": false
+                }
+              },
+              "significance_ratio": 1.2559,
+              "evidence": [
+                "BPFO=108.398Hz 幅值0.004109（理论107.365Hz，偏差0.963%）",
+                "BPFI=161.865Hz 幅值0.004899（理论162.185Hz，偏差0.197%）",
+                "BSF=68.848Hz 幅值0.006434（理论70.583Hz，偏差2.459%）",
+                "2xBSF=142.822Hz 幅值0.005123（理论141.166Hz，偏差1.173%）"
+              ],
+              "signal_reliability": "low"
+            }
+          }
+        },
+        {
+          "agent_role": "physical_residual",
+          "agent_name": "物理残差 Agent",
+          "conclusion": "PINN 物理残差处于正常基线范围内",
+          "fault_type": "normal",
+          "confidence": 0.6,
+          "evidence": "PINN残差0.0196，接近Normal基线0.019",
+          "details": {
+            "residual": 0.0196,
+            "pinn_source": "trained_model",
+            "residual_severity": "normal",
+            "residual_ratio": 1.0
+          }
+        },
+        {
+          "agent_role": "knowledge_retrieval",
+          "agent_name": "知识检索 Agent",
+          "conclusion": "知识库检索到「正常」故障模式，提供频谱特征与维护依据",
+          "fault_type": "normal",
+          "confidence": 1.0,
+          "evidence": "故障类型「normal」知识库引用：",
+          "details": {
+            "kb_entry": {},
+            "matched": true,
+            "citation": "故障类型「normal」知识库引用：",
+            "recommendation": ""
+          }
+        },
+        {
+          "agent_role": "fault_diagnosis",
+          "agent_name": "故障分类 Agent",
+          "conclusion": "故障分类结论：正常（置信度 0.9962）",
+          "fault_type": "normal",
+          "confidence": 0.9962,
+          "evidence": "CNN 判定为正常工况",
+          "details": {
+            "cnn_source": "trained_model",
+            "probabilities": {
+              "normal": 0.9962365031242371,
+              "inner_race": 0.00048160055303014815,
+              "outer_race": 0.0008734854636713862,
+              "ball": 0.002408490749076009
+            }
+          }
+        },
+        {
+          "agent_role": "decision",
+          "agent_name": "决策 Agent",
+          "conclusion": "设备判定为「正常」，信号/物理/知识证据交叉验证一致（置信度 0.9962）。",
+          "fault_type": "normal",
+          "confidence": 0.9962,
+          "evidence": "健康分=97.43，参与 Agent=['signal_analyst', 'physical_residual', 'knowledge_retrieval', 'fault_diagnosis']",
+          "details": {
+            "report": {
+              "summary": "设备判定为「正常」，信号/物理/知识证据交叉验证一致（置信度 0.9962）。",
+              "physical_evidence": "PINN残差0.0196，接近Normal基线0.019",
+              "signal_evidence": "信号证据不足（无显著特征频率峰）",
+              "knowledge_basis": "故障类型「normal」知识库引用：",
+              "diagnosis": {
+                "fault_type": "normal",
+                "confidence": 0.9962,
+                "reasoning": "以 1D-CNN 分类为主判断：正常（置信度 0.9962）；信号分析未提供充分主导峰证据；物理残差严重度 normal，健康分等级 healthy。"
+              },
+              "impact": "当前设备运行参数正常（健康分 97.43），未发现明显异常迹象。",
+              "recommendation": "设备运行正常，持续监测并保持定期润滑即可。",
+              "follow_up_questions": [
+                "近期是否出现异常振动、异响或温升？",
+                "润滑周期是否按计划执行？"
+              ]
+            },
+            "conflict_detected": false,
+            "conflicts": [],
+            "resolution": "各诊断 Agent 结论一致，无需仲裁",
+            "signal_evidence": "insufficient"
+          }
+        }
+      ],
+      "recommendation": "设备运行正常，持续监测并保持定期润滑即可。",
+      "report": {
+        "summary": "设备判定为「正常」，信号/物理/知识证据交叉验证一致（置信度 0.9962）。",
+        "physical_evidence": "PINN残差0.0196，接近Normal基线0.019",
+        "signal_evidence": "信号证据不足（无显著特征频率峰）",
+        "knowledge_basis": "故障类型「normal」知识库引用：",
+        "diagnosis": {
+          "fault_type": "normal",
+          "confidence": 0.9962,
+          "reasoning": "以 1D-CNN 分类为主判断：正常（置信度 0.9962）；信号分析未提供充分主导峰证据；物理残差严重度 normal，健康分等级 healthy。"
+        },
+        "impact": "当前设备运行参数正常（健康分 97.43），未发现明显异常迹象。",
+        "recommendation": "设备运行正常，持续监测并保持定期润滑即可。",
+        "follow_up_questions": [
+          "近期是否出现异常振动、异响或温升？",
+          "润滑周期是否按计划执行？"
+        ]
+      },
+      "conflicts": [],
+      "conflict_detected": false
+    }
+  },
+  {
+    "class": "Normal",
+    "index": 9880,
+    "result": {
+      "device_id": "e2e-Normal-9880",
+      "fault_type": "normal",
+      "fault_label": "正常",
+      "confidence": 0.9997,
+      "health_score": 97.49,
+      "health_level": "healthy",
+      "level_label": "正常",
+      "available_channels": [
+        "vibration"
+      ],
+      "agent_results": [
+        {
+          "agent_role": "signal_analyst",
+          "agent_name": "信号分析 Agent",
+          "conclusion": "包络谱无显著特征频率峰值，提示正常工况",
+          "fault_type": "normal",
+          "confidence": 0.4,
+          "evidence": "BPFO=106.201Hz 幅值0.002462（理论107.365Hz，偏差1.084%） | BPFI=164.795Hz 幅值0.002222（理论162.185Hz，偏差1.609%） | BSF=72.51Hz 幅值0.006392（理论70.583Hz，偏差2.73%） | 2xBSF=138.428Hz 幅值0.004698（理论141.166Hz，偏差1.94%）",
+          "details": {
+            "rpm": 1797.0,
+            "horsepower": null,
+            "spectrum_peaks": [
+              {
+                "frequency": 2103.516,
+                "amplitude": 0.04185
+              },
+              {
+                "frequency": 1037.109,
+                "amplitude": 0.02605
+              },
+              {
+                "frequency": 1066.406,
+                "amplitude": 0.0257
+              },
+              {
+                "frequency": 87.891,
+                "amplitude": 0.02501
+              },
+              {
+                "frequency": 181.641,
+                "amplitude": 0.01643
+              }
+            ],
+            "envelope_peaks": [
+              {
+                "frequency": 2011.23,
+                "amplitude": 0.01239
+              },
+              {
+                "frequency": 805.664,
+                "amplitude": 0.01104
+              },
+              {
+                "frequency": 89.355,
+                "amplitude": 0.0108
+              },
+              {
+                "frequency": 253.418,
+                "amplitude": 0.0103
+              },
+              {
+                "frequency": 974.854,
+                "amplitude": 0.01013
+              }
+            ],
+            "signal_evidence": {
+              "dominant_peak": "none",
+              "peaks": {
+                "BPFO": {
+                  "freq": 106.201,
+                  "theoretical": 107.365,
+                  "deviation_pct": 1.084,
+                  "magnitude": 0.002462,
+                  "significant": false
+                },
+                "BPFI": {
+                  "freq": 164.795,
+                  "theoretical": 162.185,
+                  "deviation_pct": 1.609,
+                  "magnitude": 0.002222,
+                  "significant": false
+                },
+                "BSF": {
+                  "freq": 72.51,
+                  "theoretical": 70.583,
+                  "deviation_pct": 2.73,
+                  "magnitude": 0.006392,
+                  "significant": false
+                },
+                "2xBSF": {
+                  "freq": 138.428,
+                  "theoretical": 141.166,
+                  "deviation_pct": 1.94,
+                  "magnitude": 0.004698,
+                  "significant": false
+                }
+              },
+              "significance_ratio": 1.3606,
+              "evidence": [
+                "BPFO=106.201Hz 幅值0.002462（理论107.365Hz，偏差1.084%）",
+                "BPFI=164.795Hz 幅值0.002222（理论162.185Hz，偏差1.609%）",
+                "BSF=72.51Hz 幅值0.006392（理论70.583Hz，偏差2.73%）",
+                "2xBSF=138.428Hz 幅值0.004698（理论141.166Hz，偏差1.94%）"
+              ],
+              "signal_reliability": "low"
+            }
+          }
+        },
+        {
+          "agent_role": "physical_residual",
+          "agent_name": "物理残差 Agent",
+          "conclusion": "PINN 物理残差处于正常基线范围内",
+          "fault_type": "normal",
+          "confidence": 0.6,
+          "evidence": "PINN残差0.0205，接近Normal基线0.019",
+          "details": {
+            "residual": 0.0205,
+            "pinn_source": "trained_model",
+            "residual_severity": "normal",
+            "residual_ratio": 1.1
+          }
+        },
+        {
+          "agent_role": "knowledge_retrieval",
+          "agent_name": "知识检索 Agent",
+          "conclusion": "知识库检索到「正常」故障模式，提供频谱特征与维护依据",
+          "fault_type": "normal",
+          "confidence": 1.0,
+          "evidence": "故障类型「normal」知识库引用：",
+          "details": {
+            "kb_entry": {},
+            "matched": true,
+            "citation": "故障类型「normal」知识库引用：",
+            "recommendation": ""
+          }
+        },
+        {
+          "agent_role": "fault_diagnosis",
+          "agent_name": "故障分类 Agent",
+          "conclusion": "故障分类结论：正常（置信度 0.9997）",
+          "fault_type": "normal",
+          "confidence": 0.9997,
+          "evidence": "CNN 判定为正常工况",
+          "details": {
+            "cnn_source": "trained_model",
+            "probabilities": {
+              "normal": 0.9997095465660095,
+              "inner_race": 0.0001756907149683684,
+              "outer_race": 5.375020555220544e-05,
+              "ball": 6.1025340983178467e-05
+            }
+          }
+        },
+        {
+          "agent_role": "decision",
+          "agent_name": "决策 Agent",
+          "conclusion": "设备判定为「正常」，信号/物理/知识证据交叉验证一致（置信度 0.9997）。",
+          "fault_type": "normal",
+          "confidence": 0.9997,
+          "evidence": "健康分=97.49，参与 Agent=['signal_analyst', 'physical_residual', 'knowledge_retrieval', 'fault_diagnosis']",
+          "details": {
+            "report": {
+              "summary": "设备判定为「正常」，信号/物理/知识证据交叉验证一致（置信度 0.9997）。",
+              "physical_evidence": "PINN残差0.0205，接近Normal基线0.019",
+              "signal_evidence": "信号证据不足（无显著特征频率峰）",
+              "knowledge_basis": "故障类型「normal」知识库引用：",
+              "diagnosis": {
+                "fault_type": "normal",
+                "confidence": 0.9997,
+                "reasoning": "以 1D-CNN 分类为主判断：正常（置信度 0.9997）；信号分析未提供充分主导峰证据；物理残差严重度 normal，健康分等级 healthy。"
+              },
+              "impact": "当前设备运行参数正常（健康分 97.49），未发现明显异常迹象。",
+              "recommendation": "设备运行正常，持续监测并保持定期润滑即可。",
+              "follow_up_questions": [
+                "近期是否出现异常振动、异响或温升？",
+                "润滑周期是否按计划执行？"
+              ]
+            },
+            "conflict_detected": false,
+            "conflicts": [],
+            "resolution": "各诊断 Agent 结论一致，无需仲裁",
+            "signal_evidence": "insufficient"
+          }
+        }
+      ],
+      "recommendation": "设备运行正常，持续监测并保持定期润滑即可。",
+      "report": {
+        "summary": "设备判定为「正常」，信号/物理/知识证据交叉验证一致（置信度 0.9997）。",
+        "physical_evidence": "PINN残差0.0205，接近Normal基线0.019",
+        "signal_evidence": "信号证据不足（无显著特征频率峰）",
+        "knowledge_basis": "故障类型「normal」知识库引用：",
+        "diagnosis": {
+          "fault_type": "normal",
+          "confidence": 0.9997,
+          "reasoning": "以 1D-CNN 分类为主判断：正常（置信度 0.9997）；信号分析未提供充分主导峰证据；物理残差严重度 normal，健康分等级 healthy。"
+        },
+        "impact": "当前设备运行参数正常（健康分 97.49），未发现明显异常迹象。",
+        "recommendation": "设备运行正常，持续监测并保持定期润滑即可。",
+        "follow_up_questions": [
+          "近期是否出现异常振动、异响或温升？",
+          "润滑周期是否按计划执行？"
+        ]
+      },
+      "conflicts": [],
+      "conflict_detected": false
+    }
+  },
+  {
+    "class": "OR",
+    "index": 8379,
+    "result": {
+      "device_id": "e2e-OR-8379",
+      "fault_type": "outer_race",
+      "fault_label": "外圈故障",
+      "confidence": 1.0,
+      "health_score": 11.74,
+      "health_level": "abnormal",
+      "level_label": "异常",
+      "available_channels": [
+        "vibration"
+      ],
+      "agent_results": [
+        {
+          "agent_role": "signal_analyst",
+          "agent_name": "信号分析 Agent",
+          "conclusion": "包络谱在 BPFO=104.736Hz 处出现显著峰值，提示外圈故障（信号可靠性 medium）",
+          "fault_type": "outer_race",
+          "confidence": 0.6,
+          "evidence": "BPFO=104.736Hz 幅值0.416371（理论107.365Hz，偏差2.448%） | BPFI=161.865Hz 幅值0.135876（理论162.185Hz，偏差0.197%） | BSF=73.242Hz 幅值0.328783（理论70.583Hz，偏差3.767%） | 2xBSF=138.428Hz 幅值0.120691（理论141.166Hz，偏差1.94%）",
+          "details": {
+            "rpm": 1797.0,
+            "horsepower": null,
+            "spectrum_peaks": [
+              {
+                "frequency": 3386.719,
+                "amplitude": 0.231
+              },
+              {
+                "frequency": 3416.016,
+                "amplitude": 0.22343
+              },
+              {
+                "frequency": 3310.547,
+                "amplitude": 0.2091
+              },
+              {
+                "frequency": 3492.188,
+                "amplitude": 0.19853
+              },
+              {
+                "frequency": 3515.625,
+                "amplitude": 0.18391
+              }
+            ],
+            "envelope_peaks": [
+              {
+                "frequency": 103.271,
+                "amplitude": 0.43476
+              },
+              {
+                "frequency": 28.564,
+                "amplitude": 0.43082
+              },
+              {
+                "frequency": 73.975,
+                "amplitude": 0.33355
+              },
+              {
+                "frequency": 131.836,
+                "amplitude": 0.27155
+              },
+              {
+                "frequency": 45.41,
+                "amplitude": 0.24708
+              }
+            ],
+            "signal_evidence": {
+              "dominant_peak": "BPFO",
+              "peaks": {
+                "BPFO": {
+                  "freq": 104.736,
+                  "theoretical": 107.365,
+                  "deviation_pct": 2.448,
+                  "magnitude": 0.416371,
+                  "significant": true
+                },
+                "BPFI": {
+                  "freq": 161.865,
+                  "theoretical": 162.185,
+                  "deviation_pct": 0.197,
+                  "magnitude": 0.135876,
+                  "significant": true
+                },
+                "BSF": {
+                  "freq": 73.242,
+                  "theoretical": 70.583,
+                  "deviation_pct": 3.767,
+                  "magnitude": 0.328783,
+                  "significant": true
+                },
+                "2xBSF": {
+                  "freq": 138.428,
+                  "theoretical": 141.166,
+                  "deviation_pct": 1.94,
+                  "magnitude": 0.120691,
+                  "significant": true
+                }
+              },
+              "significance_ratio": 1.2664,
+              "evidence": [
+                "BPFO=104.736Hz 幅值0.416371（理论107.365Hz，偏差2.448%）",
+                "BPFI=161.865Hz 幅值0.135876（理论162.185Hz，偏差0.197%）",
+                "BSF=73.242Hz 幅值0.328783（理论70.583Hz，偏差3.767%）",
+                "2xBSF=138.428Hz 幅值0.120691（理论141.166Hz，偏差1.94%）"
+              ],
+              "signal_reliability": "medium"
+            }
+          }
+        },
+        {
+          "agent_role": "physical_residual",
+          "agent_name": "物理残差 Agent",
+          "conclusion": "PINN 物理残差 severe 级偏离，存在物理异常信号",
+          "fault_type": "normal",
+          "confidence": 0.9,
+          "evidence": "PINN残差0.5802，是Normal基线的30.5倍，提示显著异常",
+          "details": {
+            "residual": 0.5802,
+            "pinn_source": "trained_model",
+            "residual_severity": "severe",
+            "residual_ratio": 30.5
+          }
+        },
+        {
+          "agent_role": "knowledge_retrieval",
+          "agent_name": "知识检索 Agent",
+          "conclusion": "知识库检索到「外圈故障」故障模式，提供频谱特征与维护依据",
+          "fault_type": "outer_race",
+          "confidence": 1.0,
+          "evidence": "故障类型「outer_race」知识库引用：",
+          "details": {
+            "kb_entry": {},
+            "matched": true,
+            "citation": "故障类型「outer_race」知识库引用：",
+            "recommendation": ""
+          }
+        },
+        {
+          "agent_role": "fault_diagnosis",
+          "agent_name": "故障分类 Agent",
+          "conclusion": "故障分类结论：外圈故障（置信度 0.9888）",
+          "fault_type": "outer_race",
+          "confidence": 0.9888,
+          "evidence": "CNN 识别到 外圈故障，各类置信度：{'normal': 0.0003929134109057486, 'inner_race': 0.008544603362679482, 'outer_race': 0.9887781739234924, 'ball': 0.002284358022734523}",
+          "details": {
+            "cnn_source": "trained_model",
+            "probabilities": {
+              "normal": 0.0003929134109057486,
+              "inner_race": 0.008544603362679482,
+              "outer_race": 0.9887781739234924,
+              "ball": 0.002284358022734523
+            }
+          }
+        },
+        {
+          "agent_role": "decision",
+          "agent_name": "决策 Agent",
+          "conclusion": "设备判定为「外圈故障」，信号/物理/知识证据交叉验证一致（置信度 1.0000）。",
+          "fault_type": "outer_race",
+          "confidence": 1.0,
+          "evidence": "健康分=11.74，参与 Agent=['signal_analyst', 'physical_residual', 'knowledge_retrieval', 'fault_diagnosis']",
+          "details": {
+            "report": {
+              "summary": "设备判定为「外圈故障」，信号/物理/知识证据交叉验证一致（置信度 1.0000）。",
+              "physical_evidence": "PINN残差0.5802，是Normal基线的30.5倍，提示显著异常",
+              "signal_evidence": "BPFO=104.736Hz 幅值0.416371（理论107.365Hz，偏差2.448%） | BPFI=161.865Hz 幅值0.135876（理论162.185Hz，偏差0.197%） | BSF=73.242Hz 幅值0.328783（理论70.583Hz，偏差3.767%） | 2xBSF=138.428Hz 幅值0.120691（理论141.166Hz，偏差1.94%）",
+              "knowledge_basis": "故障类型「outer_race」知识库引用：",
+              "diagnosis": {
+                "fault_type": "outer_race",
+                "confidence": 1.0,
+                "reasoning": "以 1D-CNN 分类为主判断：外圈故障（置信度 0.9888）；信号分析主导峰 BPFO 指向 outer_race，与 CNN 一致；物理残差严重度 severe，健康分等级 abnormal。"
+              },
+              "impact": "设备已进入异常状态（健康分 11.74），「外圈故障」可能导致停机或损坏，建议尽快处置。",
+              "recommendation": "建议停机检查轴承外圈，重点关注 BPFO 特征频率及谐波间隔。",
+              "follow_up_questions": [
+                "外圈故障点是否位于负载区（影响劣化速度）？",
+                "是否需要停机检查外圈滚道剥落情况？"
+              ]
+            },
+            "conflict_detected": false,
+            "conflicts": [],
+            "resolution": "各诊断 Agent 结论一致，无需仲裁"
+          }
+        }
+      ],
+      "recommendation": "建议停机检查轴承外圈，重点关注 BPFO 特征频率及谐波间隔。",
+      "report": {
+        "summary": "设备判定为「外圈故障」，信号/物理/知识证据交叉验证一致（置信度 1.0000）。",
+        "physical_evidence": "PINN残差0.5802，是Normal基线的30.5倍，提示显著异常",
+        "signal_evidence": "BPFO=104.736Hz 幅值0.416371（理论107.365Hz，偏差2.448%） | BPFI=161.865Hz 幅值0.135876（理论162.185Hz，偏差0.197%） | BSF=73.242Hz 幅值0.328783（理论70.583Hz，偏差3.767%） | 2xBSF=138.428Hz 幅值0.120691（理论141.166Hz，偏差1.94%）",
+        "knowledge_basis": "故障类型「outer_race」知识库引用：",
+        "diagnosis": {
+          "fault_type": "outer_race",
+          "confidence": 1.0,
+          "reasoning": "以 1D-CNN 分类为主判断：外圈故障（置信度 0.9888）；信号分析主导峰 BPFO 指向 outer_race，与 CNN 一致；物理残差严重度 severe，健康分等级 abnormal。"
+        },
+        "impact": "设备已进入异常状态（健康分 11.74），「外圈故障」可能导致停机或损坏，建议尽快处置。",
+        "recommendation": "建议停机检查轴承外圈，重点关注 BPFO 特征频率及谐波间隔。",
+        "follow_up_questions": [
+          "外圈故障点是否位于负载区（影响劣化速度）？",
+          "是否需要停机检查外圈滚道剥落情况？"
+        ]
+      },
+      "conflicts": [],
+      "conflict_detected": false
+    }
+  },
+  {
+    "class": "OR",
+    "index": 1435,
+    "result": {
+      "device_id": "e2e-OR-1435",
+      "fault_type": "outer_race",
+      "fault_label": "外圈故障",
+      "confidence": 1.0,
+      "health_score": 11.69,
+      "health_level": "abnormal",
+      "level_label": "异常",
+      "available_channels": [
+        "vibration"
+      ],
+      "agent_results": [
+        {
+          "agent_role": "signal_analyst",
+          "agent_name": "信号分析 Agent",
+          "conclusion": "包络谱在 BPFO=106.201Hz 处出现显著峰值，提示外圈故障（信号可靠性 medium）",
+          "fault_type": "outer_race",
+          "confidence": 0.6,
+          "evidence": "BPFO=106.201Hz 幅值0.458796（理论107.365Hz，偏差1.084%） | BPFI=163.33Hz 幅值0.123107（理论162.185Hz，偏差0.706%） | BSF=73.242Hz 幅值0.239167（理论70.583Hz，偏差3.767%） | 2xBSF=138.428Hz 幅值0.204412（理论141.166Hz，偏差1.94%）",
+          "details": {
+            "rpm": 1797.0,
+            "horsepower": null,
+            "spectrum_peaks": [
+              {
+                "frequency": 3398.438,
+                "amplitude": 0.19871
+              },
+              {
+                "frequency": 3503.906,
+                "amplitude": 0.19384
+              },
+              {
+                "frequency": 3427.734,
+                "amplitude": 0.19084
+              },
+              {
+                "frequency": 3533.203,
+                "amplitude": 0.17784
+              },
+              {
+                "frequency": 3292.969,
+                "amplitude": 0.17221
+              }
+            ],
+            "envelope_peaks": [
+              {
+                "frequency": 106.201,
+                "amplitude": 0.4588
+              },
+              {
+                "frequency": 29.297,
+                "amplitude": 0.40515
+              },
+              {
+                "frequency": 76.904,
+                "amplitude": 0.2947
+              },
+              {
+                "frequency": 134.766,
+                "amplitude": 0.24275
+              },
+              {
+                "frequency": 212.402,
+                "amplitude": 0.21996
+              }
+            ],
+            "signal_evidence": {
+              "dominant_peak": "BPFO",
+              "peaks": {
+                "BPFO": {
+                  "freq": 106.201,
+                  "theoretical": 107.365,
+                  "deviation_pct": 1.084,
+                  "magnitude": 0.458796,
+                  "significant": true
+                },
+                "BPFI": {
+                  "freq": 163.33,
+                  "theoretical": 162.185,
+                  "deviation_pct": 0.706,
+                  "magnitude": 0.123107,
+                  "significant": true
+                },
+                "BSF": {
+                  "freq": 73.242,
+                  "theoretical": 70.583,
+                  "deviation_pct": 3.767,
+                  "magnitude": 0.239167,
+                  "significant": true
+                },
+                "2xBSF": {
+                  "freq": 138.428,
+                  "theoretical": 141.166,
+                  "deviation_pct": 1.94,
+                  "magnitude": 0.204412,
+                  "significant": true
+                }
+              },
+              "significance_ratio": 1.9183,
+              "evidence": [
+                "BPFO=106.201Hz 幅值0.458796（理论107.365Hz，偏差1.084%）",
+                "BPFI=163.33Hz 幅值0.123107（理论162.185Hz，偏差0.706%）",
+                "BSF=73.242Hz 幅值0.239167（理论70.583Hz，偏差3.767%）",
+                "2xBSF=138.428Hz 幅值0.204412（理论141.166Hz，偏差1.94%）"
+              ],
+              "signal_reliability": "medium"
+            }
+          }
+        },
+        {
+          "agent_role": "physical_residual",
+          "agent_name": "物理残差 Agent",
+          "conclusion": "PINN 物理残差 severe 级偏离，存在物理异常信号",
+          "fault_type": "normal",
+          "confidence": 0.9,
+          "evidence": "PINN残差0.5812，是Normal基线的30.6倍，提示显著异常",
+          "details": {
+            "residual": 0.5812,
+            "pinn_source": "trained_model",
+            "residual_severity": "severe",
+            "residual_ratio": 30.6
+          }
+        },
+        {
+          "agent_role": "knowledge_retrieval",
+          "agent_name": "知识检索 Agent",
+          "conclusion": "知识库检索到「外圈故障」故障模式，提供频谱特征与维护依据",
+          "fault_type": "outer_race",
+          "confidence": 1.0,
+          "evidence": "故障类型「outer_race」知识库引用：",
+          "details": {
+            "kb_entry": {},
+            "matched": true,
+            "citation": "故障类型「outer_race」知识库引用：",
+            "recommendation": ""
+          }
+        },
+        {
+          "agent_role": "fault_diagnosis",
+          "agent_name": "故障分类 Agent",
+          "conclusion": "故障分类结论：外圈故障（置信度 0.9991）",
+          "fault_type": "outer_race",
+          "confidence": 0.9991,
+          "evidence": "CNN 识别到 外圈故障，各类置信度：{'normal': 4.286084367777221e-05, 'inner_race': 0.0006506744539365172, 'outer_race': 0.9990891218185425, 'ball': 0.0002173794637201354}",
+          "details": {
+            "cnn_source": "trained_model",
+            "probabilities": {
+              "normal": 4.286084367777221e-05,
+              "inner_race": 0.0006506744539365172,
+              "outer_race": 0.9990891218185425,
+              "ball": 0.0002173794637201354
+            }
+          }
+        },
+        {
+          "agent_role": "decision",
+          "agent_name": "决策 Agent",
+          "conclusion": "设备判定为「外圈故障」，信号/物理/知识证据交叉验证一致（置信度 1.0000）。",
+          "fault_type": "outer_race",
+          "confidence": 1.0,
+          "evidence": "健康分=11.69，参与 Agent=['signal_analyst', 'physical_residual', 'knowledge_retrieval', 'fault_diagnosis']",
+          "details": {
+            "report": {
+              "summary": "设备判定为「外圈故障」，信号/物理/知识证据交叉验证一致（置信度 1.0000）。",
+              "physical_evidence": "PINN残差0.5812，是Normal基线的30.6倍，提示显著异常",
+              "signal_evidence": "BPFO=106.201Hz 幅值0.458796（理论107.365Hz，偏差1.084%） | BPFI=163.33Hz 幅值0.123107（理论162.185Hz，偏差0.706%） | BSF=73.242Hz 幅值0.239167（理论70.583Hz，偏差3.767%） | 2xBSF=138.428Hz 幅值0.204412（理论141.166Hz，偏差1.94%）",
+              "knowledge_basis": "故障类型「outer_race」知识库引用：",
+              "diagnosis": {
+                "fault_type": "outer_race",
+                "confidence": 1.0,
+                "reasoning": "以 1D-CNN 分类为主判断：外圈故障（置信度 0.9991）；信号分析主导峰 BPFO 指向 outer_race，与 CNN 一致；物理残差严重度 severe，健康分等级 abnormal。"
+              },
+              "impact": "设备已进入异常状态（健康分 11.69），「外圈故障」可能导致停机或损坏，建议尽快处置。",
+              "recommendation": "建议停机检查轴承外圈，重点关注 BPFO 特征频率及谐波间隔。",
+              "follow_up_questions": [
+                "外圈故障点是否位于负载区（影响劣化速度）？",
+                "是否需要停机检查外圈滚道剥落情况？"
+              ]
+            },
+            "conflict_detected": false,
+            "conflicts": [],
+            "resolution": "各诊断 Agent 结论一致，无需仲裁"
+          }
+        }
+      ],
+      "recommendation": "建议停机检查轴承外圈，重点关注 BPFO 特征频率及谐波间隔。",
+      "report": {
+        "summary": "设备判定为「外圈故障」，信号/物理/知识证据交叉验证一致（置信度 1.0000）。",
+        "physical_evidence": "PINN残差0.5812，是Normal基线的30.6倍，提示显著异常",
+        "signal_evidence": "BPFO=106.201Hz 幅值0.458796（理论107.365Hz，偏差1.084%） | BPFI=163.33Hz 幅值0.123107（理论162.185Hz，偏差0.706%） | BSF=73.242Hz 幅值0.239167（理论70.583Hz，偏差3.767%） | 2xBSF=138.428Hz 幅值0.204412（理论141.166Hz，偏差1.94%）",
+        "knowledge_basis": "故障类型「outer_race」知识库引用：",
+        "diagnosis": {
+          "fault_type": "outer_race",
+          "confidence": 1.0,
+          "reasoning": "以 1D-CNN 分类为主判断：外圈故障（置信度 0.9991）；信号分析主导峰 BPFO 指向 outer_race，与 CNN 一致；物理残差严重度 severe，健康分等级 abnormal。"
+        },
+        "impact": "设备已进入异常状态（健康分 11.69），「外圈故障」可能导致停机或损坏，建议尽快处置。",
+        "recommendation": "建议停机检查轴承外圈，重点关注 BPFO 特征频率及谐波间隔。",
+        "follow_up_questions": [
+          "外圈故障点是否位于负载区（影响劣化速度）？",
+          "是否需要停机检查外圈滚道剥落情况？"
+        ]
+      },
+      "conflicts": [],
+      "conflict_detected": false
+    }
+  },
+  {
+    "class": "OR",
+    "index": 4293,
+    "result": {
+      "device_id": "e2e-OR-4293",
+      "fault_type": "outer_race",
+      "fault_label": "外圈故障",
+      "confidence": 1.0,
+      "health_score": 10.68,
+      "health_level": "abnormal",
+      "level_label": "异常",
+      "available_channels": [
+        "vibration"
+      ],
+      "agent_results": [
+        {
+          "agent_role": "signal_analyst",
+          "agent_name": "信号分析 Agent",
+          "conclusion": "包络谱在 BPFO=104.736Hz 处出现显著峰值，提示外圈故障（信号可靠性 high）",
+          "fault_type": "outer_race",
+          "confidence": 0.85,
+          "evidence": "BPFO=104.736Hz 幅值0.563489（理论107.365Hz，偏差2.448%） | BPFI=161.865Hz 幅值0.050135（理论162.185Hz，偏差0.197%） | BSF=73.242Hz 幅值0.065518（理论70.583Hz，偏差3.767%） | 2xBSF=138.428Hz 幅值0.02981（理论141.166Hz，偏差1.94%）",
+          "details": {
+            "rpm": 1797.0,
+            "horsepower": null,
+            "spectrum_peaks": [
+              {
+                "frequency": 3357.422,
+                "amplitude": 0.3303
+              },
+              {
+                "frequency": 3462.891,
+                "amplitude": 0.31563
+              },
+              {
+                "frequency": 2835.938,
+                "amplitude": 0.23547
+              },
+              {
+                "frequency": 3568.359,
+                "amplitude": 0.18157
+              },
+              {
+                "frequency": 3251.953,
+                "amplitude": 0.17129
+              }
+            ],
+            "envelope_peaks": [
+              {
+                "frequency": 104.736,
+                "amplitude": 0.56349
+              },
+              {
+                "frequency": 210.205,
+                "amplitude": 0.35044
+              },
+              {
+                "frequency": 314.941,
+                "amplitude": 0.24399
+              },
+              {
+                "frequency": 524.414,
+                "amplitude": 0.21629
+              },
+              {
+                "frequency": 629.883,
+                "amplitude": 0.21328
+              }
+            ],
+            "signal_evidence": {
+              "dominant_peak": "BPFO",
+              "peaks": {
+                "BPFO": {
+                  "freq": 104.736,
+                  "theoretical": 107.365,
+                  "deviation_pct": 2.448,
+                  "magnitude": 0.563489,
+                  "significant": true
+                },
+                "BPFI": {
+                  "freq": 161.865,
+                  "theoretical": 162.185,
+                  "deviation_pct": 0.197,
+                  "magnitude": 0.050135,
+                  "significant": true
+                },
+                "BSF": {
+                  "freq": 73.242,
+                  "theoretical": 70.583,
+                  "deviation_pct": 3.767,
+                  "magnitude": 0.065518,
+                  "significant": true
+                },
+                "2xBSF": {
+                  "freq": 138.428,
+                  "theoretical": 141.166,
+                  "deviation_pct": 1.94,
+                  "magnitude": 0.02981,
+                  "significant": false
+                }
+              },
+              "significance_ratio": 8.6005,
+              "evidence": [
+                "BPFO=104.736Hz 幅值0.563489（理论107.365Hz，偏差2.448%）",
+                "BPFI=161.865Hz 幅值0.050135（理论162.185Hz，偏差0.197%）",
+                "BSF=73.242Hz 幅值0.065518（理论70.583Hz，偏差3.767%）",
+                "2xBSF=138.428Hz 幅值0.02981（理论141.166Hz，偏差1.94%）"
+              ],
+              "signal_reliability": "high"
+            }
+          }
+        },
+        {
+          "agent_role": "physical_residual",
+          "agent_name": "物理残差 Agent",
+          "conclusion": "PINN 物理残差 severe 级偏离，存在物理异常信号",
+          "fault_type": "normal",
+          "confidence": 0.9,
+          "evidence": "PINN残差0.6175，是Normal基线的32.5倍，提示显著异常",
+          "details": {
+            "residual": 0.6175,
+            "pinn_source": "trained_model",
+            "residual_severity": "severe",
+            "residual_ratio": 32.5
+          }
+        },
+        {
+          "agent_role": "knowledge_retrieval",
+          "agent_name": "知识检索 Agent",
+          "conclusion": "知识库检索到「外圈故障」故障模式，提供频谱特征与维护依据",
+          "fault_type": "outer_race",
+          "confidence": 1.0,
+          "evidence": "故障类型「outer_race」知识库引用：",
+          "details": {
+            "kb_entry": {},
+            "matched": true,
+            "citation": "故障类型「outer_race」知识库引用：",
+            "recommendation": ""
+          }
+        },
+        {
+          "agent_role": "fault_diagnosis",
+          "agent_name": "故障分类 Agent",
+          "conclusion": "故障分类结论：外圈故障（置信度 0.9996）",
+          "fault_type": "outer_race",
+          "confidence": 0.9996,
+          "evidence": "CNN 识别到 外圈故障，各类置信度：{'normal': 4.009641270386055e-05, 'inner_race': 0.00023198248527478427, 'outer_race': 0.999586284160614, 'ball': 0.00014167003973852843}",
+          "details": {
+            "cnn_source": "trained_model",
+            "probabilities": {
+              "normal": 4.009641270386055e-05,
+              "inner_race": 0.00023198248527478427,
+              "outer_race": 0.999586284160614,
+              "ball": 0.00014167003973852843
+            }
+          }
+        },
+        {
+          "agent_role": "decision",
+          "agent_name": "决策 Agent",
+          "conclusion": "设备判定为「外圈故障」，信号/物理/知识证据交叉验证一致（置信度 1.0000）。",
+          "fault_type": "outer_race",
+          "confidence": 1.0,
+          "evidence": "健康分=10.68，参与 Agent=['signal_analyst', 'physical_residual', 'knowledge_retrieval', 'fault_diagnosis']",
+          "details": {
+            "report": {
+              "summary": "设备判定为「外圈故障」，信号/物理/知识证据交叉验证一致（置信度 1.0000）。",
+              "physical_evidence": "PINN残差0.6175，是Normal基线的32.5倍，提示显著异常",
+              "signal_evidence": "BPFO=104.736Hz 幅值0.563489（理论107.365Hz，偏差2.448%） | BPFI=161.865Hz 幅值0.050135（理论162.185Hz，偏差0.197%） | BSF=73.242Hz 幅值0.065518（理论70.583Hz，偏差3.767%） | 2xBSF=138.428Hz 幅值0.02981（理论141.166Hz，偏差1.94%）",
+              "knowledge_basis": "故障类型「outer_race」知识库引用：",
+              "diagnosis": {
+                "fault_type": "outer_race",
+                "confidence": 1.0,
+                "reasoning": "以 1D-CNN 分类为主判断：外圈故障（置信度 0.9996）；信号分析主导峰 BPFO 指向 outer_race，与 CNN 一致；物理残差严重度 severe，健康分等级 abnormal。"
+              },
+              "impact": "设备已进入异常状态（健康分 10.68），「外圈故障」可能导致停机或损坏，建议尽快处置。",
+              "recommendation": "建议停机检查轴承外圈，重点关注 BPFO 特征频率及谐波间隔。",
+              "follow_up_questions": [
+                "外圈故障点是否位于负载区（影响劣化速度）？",
+                "是否需要停机检查外圈滚道剥落情况？"
+              ]
+            },
+            "conflict_detected": false,
+            "conflicts": [],
+            "resolution": "各诊断 Agent 结论一致，无需仲裁"
+          }
+        }
+      ],
+      "recommendation": "建议停机检查轴承外圈，重点关注 BPFO 特征频率及谐波间隔。",
+      "report": {
+        "summary": "设备判定为「外圈故障」，信号/物理/知识证据交叉验证一致（置信度 1.0000）。",
+        "physical_evidence": "PINN残差0.6175，是Normal基线的32.5倍，提示显著异常",
+        "signal_evidence": "BPFO=104.736Hz 幅值0.563489（理论107.365Hz，偏差2.448%） | BPFI=161.865Hz 幅值0.050135（理论162.185Hz，偏差0.197%） | BSF=73.242Hz 幅值0.065518（理论70.583Hz，偏差3.767%） | 2xBSF=138.428Hz 幅值0.02981（理论141.166Hz，偏差1.94%）",
+        "knowledge_basis": "故障类型「outer_race」知识库引用：",
+        "diagnosis": {
+          "fault_type": "outer_race",
+          "confidence": 1.0,
+          "reasoning": "以 1D-CNN 分类为主判断：外圈故障（置信度 0.9996）；信号分析主导峰 BPFO 指向 outer_race，与 CNN 一致；物理残差严重度 severe，健康分等级 abnormal。"
+        },
+        "impact": "设备已进入异常状态（健康分 10.68），「外圈故障」可能导致停机或损坏，建议尽快处置。",
+        "recommendation": "建议停机检查轴承外圈，重点关注 BPFO 特征频率及谐波间隔。",
+        "follow_up_questions": [
+          "外圈故障点是否位于负载区（影响劣化速度）？",
+          "是否需要停机检查外圈滚道剥落情况？"
+        ]
+      },
+      "conflicts": [],
+      "conflict_detected": false
+    }
+  },
+  {
+    "class": "OR",
+    "index": 6599,
+    "result": {
+      "device_id": "e2e-OR-6599",
+      "fault_type": "outer_race",
+      "fault_label": "外圈故障",
+      "confidence": 1.0,
+      "health_score": 10.99,
+      "health_level": "abnormal",
+      "level_label": "异常",
+      "available_channels": [
+        "vibration"
+      ],
+      "agent_results": [
+        {
+          "agent_role": "signal_analyst",
+          "agent_name": "信号分析 Agent",
+          "conclusion": "包络谱在 BPFO=104.736Hz 处出现显著峰值，提示外圈故障（信号可靠性 high）",
+          "fault_type": "outer_race",
+          "confidence": 0.85,
+          "evidence": "BPFO=104.736Hz 幅值0.533345（理论107.365Hz，偏差2.448%） | BPFI=161.133Hz 幅值0.045439（理论162.185Hz，偏差0.649%） | BSF=73.242Hz 幅值0.056581（理论70.583Hz，偏差3.767%） | 2xBSF=138.428Hz 幅值0.036312（理论141.166Hz，偏差1.94%）",
+          "details": {
+            "rpm": 1797.0,
+            "horsepower": null,
+            "spectrum_peaks": [
+              {
+                "frequency": 3310.547,
+                "amplitude": 0.22383
+              },
+              {
+                "frequency": 3416.016,
+                "amplitude": 0.18906
+              },
+              {
+                "frequency": 2894.531,
+                "amplitude": 0.16328
+              },
+              {
+                "frequency": 3298.828,
+                "amplitude": 0.1626
+              },
+              {
+                "frequency": 2794.922,
+                "amplitude": 0.15255
+              }
+            ],
+            "envelope_peaks": [
+              {
+                "frequency": 103.271,
+                "amplitude": 0.54832
+              },
+              {
+                "frequency": 206.543,
+                "amplitude": 0.33378
+              },
+              {
+                "frequency": 310.547,
+                "amplitude": 0.25482
+              },
+              {
+                "frequency": 517.09,
+                "amplitude": 0.21596
+              },
+              {
+                "frequency": 620.361,
+                "amplitude": 0.19522
+              }
+            ],
+            "signal_evidence": {
+              "dominant_peak": "BPFO",
+              "peaks": {
+                "BPFO": {
+                  "freq": 104.736,
+                  "theoretical": 107.365,
+                  "deviation_pct": 2.448,
+                  "magnitude": 0.533345,
+                  "significant": true
+                },
+                "BPFI": {
+                  "freq": 161.133,
+                  "theoretical": 162.185,
+                  "deviation_pct": 0.649,
+                  "magnitude": 0.045439,
+                  "significant": false
+                },
+                "BSF": {
+                  "freq": 73.242,
+                  "theoretical": 70.583,
+                  "deviation_pct": 3.767,
+                  "magnitude": 0.056581,
+                  "significant": true
+                },
+                "2xBSF": {
+                  "freq": 138.428,
+                  "theoretical": 141.166,
+                  "deviation_pct": 1.94,
+                  "magnitude": 0.036312,
+                  "significant": false
+                }
+              },
+              "significance_ratio": 9.4262,
+              "evidence": [
+                "BPFO=104.736Hz 幅值0.533345（理论107.365Hz，偏差2.448%）",
+                "BPFI=161.133Hz 幅值0.045439（理论162.185Hz，偏差0.649%）",
+                "BSF=73.242Hz 幅值0.056581（理论70.583Hz，偏差3.767%）",
+                "2xBSF=138.428Hz 幅值0.036312（理论141.166Hz，偏差1.94%）"
+              ],
+              "signal_reliability": "high"
+            }
+          }
+        },
+        {
+          "agent_role": "physical_residual",
+          "agent_name": "物理残差 Agent",
+          "conclusion": "PINN 物理残差 severe 级偏离，存在物理异常信号",
+          "fault_type": "normal",
+          "confidence": 0.9,
+          "evidence": "PINN残差0.6060，是Normal基线的31.9倍，提示显著异常",
+          "details": {
+            "residual": 0.606,
+            "pinn_source": "trained_model",
+            "residual_severity": "severe",
+            "residual_ratio": 31.9
+          }
+        },
+        {
+          "agent_role": "knowledge_retrieval",
+          "agent_name": "知识检索 Agent",
+          "conclusion": "知识库检索到「外圈故障」故障模式，提供频谱特征与维护依据",
+          "fault_type": "outer_race",
+          "confidence": 1.0,
+          "evidence": "故障类型「outer_race」知识库引用：",
+          "details": {
+            "kb_entry": {},
+            "matched": true,
+            "citation": "故障类型「outer_race」知识库引用：",
+            "recommendation": ""
+          }
+        },
+        {
+          "agent_role": "fault_diagnosis",
+          "agent_name": "故障分类 Agent",
+          "conclusion": "故障分类结论：外圈故障（置信度 0.9998）",
+          "fault_type": "outer_race",
+          "confidence": 0.9998,
+          "evidence": "CNN 识别到 外圈故障，各类置信度：{'normal': 2.7712141672964208e-05, 'inner_race': 0.00013657889212481678, 'outer_race': 0.9997740387916565, 'ball': 6.177282193675637e-05}",
+          "details": {
+            "cnn_source": "trained_model",
+            "probabilities": {
+              "normal": 2.7712141672964208e-05,
+              "inner_race": 0.00013657889212481678,
+              "outer_race": 0.9997740387916565,
+              "ball": 6.177282193675637e-05
+            }
+          }
+        },
+        {
+          "agent_role": "decision",
+          "agent_name": "决策 Agent",
+          "conclusion": "设备判定为「外圈故障」，信号/物理/知识证据交叉验证一致（置信度 1.0000）。",
+          "fault_type": "outer_race",
+          "confidence": 1.0,
+          "evidence": "健康分=10.99，参与 Agent=['signal_analyst', 'physical_residual', 'knowledge_retrieval', 'fault_diagnosis']",
+          "details": {
+            "report": {
+              "summary": "设备判定为「外圈故障」，信号/物理/知识证据交叉验证一致（置信度 1.0000）。",
+              "physical_evidence": "PINN残差0.6060，是Normal基线的31.9倍，提示显著异常",
+              "signal_evidence": "BPFO=104.736Hz 幅值0.533345（理论107.365Hz，偏差2.448%） | BPFI=161.133Hz 幅值0.045439（理论162.185Hz，偏差0.649%） | BSF=73.242Hz 幅值0.056581（理论70.583Hz，偏差3.767%） | 2xBSF=138.428Hz 幅值0.036312（理论141.166Hz，偏差1.94%）",
+              "knowledge_basis": "故障类型「outer_race」知识库引用：",
+              "diagnosis": {
+                "fault_type": "outer_race",
+                "confidence": 1.0,
+                "reasoning": "以 1D-CNN 分类为主判断：外圈故障（置信度 0.9998）；信号分析主导峰 BPFO 指向 outer_race，与 CNN 一致；物理残差严重度 severe，健康分等级 abnormal。"
+              },
+              "impact": "设备已进入异常状态（健康分 10.99），「外圈故障」可能导致停机或损坏，建议尽快处置。",
+              "recommendation": "建议停机检查轴承外圈，重点关注 BPFO 特征频率及谐波间隔。",
+              "follow_up_questions": [
+                "外圈故障点是否位于负载区（影响劣化速度）？",
+                "是否需要停机检查外圈滚道剥落情况？"
+              ]
+            },
+            "conflict_detected": false,
+            "conflicts": [],
+            "resolution": "各诊断 Agent 结论一致，无需仲裁"
+          }
+        }
+      ],
+      "recommendation": "建议停机检查轴承外圈，重点关注 BPFO 特征频率及谐波间隔。",
+      "report": {
+        "summary": "设备判定为「外圈故障」，信号/物理/知识证据交叉验证一致（置信度 1.0000）。",
+        "physical_evidence": "PINN残差0.6060，是Normal基线的31.9倍，提示显著异常",
+        "signal_evidence": "BPFO=104.736Hz 幅值0.533345（理论107.365Hz，偏差2.448%） | BPFI=161.133Hz 幅值0.045439（理论162.185Hz，偏差0.649%） | BSF=73.242Hz 幅值0.056581（理论70.583Hz，偏差3.767%） | 2xBSF=138.428Hz 幅值0.036312（理论141.166Hz，偏差1.94%）",
+        "knowledge_basis": "故障类型「outer_race」知识库引用：",
+        "diagnosis": {
+          "fault_type": "outer_race",
+          "confidence": 1.0,
+          "reasoning": "以 1D-CNN 分类为主判断：外圈故障（置信度 0.9998）；信号分析主导峰 BPFO 指向 outer_race，与 CNN 一致；物理残差严重度 severe，健康分等级 abnormal。"
+        },
+        "impact": "设备已进入异常状态（健康分 10.99），「外圈故障」可能导致停机或损坏，建议尽快处置。",
+        "recommendation": "建议停机检查轴承外圈，重点关注 BPFO 特征频率及谐波间隔。",
+        "follow_up_questions": [
+          "外圈故障点是否位于负载区（影响劣化速度）？",
+          "是否需要停机检查外圈滚道剥落情况？"
+        ]
+      },
+      "conflicts": [],
+      "conflict_detected": false
+    }
+  },
+  {
+    "class": "OR",
+    "index": 6057,
+    "result": {
+      "device_id": "e2e-OR-6057",
+      "fault_type": "outer_race",
+      "fault_label": "外圈故障",
+      "confidence": 0.9997,
+      "health_score": 39.63,
+      "health_level": "abnormal",
+      "level_label": "异常",
+      "available_channels": [
+        "vibration"
+      ],
+      "agent_results": [
+        {
+          "agent_role": "signal_analyst",
+          "agent_name": "信号分析 Agent",
+          "conclusion": "包络谱无显著特征频率峰值，提示正常工况",
+          "fault_type": "normal",
+          "confidence": 0.4,
+          "evidence": "BPFO=104.736Hz 幅值0.005072（理论107.365Hz，偏差2.448%） | BPFI=164.062Hz 幅值0.012442（理论162.185Hz，偏差1.157%） | BSF=68.115Hz 幅值0.008179（理论70.583Hz，偏差3.496%） | 2xBSF=143.555Hz 幅值0.009157（理论141.166Hz，偏差1.692%）",
+          "details": {
+            "rpm": 1797.0,
+            "horsepower": null,
+            "spectrum_peaks": [
+              {
+                "frequency": 3369.141,
+                "amplitude": 0.05345
+              },
+              {
+                "frequency": 3521.484,
+                "amplitude": 0.02923
+              },
+              {
+                "frequency": 3732.422,
+                "amplitude": 0.02307
+              },
+              {
+                "frequency": 3351.562,
+                "amplitude": 0.01994
+              },
+              {
+                "frequency": 3791.016,
+                "amplitude": 0.01977
+              }
+            ],
+            "envelope_peaks": [
+              {
+                "frequency": 17.578,
+                "amplitude": 0.01803
+              },
+              {
+                "frequency": 57.861,
+                "amplitude": 0.0175
+              },
+              {
+                "frequency": 148.682,
+                "amplitude": 0.01451
+              },
+              {
+                "frequency": 164.062,
+                "amplitude": 0.01244
+              },
+              {
+                "frequency": 123.047,
+                "amplitude": 0.01174
+              }
+            ],
+            "signal_evidence": {
+              "dominant_peak": "none",
+              "peaks": {
+                "BPFO": {
+                  "freq": 104.736,
+                  "theoretical": 107.365,
+                  "deviation_pct": 2.448,
+                  "magnitude": 0.005072,
+                  "significant": false
+                },
+                "BPFI": {
+                  "freq": 164.062,
+                  "theoretical": 162.185,
+                  "deviation_pct": 1.157,
+                  "magnitude": 0.012442,
+                  "significant": false
+                },
+                "BSF": {
+                  "freq": 68.115,
+                  "theoretical": 70.583,
+                  "deviation_pct": 3.496,
+                  "magnitude": 0.008179,
+                  "significant": false
+                },
+                "2xBSF": {
+                  "freq": 143.555,
+                  "theoretical": 141.166,
+                  "deviation_pct": 1.692,
+                  "magnitude": 0.009157,
+                  "significant": false
+                }
+              },
+              "significance_ratio": 1.3587,
+              "evidence": [
+                "BPFO=104.736Hz 幅值0.005072（理论107.365Hz，偏差2.448%）",
+                "BPFI=164.062Hz 幅值0.012442（理论162.185Hz，偏差1.157%）",
+                "BSF=68.115Hz 幅值0.008179（理论70.583Hz，偏差3.496%）",
+                "2xBSF=143.555Hz 幅值0.009157（理论141.166Hz，偏差1.692%）"
+              ],
+              "signal_reliability": "low"
+            }
+          }
+        },
+        {
+          "agent_role": "physical_residual",
+          "agent_name": "物理残差 Agent",
+          "conclusion": "PINN 物理残差 mild 级偏离，存在物理异常信号",
+          "fault_type": "normal",
+          "confidence": 0.7,
+          "evidence": "PINN残差0.0930，是Normal基线的4.9倍，提示显著异常",
+          "details": {
+            "residual": 0.093,
+            "pinn_source": "trained_model",
+            "residual_severity": "mild",
+            "residual_ratio": 4.9
+          }
+        },
+        {
+          "agent_role": "knowledge_retrieval",
+          "agent_name": "知识检索 Agent",
+          "conclusion": "知识库检索到「外圈故障」故障模式，提供频谱特征与维护依据",
+          "fault_type": "outer_race",
+          "confidence": 1.0,
+          "evidence": "故障类型「outer_race」知识库引用：",
+          "details": {
+            "kb_entry": {},
+            "matched": true,
+            "citation": "故障类型「outer_race」知识库引用：",
+            "recommendation": ""
+          }
+        },
+        {
+          "agent_role": "fault_diagnosis",
+          "agent_name": "故障分类 Agent",
+          "conclusion": "故障分类结论：外圈故障（置信度 0.9997）",
+          "fault_type": "outer_race",
+          "confidence": 0.9997,
+          "evidence": "CNN 识别到 外圈故障，各类置信度：{'normal': 9.960245733964257e-06, 'inner_race': 0.00022344791796058416, 'outer_race': 0.9996870756149292, 'ball': 7.946397818159312e-05}",
+          "details": {
+            "cnn_source": "trained_model",
+            "probabilities": {
+              "normal": 9.960245733964257e-06,
+              "inner_race": 0.00022344791796058416,
+              "outer_race": 0.9996870756149292,
+              "ball": 7.946397818159312e-05
+            }
+          }
+        },
+        {
+          "agent_role": "decision",
+          "agent_name": "决策 Agent",
+          "conclusion": "设备判定为「外圈故障」，但各证据存在 1 处冲突，以 CNN 为主判断（置信度 0.9997）。",
+          "fault_type": "outer_race",
+          "confidence": 0.9997,
+          "evidence": "健康分=39.63，参与 Agent=['signal_analyst', 'physical_residual', 'knowledge_retrieval', 'fault_diagnosis']",
+          "details": {
+            "report": {
+              "summary": "设备判定为「外圈故障」，但各证据存在 1 处冲突，以 CNN 为主判断（置信度 0.9997）。",
+              "physical_evidence": "PINN残差0.0930，是Normal基线的4.9倍，提示显著异常",
+              "signal_evidence": "信号证据不足（无显著特征频率峰）",
+              "knowledge_basis": "故障类型「outer_race」知识库引用：",
+              "diagnosis": {
+                "fault_type": "outer_race",
+                "confidence": 0.9997,
+                "reasoning": "以 1D-CNN 分类为主判断：外圈故障（置信度 0.9997）；信号分析未提供充分主导峰证据；物理残差严重度 mild，健康分等级 abnormal。"
+              },
+              "impact": "设备已进入异常状态（健康分 39.63），「外圈故障」可能导致停机或损坏，建议尽快处置。",
+              "recommendation": "建议停机检查轴承外圈，重点关注 BPFO 特征频率及谐波间隔。",
+              "follow_up_questions": [
+                "外圈故障点是否位于负载区（影响劣化速度）？",
+                "是否需要停机检查外圈滚道剥落情况？"
+              ]
+            },
+            "conflict_detected": true,
+            "conflicts": [
+              "物理残差严重度 mild 与健康分等级 abnormal 不一致"
+            ],
+            "resolution": "检测到 1 处冲突，以 CNN 分类结果（outer_race）为主判断，其余证据作为交叉验证参考",
+            "signal_evidence": "insufficient"
+          }
+        }
+      ],
+      "recommendation": "建议停机检查轴承外圈，重点关注 BPFO 特征频率及谐波间隔。",
+      "report": {
+        "summary": "设备判定为「外圈故障」，但各证据存在 1 处冲突，以 CNN 为主判断（置信度 0.9997）。",
+        "physical_evidence": "PINN残差0.0930，是Normal基线的4.9倍，提示显著异常",
+        "signal_evidence": "信号证据不足（无显著特征频率峰）",
+        "knowledge_basis": "故障类型「outer_race」知识库引用：",
+        "diagnosis": {
+          "fault_type": "outer_race",
+          "confidence": 0.9997,
+          "reasoning": "以 1D-CNN 分类为主判断：外圈故障（置信度 0.9997）；信号分析未提供充分主导峰证据；物理残差严重度 mild，健康分等级 abnormal。"
+        },
+        "impact": "设备已进入异常状态（健康分 39.63），「外圈故障」可能导致停机或损坏，建议尽快处置。",
+        "recommendation": "建议停机检查轴承外圈，重点关注 BPFO 特征频率及谐波间隔。",
+        "follow_up_questions": [
+          "外圈故障点是否位于负载区（影响劣化速度）？",
+          "是否需要停机检查外圈滚道剥落情况？"
+        ]
+      },
+      "conflicts": [
+        "物理残差严重度 mild 与健康分等级 abnormal 不一致"
+      ],
+      "conflict_detected": true
+    }
+  },
+  {
+    "class": "IR",
+    "index": 4925,
+    "result": {
+      "device_id": "e2e-IR-4925",
+      "fault_type": "inner_race",
+      "fault_label": "内圈故障",
+      "confidence": 1.0,
+      "health_score": 16.66,
+      "health_level": "abnormal",
+      "level_label": "异常",
+      "available_channels": [
+        "vibration"
+      ],
+      "agent_results": [
+        {
+          "agent_role": "signal_analyst",
+          "agent_name": "信号分析 Agent",
+          "conclusion": "包络谱在 BPFI=159.668Hz 处出现显著峰值，提示内圈故障（信号可靠性 medium）",
+          "fault_type": "inner_race",
+          "confidence": 0.6,
+          "evidence": "BPFO=104.736Hz 幅值0.047738（理论107.365Hz，偏差2.448%） | BPFI=159.668Hz 幅值0.277772（理论162.185Hz，偏差1.552%） | BSF=69.58Hz 幅值0.177764（理论70.583Hz，偏差1.421%） | 2xBSF=143.555Hz 幅值0.04794（理论141.166Hz，偏差1.692%）",
+          "details": {
+            "rpm": 1797.0,
+            "horsepower": null,
+            "spectrum_peaks": [
+              {
+                "frequency": 2906.25,
+                "amplitude": 0.18849
+              },
+              {
+                "frequency": 2847.656,
+                "amplitude": 0.1805
+              },
+              {
+                "frequency": 3064.453,
+                "amplitude": 0.1723
+              },
+              {
+                "frequency": 2748.047,
+                "amplitude": 0.12793
+              },
+              {
+                "frequency": 2583.984,
+                "amplitude": 0.12114
+              }
+            ],
+            "envelope_peaks": [
+              {
+                "frequency": 159.668,
+                "amplitude": 0.27777
+              },
+              {
+                "frequency": 69.58,
+                "amplitude": 0.17776
+              },
+              {
+                "frequency": 89.355,
+                "amplitude": 0.17231
+              },
+              {
+                "frequency": 28.564,
+                "amplitude": 0.15899
+              },
+              {
+                "frequency": 320.068,
+                "amplitude": 0.13783
+              }
+            ],
+            "signal_evidence": {
+              "dominant_peak": "BPFI",
+              "peaks": {
+                "BPFO": {
+                  "freq": 104.736,
+                  "theoretical": 107.365,
+                  "deviation_pct": 2.448,
+                  "magnitude": 0.047738,
+                  "significant": false
+                },
+                "BPFI": {
+                  "freq": 159.668,
+                  "theoretical": 162.185,
+                  "deviation_pct": 1.552,
+                  "magnitude": 0.277772,
+                  "significant": true
+                },
+                "BSF": {
+                  "freq": 69.58,
+                  "theoretical": 70.583,
+                  "deviation_pct": 1.421,
+                  "magnitude": 0.177764,
+                  "significant": true
+                },
+                "2xBSF": {
+                  "freq": 143.555,
+                  "theoretical": 141.166,
+                  "deviation_pct": 1.692,
+                  "magnitude": 0.04794,
+                  "significant": false
+                }
+              },
+              "significance_ratio": 1.5626,
+              "evidence": [
+                "BPFO=104.736Hz 幅值0.047738（理论107.365Hz，偏差2.448%）",
+                "BPFI=159.668Hz 幅值0.277772（理论162.185Hz，偏差1.552%）",
+                "BSF=69.58Hz 幅值0.177764（理论70.583Hz，偏差1.421%）",
+                "2xBSF=143.555Hz 幅值0.04794（理论141.166Hz，偏差1.692%）"
+              ],
+              "signal_reliability": "medium"
+            }
+          }
+        },
+        {
+          "agent_role": "physical_residual",
+          "agent_name": "物理残差 Agent",
+          "conclusion": "PINN 物理残差 severe 级偏离，存在物理异常信号",
+          "fault_type": "normal",
+          "confidence": 0.9,
+          "evidence": "PINN残差0.4403，是Normal基线的23.2倍，提示显著异常",
+          "details": {
+            "residual": 0.4403,
+            "pinn_source": "trained_model",
+            "residual_severity": "severe",
+            "residual_ratio": 23.2
+          }
+        },
+        {
+          "agent_role": "knowledge_retrieval",
+          "agent_name": "知识检索 Agent",
+          "conclusion": "知识库检索到「内圈故障」故障模式，提供频谱特征与维护依据",
+          "fault_type": "inner_race",
+          "confidence": 1.0,
+          "evidence": "故障类型「inner_race」知识库引用：",
+          "details": {
+            "kb_entry": {},
+            "matched": true,
+            "citation": "故障类型「inner_race」知识库引用：",
+            "recommendation": ""
+          }
+        },
+        {
+          "agent_role": "fault_diagnosis",
+          "agent_name": "故障分类 Agent",
+          "conclusion": "故障分类结论：内圈故障（置信度 0.9927）",
+          "fault_type": "inner_race",
+          "confidence": 0.9927,
+          "evidence": "CNN 识别到 内圈故障，各类置信度：{'normal': 0.000594677752815187, 'inner_race': 0.992676854133606, 'outer_race': 0.003563447156921029, 'ball': 0.0031649840530008078}",
+          "details": {
+            "cnn_source": "trained_model",
+            "probabilities": {
+              "normal": 0.000594677752815187,
+              "inner_race": 0.992676854133606,
+              "outer_race": 0.003563447156921029,
+              "ball": 0.0031649840530008078
+            }
+          }
+        },
+        {
+          "agent_role": "decision",
+          "agent_name": "决策 Agent",
+          "conclusion": "设备判定为「内圈故障」，信号/物理/知识证据交叉验证一致（置信度 1.0000）。",
+          "fault_type": "inner_race",
+          "confidence": 1.0,
+          "evidence": "健康分=16.66，参与 Agent=['signal_analyst', 'physical_residual', 'knowledge_retrieval', 'fault_diagnosis']",
+          "details": {
+            "report": {
+              "summary": "设备判定为「内圈故障」，信号/物理/知识证据交叉验证一致（置信度 1.0000）。",
+              "physical_evidence": "PINN残差0.4403，是Normal基线的23.2倍，提示显著异常",
+              "signal_evidence": "BPFO=104.736Hz 幅值0.047738（理论107.365Hz，偏差2.448%） | BPFI=159.668Hz 幅值0.277772（理论162.185Hz，偏差1.552%） | BSF=69.58Hz 幅值0.177764（理论70.583Hz，偏差1.421%） | 2xBSF=143.555Hz 幅值0.04794（理论141.166Hz，偏差1.692%）",
+              "knowledge_basis": "故障类型「inner_race」知识库引用：",
+              "diagnosis": {
+                "fault_type": "inner_race",
+                "confidence": 1.0,
+                "reasoning": "以 1D-CNN 分类为主判断：内圈故障（置信度 0.9927）；信号分析主导峰 BPFI 指向 inner_race，与 CNN 一致；物理残差严重度 severe，健康分等级 abnormal。"
+              },
+              "impact": "设备已进入异常状态（健康分 16.66），「内圈故障」可能导致停机或损坏，建议尽快处置。",
+              "recommendation": "建议停机检查轴承内圈，重点关注 BPFI 特征频率及其转频边带。",
+              "follow_up_questions": [
+                "是否观察到 BPFI 转频边带随转速变化？",
+                "是否需要拆解确认内圈滚道剥落/点蚀的缺陷尺寸？"
+              ]
+            },
+            "conflict_detected": false,
+            "conflicts": [],
+            "resolution": "各诊断 Agent 结论一致，无需仲裁"
+          }
+        }
+      ],
+      "recommendation": "建议停机检查轴承内圈，重点关注 BPFI 特征频率及其转频边带。",
+      "report": {
+        "summary": "设备判定为「内圈故障」，信号/物理/知识证据交叉验证一致（置信度 1.0000）。",
+        "physical_evidence": "PINN残差0.4403，是Normal基线的23.2倍，提示显著异常",
+        "signal_evidence": "BPFO=104.736Hz 幅值0.047738（理论107.365Hz，偏差2.448%） | BPFI=159.668Hz 幅值0.277772（理论162.185Hz，偏差1.552%） | BSF=69.58Hz 幅值0.177764（理论70.583Hz，偏差1.421%） | 2xBSF=143.555Hz 幅值0.04794（理论141.166Hz，偏差1.692%）",
+        "knowledge_basis": "故障类型「inner_race」知识库引用：",
+        "diagnosis": {
+          "fault_type": "inner_race",
+          "confidence": 1.0,
+          "reasoning": "以 1D-CNN 分类为主判断：内圈故障（置信度 0.9927）；信号分析主导峰 BPFI 指向 inner_race，与 CNN 一致；物理残差严重度 severe，健康分等级 abnormal。"
+        },
+        "impact": "设备已进入异常状态（健康分 16.66），「内圈故障」可能导致停机或损坏，建议尽快处置。",
+        "recommendation": "建议停机检查轴承内圈，重点关注 BPFI 特征频率及其转频边带。",
+        "follow_up_questions": [
+          "是否观察到 BPFI 转频边带随转速变化？",
+          "是否需要拆解确认内圈滚道剥落/点蚀的缺陷尺寸？"
+        ]
+      },
+      "conflicts": [],
+      "conflict_detected": false
+    }
+  },
+  {
+    "class": "IR",
+    "index": 7289,
+    "result": {
+      "device_id": "e2e-IR-7289",
+      "fault_type": "inner_race",
+      "fault_label": "内圈故障",
+      "confidence": 1.0,
+      "health_score": 24.15,
+      "health_level": "abnormal",
+      "level_label": "异常",
+      "available_channels": [
+        "vibration"
+      ],
+      "agent_results": [
+        {
+          "agent_role": "signal_analyst",
+          "agent_name": "信号分析 Agent",
+          "conclusion": "包络谱在 BPFI=159.668Hz 处出现显著峰值，提示内圈故障（信号可靠性 high）",
+          "fault_type": "inner_race",
+          "confidence": 0.85,
+          "evidence": "BPFO=104.736Hz 幅值0.021456（理论107.365Hz，偏差2.448%） | BPFI=159.668Hz 幅值0.127467（理论162.185Hz，偏差1.552%） | BSF=70.312Hz 幅值0.031255（理论70.583Hz，偏差0.383%） | 2xBSF=143.555Hz 幅值0.016997（理论141.166Hz，偏差1.692%）",
+          "details": {
+            "rpm": 1797.0,
+            "horsepower": null,
+            "spectrum_peaks": [
+              {
+                "frequency": 3591.797,
+                "amplitude": 0.13207
+              },
+              {
+                "frequency": 2507.812,
+                "amplitude": 0.12026
+              },
+              {
+                "frequency": 2818.359,
+                "amplitude": 0.10021
+              },
+              {
+                "frequency": 1423.828,
+                "amplitude": 0.0977
+              },
+              {
+                "frequency": 3281.25,
+                "amplitude": 0.09687
+              }
+            ],
+            "envelope_peaks": [
+              {
+                "frequency": 154.541,
+                "amplitude": 0.2047
+              },
+              {
+                "frequency": 309.814,
+                "amplitude": 0.104
+              },
+              {
+                "frequency": 57.129,
+                "amplitude": 0.08506
+              },
+              {
+                "frequency": 97.412,
+                "amplitude": 0.07544
+              },
+              {
+                "frequency": 774.902,
+                "amplitude": 0.06342
+              }
+            ],
+            "signal_evidence": {
+              "dominant_peak": "BPFI",
+              "peaks": {
+                "BPFO": {
+                  "freq": 104.736,
+                  "theoretical": 107.365,
+                  "deviation_pct": 2.448,
+                  "magnitude": 0.021456,
+                  "significant": false
+                },
+                "BPFI": {
+                  "freq": 159.668,
+                  "theoretical": 162.185,
+                  "deviation_pct": 1.552,
+                  "magnitude": 0.127467,
+                  "significant": true
+                },
+                "BSF": {
+                  "freq": 70.312,
+                  "theoretical": 70.583,
+                  "deviation_pct": 0.383,
+                  "magnitude": 0.031255,
+                  "significant": false
+                },
+                "2xBSF": {
+                  "freq": 143.555,
+                  "theoretical": 141.166,
+                  "deviation_pct": 1.692,
+                  "magnitude": 0.016997,
+                  "significant": false
+                }
+              },
+              "significance_ratio": 4.0783,
+              "evidence": [
+                "BPFO=104.736Hz 幅值0.021456（理论107.365Hz，偏差2.448%）",
+                "BPFI=159.668Hz 幅值0.127467（理论162.185Hz，偏差1.552%）",
+                "BSF=70.312Hz 幅值0.031255（理论70.583Hz，偏差0.383%）",
+                "2xBSF=143.555Hz 幅值0.016997（理论141.166Hz，偏差1.692%）"
+              ],
+              "signal_reliability": "high"
+            }
+          }
+        },
+        {
+          "agent_role": "physical_residual",
+          "agent_name": "物理残差 Agent",
+          "conclusion": "PINN 物理残差 severe 级偏离，存在物理异常信号",
+          "fault_type": "normal",
+          "confidence": 0.9,
+          "evidence": "PINN残差0.2911，是Normal基线的15.3倍，提示显著异常",
+          "details": {
+            "residual": 0.2911,
+            "pinn_source": "trained_model",
+            "residual_severity": "severe",
+            "residual_ratio": 15.3
+          }
+        },
+        {
+          "agent_role": "knowledge_retrieval",
+          "agent_name": "知识检索 Agent",
+          "conclusion": "知识库检索到「内圈故障」故障模式，提供频谱特征与维护依据",
+          "fault_type": "inner_race",
+          "confidence": 1.0,
+          "evidence": "故障类型「inner_race」知识库引用：",
+          "details": {
+            "kb_entry": {},
+            "matched": true,
+            "citation": "故障类型「inner_race」知识库引用：",
+            "recommendation": ""
+          }
+        },
+        {
+          "agent_role": "fault_diagnosis",
+          "agent_name": "故障分类 Agent",
+          "conclusion": "故障分类结论：内圈故障（置信度 1.0000）",
+          "fault_type": "inner_race",
+          "confidence": 1.0,
+          "evidence": "CNN 识别到 内圈故障，各类置信度：{'normal': 1.4241605867937324e-06, 'inner_race': 0.9999898672103882, 'outer_race': 8.567787517677061e-06, 'ball': 1.4810839843448775e-07}",
+          "details": {
+            "cnn_source": "trained_model",
+            "probabilities": {
+              "normal": 1.4241605867937324e-06,
+              "inner_race": 0.9999898672103882,
+              "outer_race": 8.567787517677061e-06,
+              "ball": 1.4810839843448775e-07
+            }
+          }
+        },
+        {
+          "agent_role": "decision",
+          "agent_name": "决策 Agent",
+          "conclusion": "设备判定为「内圈故障」，信号/物理/知识证据交叉验证一致（置信度 1.0000）。",
+          "fault_type": "inner_race",
+          "confidence": 1.0,
+          "evidence": "健康分=24.15，参与 Agent=['signal_analyst', 'physical_residual', 'knowledge_retrieval', 'fault_diagnosis']",
+          "details": {
+            "report": {
+              "summary": "设备判定为「内圈故障」，信号/物理/知识证据交叉验证一致（置信度 1.0000）。",
+              "physical_evidence": "PINN残差0.2911，是Normal基线的15.3倍，提示显著异常",
+              "signal_evidence": "BPFO=104.736Hz 幅值0.021456（理论107.365Hz，偏差2.448%） | BPFI=159.668Hz 幅值0.127467（理论162.185Hz，偏差1.552%） | BSF=70.312Hz 幅值0.031255（理论70.583Hz，偏差0.383%） | 2xBSF=143.555Hz 幅值0.016997（理论141.166Hz，偏差1.692%）",
+              "knowledge_basis": "故障类型「inner_race」知识库引用：",
+              "diagnosis": {
+                "fault_type": "inner_race",
+                "confidence": 1.0,
+                "reasoning": "以 1D-CNN 分类为主判断：内圈故障（置信度 1.0000）；信号分析主导峰 BPFI 指向 inner_race，与 CNN 一致；物理残差严重度 severe，健康分等级 abnormal。"
+              },
+              "impact": "设备已进入异常状态（健康分 24.15），「内圈故障」可能导致停机或损坏，建议尽快处置。",
+              "recommendation": "建议停机检查轴承内圈，重点关注 BPFI 特征频率及其转频边带。",
+              "follow_up_questions": [
+                "是否观察到 BPFI 转频边带随转速变化？",
+                "是否需要拆解确认内圈滚道剥落/点蚀的缺陷尺寸？"
+              ]
+            },
+            "conflict_detected": false,
+            "conflicts": [],
+            "resolution": "各诊断 Agent 结论一致，无需仲裁"
+          }
+        }
+      ],
+      "recommendation": "建议停机检查轴承内圈，重点关注 BPFI 特征频率及其转频边带。",
+      "report": {
+        "summary": "设备判定为「内圈故障」，信号/物理/知识证据交叉验证一致（置信度 1.0000）。",
+        "physical_evidence": "PINN残差0.2911，是Normal基线的15.3倍，提示显著异常",
+        "signal_evidence": "BPFO=104.736Hz 幅值0.021456（理论107.365Hz，偏差2.448%） | BPFI=159.668Hz 幅值0.127467（理论162.185Hz，偏差1.552%） | BSF=70.312Hz 幅值0.031255（理论70.583Hz，偏差0.383%） | 2xBSF=143.555Hz 幅值0.016997（理论141.166Hz，偏差1.692%）",
+        "knowledge_basis": "故障类型「inner_race」知识库引用：",
+        "diagnosis": {
+          "fault_type": "inner_race",
+          "confidence": 1.0,
+          "reasoning": "以 1D-CNN 分类为主判断：内圈故障（置信度 1.0000）；信号分析主导峰 BPFI 指向 inner_race，与 CNN 一致；物理残差严重度 severe，健康分等级 abnormal。"
+        },
+        "impact": "设备已进入异常状态（健康分 24.15），「内圈故障」可能导致停机或损坏，建议尽快处置。",
+        "recommendation": "建议停机检查轴承内圈，重点关注 BPFI 特征频率及其转频边带。",
+        "follow_up_questions": [
+          "是否观察到 BPFI 转频边带随转速变化？",
+          "是否需要拆解确认内圈滚道剥落/点蚀的缺陷尺寸？"
+        ]
+      },
+      "conflicts": [],
+      "conflict_detected": false
+    }
+  },
+  {
+    "class": "IR",
+    "index": 2675,
+    "result": {
+      "device_id": "e2e-IR-2675",
+      "fault_type": "inner_race",
+      "fault_label": "内圈故障",
+      "confidence": 1.0,
+      "health_score": 33.12,
+      "health_level": "abnormal",
+      "level_label": "异常",
+      "available_channels": [
+        "vibration"
+      ],
+      "agent_results": [
+        {
+          "agent_role": "signal_analyst",
+          "agent_name": "信号分析 Agent",
+          "conclusion": "包络谱在 BPFI=159.668Hz 处出现显著峰值，提示内圈故障（信号可靠性 medium）",
+          "fault_type": "inner_race",
+          "confidence": 0.6,
+          "evidence": "BPFO=104.736Hz 幅值0.027304（理论107.365Hz，偏差2.448%） | BPFI=159.668Hz 幅值0.07019（理论162.185Hz，偏差1.552%） | BSF=70.312Hz 幅值0.054321（理论70.583Hz，偏差0.383%） | 2xBSF=143.555Hz 幅值0.030217（理论141.166Hz，偏差1.692%）",
+          "details": {
+            "rpm": 1797.0,
+            "horsepower": null,
+            "spectrum_peaks": [
+              {
+                "frequency": 3462.891,
+                "amplitude": 0.04774
+              },
+              {
+                "frequency": 3375.0,
+                "amplitude": 0.04176
+              },
+              {
+                "frequency": 3621.094,
+                "amplitude": 0.04131
+              },
+              {
+                "frequency": 3503.906,
+                "amplitude": 0.03564
+              },
+              {
+                "frequency": 3515.625,
+                "amplitude": 0.03337
+              }
+            ],
+            "envelope_peaks": [
+              {
+                "frequency": 158.203,
+                "amplitude": 0.07535
+              },
+              {
+                "frequency": 29.297,
+                "amplitude": 0.05632
+              },
+              {
+                "frequency": 70.312,
+                "amplitude": 0.05432
+              },
+              {
+                "frequency": 11.719,
+                "amplitude": 0.04741
+              },
+              {
+                "frequency": 100.342,
+                "amplitude": 0.04601
+              }
+            ],
+            "signal_evidence": {
+              "dominant_peak": "BPFI",
+              "peaks": {
+                "BPFO": {
+                  "freq": 104.736,
+                  "theoretical": 107.365,
+                  "deviation_pct": 2.448,
+                  "magnitude": 0.027304,
+                  "significant": false
+                },
+                "BPFI": {
+                  "freq": 159.668,
+                  "theoretical": 162.185,
+                  "deviation_pct": 1.552,
+                  "magnitude": 0.07019,
+                  "significant": true
+                },
+                "BSF": {
+                  "freq": 70.312,
+                  "theoretical": 70.583,
+                  "deviation_pct": 0.383,
+                  "magnitude": 0.054321,
+                  "significant": true
+                },
+                "2xBSF": {
+                  "freq": 143.555,
+                  "theoretical": 141.166,
+                  "deviation_pct": 1.692,
+                  "magnitude": 0.030217,
+                  "significant": false
+                }
+              },
+              "significance_ratio": 1.2921,
+              "evidence": [
+                "BPFO=104.736Hz 幅值0.027304（理论107.365Hz，偏差2.448%）",
+                "BPFI=159.668Hz 幅值0.07019（理论162.185Hz，偏差1.552%）",
+                "BSF=70.312Hz 幅值0.054321（理论70.583Hz，偏差0.383%）",
+                "2xBSF=143.555Hz 幅值0.030217（理论141.166Hz，偏差1.692%）"
+              ],
+              "signal_reliability": "medium"
+            }
+          }
+        },
+        {
+          "agent_role": "physical_residual",
+          "agent_name": "物理残差 Agent",
+          "conclusion": "PINN 物理残差 mild 级偏离，存在物理异常信号",
+          "fault_type": "normal",
+          "confidence": 0.7,
+          "evidence": "PINN残差0.1648，是Normal基线的8.7倍，提示显著异常",
+          "details": {
+            "residual": 0.1648,
+            "pinn_source": "trained_model",
+            "residual_severity": "mild",
+            "residual_ratio": 8.7
+          }
+        },
+        {
+          "agent_role": "knowledge_retrieval",
+          "agent_name": "知识检索 Agent",
+          "conclusion": "知识库检索到「内圈故障」故障模式，提供频谱特征与维护依据",
+          "fault_type": "inner_race",
+          "confidence": 1.0,
+          "evidence": "故障类型「inner_race」知识库引用：",
+          "details": {
+            "kb_entry": {},
+            "matched": true,
+            "citation": "故障类型「inner_race」知识库引用：",
+            "recommendation": ""
+          }
+        },
+        {
+          "agent_role": "fault_diagnosis",
+          "agent_name": "故障分类 Agent",
+          "conclusion": "故障分类结论：内圈故障（置信度 0.9996）",
+          "fault_type": "inner_race",
+          "confidence": 0.9996,
+          "evidence": "CNN 识别到 内圈故障，各类置信度：{'normal': 5.439997403300367e-05, 'inner_race': 0.9996169805526733, 'outer_race': 9.982831397792324e-05, 'ball': 0.00022867605730425566}",
+          "details": {
+            "cnn_source": "trained_model",
+            "probabilities": {
+              "normal": 5.439997403300367e-05,
+              "inner_race": 0.9996169805526733,
+              "outer_race": 9.982831397792324e-05,
+              "ball": 0.00022867605730425566
+            }
+          }
+        },
+        {
+          "agent_role": "decision",
+          "agent_name": "决策 Agent",
+          "conclusion": "设备判定为「内圈故障」，但各证据存在 1 处冲突，以 CNN 为主判断（置信度 1.0000）。",
+          "fault_type": "inner_race",
+          "confidence": 1.0,
+          "evidence": "健康分=33.12，参与 Agent=['signal_analyst', 'physical_residual', 'knowledge_retrieval', 'fault_diagnosis']",
+          "details": {
+            "report": {
+              "summary": "设备判定为「内圈故障」，但各证据存在 1 处冲突，以 CNN 为主判断（置信度 1.0000）。",
+              "physical_evidence": "PINN残差0.1648，是Normal基线的8.7倍，提示显著异常",
+              "signal_evidence": "BPFO=104.736Hz 幅值0.027304（理论107.365Hz，偏差2.448%） | BPFI=159.668Hz 幅值0.07019（理论162.185Hz，偏差1.552%） | BSF=70.312Hz 幅值0.054321（理论70.583Hz，偏差0.383%） | 2xBSF=143.555Hz 幅值0.030217（理论141.166Hz，偏差1.692%）",
+              "knowledge_basis": "故障类型「inner_race」知识库引用：",
+              "diagnosis": {
+                "fault_type": "inner_race",
+                "confidence": 1.0,
+                "reasoning": "以 1D-CNN 分类为主判断：内圈故障（置信度 0.9996）；信号分析主导峰 BPFI 指向 inner_race，与 CNN 一致；物理残差严重度 mild，健康分等级 abnormal。"
+              },
+              "impact": "设备已进入异常状态（健康分 33.12），「内圈故障」可能导致停机或损坏，建议尽快处置。",
+              "recommendation": "建议停机检查轴承内圈，重点关注 BPFI 特征频率及其转频边带。",
+              "follow_up_questions": [
+                "是否观察到 BPFI 转频边带随转速变化？",
+                "是否需要拆解确认内圈滚道剥落/点蚀的缺陷尺寸？"
+              ]
+            },
+            "conflict_detected": true,
+            "conflicts": [
+              "物理残差严重度 mild 与健康分等级 abnormal 不一致"
+            ],
+            "resolution": "检测到 1 处冲突，以 CNN 分类结果（inner_race）为主判断，其余证据作为交叉验证参考"
+          }
+        }
+      ],
+      "recommendation": "建议停机检查轴承内圈，重点关注 BPFI 特征频率及其转频边带。",
+      "report": {
+        "summary": "设备判定为「内圈故障」，但各证据存在 1 处冲突，以 CNN 为主判断（置信度 1.0000）。",
+        "physical_evidence": "PINN残差0.1648，是Normal基线的8.7倍，提示显著异常",
+        "signal_evidence": "BPFO=104.736Hz 幅值0.027304（理论107.365Hz，偏差2.448%） | BPFI=159.668Hz 幅值0.07019（理论162.185Hz，偏差1.552%） | BSF=70.312Hz 幅值0.054321（理论70.583Hz，偏差0.383%） | 2xBSF=143.555Hz 幅值0.030217（理论141.166Hz，偏差1.692%）",
+        "knowledge_basis": "故障类型「inner_race」知识库引用：",
+        "diagnosis": {
+          "fault_type": "inner_race",
+          "confidence": 1.0,
+          "reasoning": "以 1D-CNN 分类为主判断：内圈故障（置信度 0.9996）；信号分析主导峰 BPFI 指向 inner_race，与 CNN 一致；物理残差严重度 mild，健康分等级 abnormal。"
+        },
+        "impact": "设备已进入异常状态（健康分 33.12），「内圈故障」可能导致停机或损坏，建议尽快处置。",
+        "recommendation": "建议停机检查轴承内圈，重点关注 BPFI 特征频率及其转频边带。",
+        "follow_up_questions": [
+          "是否观察到 BPFI 转频边带随转速变化？",
+          "是否需要拆解确认内圈滚道剥落/点蚀的缺陷尺寸？"
+        ]
+      },
+      "conflicts": [
+        "物理残差严重度 mild 与健康分等级 abnormal 不一致"
+      ],
+      "conflict_detected": true
+    }
+  },
+  {
+    "class": "IR",
+    "index": 1747,
+    "result": {
+      "device_id": "e2e-IR-1747",
+      "fault_type": "inner_race",
+      "fault_label": "内圈故障",
+      "confidence": 1.0,
+      "health_score": 30.15,
+      "health_level": "abnormal",
+      "level_label": "异常",
+      "available_channels": [
+        "vibration"
+      ],
+      "agent_results": [
+        {
+          "agent_role": "signal_analyst",
+          "agent_name": "信号分析 Agent",
+          "conclusion": "包络谱在 BPFI=162.598Hz 处出现显著峰值，提示内圈故障（信号可靠性 medium）",
+          "fault_type": "inner_race",
+          "confidence": 0.6,
+          "evidence": "BPFO=104.736Hz 幅值0.054674（理论107.365Hz，偏差2.448%） | BPFI=162.598Hz 幅值0.108688（理论162.185Hz，偏差0.254%） | BSF=73.242Hz 幅值0.081292（理论70.583Hz，偏差3.767%） | 2xBSF=138.428Hz 幅值0.033697（理论141.166Hz，偏差1.94%）",
+          "details": {
+            "rpm": 1797.0,
+            "horsepower": null,
+            "spectrum_peaks": [
+              {
+                "frequency": 2759.766,
+                "amplitude": 0.0448
+              },
+              {
+                "frequency": 3292.969,
+                "amplitude": 0.04416
+              },
+              {
+                "frequency": 2625.0,
+                "amplitude": 0.04131
+              },
+              {
+                "frequency": 3697.266,
+                "amplitude": 0.04027
+              },
+              {
+                "frequency": 3662.109,
+                "amplitude": 0.04019
+              }
+            ],
+            "envelope_peaks": [
+              {
+                "frequency": 162.598,
+                "amplitude": 0.10869
+              },
+              {
+                "frequency": 73.242,
+                "amplitude": 0.08129
+              },
+              {
+                "frequency": 89.355,
+                "amplitude": 0.07661
+              },
+              {
+                "frequency": 29.297,
+                "amplitude": 0.07519
+              },
+              {
+                "frequency": 102.539,
+                "amplitude": 0.05839
+              }
+            ],
+            "signal_evidence": {
+              "dominant_peak": "BPFI",
+              "peaks": {
+                "BPFO": {
+                  "freq": 104.736,
+                  "theoretical": 107.365,
+                  "deviation_pct": 2.448,
+                  "magnitude": 0.054674,
+                  "significant": true
+                },
+                "BPFI": {
+                  "freq": 162.598,
+                  "theoretical": 162.185,
+                  "deviation_pct": 0.254,
+                  "magnitude": 0.108688,
+                  "significant": true
+                },
+                "BSF": {
+                  "freq": 73.242,
+                  "theoretical": 70.583,
+                  "deviation_pct": 3.767,
+                  "magnitude": 0.081292,
+                  "significant": true
+                },
+                "2xBSF": {
+                  "freq": 138.428,
+                  "theoretical": 141.166,
+                  "deviation_pct": 1.94,
+                  "magnitude": 0.033697,
+                  "significant": false
+                }
+              },
+              "significance_ratio": 1.337,
+              "evidence": [
+                "BPFO=104.736Hz 幅值0.054674（理论107.365Hz，偏差2.448%）",
+                "BPFI=162.598Hz 幅值0.108688（理论162.185Hz，偏差0.254%）",
+                "BSF=73.242Hz 幅值0.081292（理论70.583Hz，偏差3.767%）",
+                "2xBSF=138.428Hz 幅值0.033697（理论141.166Hz，偏差1.94%）"
+              ],
+              "signal_reliability": "medium"
+            }
+          }
+        },
+        {
+          "agent_role": "physical_residual",
+          "agent_name": "物理残差 Agent",
+          "conclusion": "PINN 物理残差 severe 级偏离，存在物理异常信号",
+          "fault_type": "normal",
+          "confidence": 0.9,
+          "evidence": "PINN残差0.2025，是Normal基线的10.7倍，提示显著异常",
+          "details": {
+            "residual": 0.2025,
+            "pinn_source": "trained_model",
+            "residual_severity": "severe",
+            "residual_ratio": 10.7
+          }
+        },
+        {
+          "agent_role": "knowledge_retrieval",
+          "agent_name": "知识检索 Agent",
+          "conclusion": "知识库检索到「内圈故障」故障模式，提供频谱特征与维护依据",
+          "fault_type": "inner_race",
+          "confidence": 1.0,
+          "evidence": "故障类型「inner_race」知识库引用：",
+          "details": {
+            "kb_entry": {},
+            "matched": true,
+            "citation": "故障类型「inner_race」知识库引用：",
+            "recommendation": ""
+          }
+        },
+        {
+          "agent_role": "fault_diagnosis",
+          "agent_name": "故障分类 Agent",
+          "conclusion": "故障分类结论：内圈故障（置信度 0.9958）",
+          "fault_type": "inner_race",
+          "confidence": 0.9958,
+          "evidence": "CNN 识别到 内圈故障，各类置信度：{'normal': 0.00019135838374495506, 'inner_race': 0.9957772493362427, 'outer_race': 0.003905734745785594, 'ball': 0.00012555024295579642}",
+          "details": {
+            "cnn_source": "trained_model",
+            "probabilities": {
+              "normal": 0.00019135838374495506,
+              "inner_race": 0.9957772493362427,
+              "outer_race": 0.003905734745785594,
+              "ball": 0.00012555024295579642
+            }
+          }
+        },
+        {
+          "agent_role": "decision",
+          "agent_name": "决策 Agent",
+          "conclusion": "设备判定为「内圈故障」，信号/物理/知识证据交叉验证一致（置信度 1.0000）。",
+          "fault_type": "inner_race",
+          "confidence": 1.0,
+          "evidence": "健康分=30.15，参与 Agent=['signal_analyst', 'physical_residual', 'knowledge_retrieval', 'fault_diagnosis']",
+          "details": {
+            "report": {
+              "summary": "设备判定为「内圈故障」，信号/物理/知识证据交叉验证一致（置信度 1.0000）。",
+              "physical_evidence": "PINN残差0.2025，是Normal基线的10.7倍，提示显著异常",
+              "signal_evidence": "BPFO=104.736Hz 幅值0.054674（理论107.365Hz，偏差2.448%） | BPFI=162.598Hz 幅值0.108688（理论162.185Hz，偏差0.254%） | BSF=73.242Hz 幅值0.081292（理论70.583Hz，偏差3.767%） | 2xBSF=138.428Hz 幅值0.033697（理论141.166Hz，偏差1.94%）",
+              "knowledge_basis": "故障类型「inner_race」知识库引用：",
+              "diagnosis": {
+                "fault_type": "inner_race",
+                "confidence": 1.0,
+                "reasoning": "以 1D-CNN 分类为主判断：内圈故障（置信度 0.9958）；信号分析主导峰 BPFI 指向 inner_race，与 CNN 一致；物理残差严重度 severe，健康分等级 abnormal。"
+              },
+              "impact": "设备已进入异常状态（健康分 30.15），「内圈故障」可能导致停机或损坏，建议尽快处置。",
+              "recommendation": "建议停机检查轴承内圈，重点关注 BPFI 特征频率及其转频边带。",
+              "follow_up_questions": [
+                "是否观察到 BPFI 转频边带随转速变化？",
+                "是否需要拆解确认内圈滚道剥落/点蚀的缺陷尺寸？"
+              ]
+            },
+            "conflict_detected": false,
+            "conflicts": [],
+            "resolution": "各诊断 Agent 结论一致，无需仲裁"
+          }
+        }
+      ],
+      "recommendation": "建议停机检查轴承内圈，重点关注 BPFI 特征频率及其转频边带。",
+      "report": {
+        "summary": "设备判定为「内圈故障」，信号/物理/知识证据交叉验证一致（置信度 1.0000）。",
+        "physical_evidence": "PINN残差0.2025，是Normal基线的10.7倍，提示显著异常",
+        "signal_evidence": "BPFO=104.736Hz 幅值0.054674（理论107.365Hz，偏差2.448%） | BPFI=162.598Hz 幅值0.108688（理论162.185Hz，偏差0.254%） | BSF=73.242Hz 幅值0.081292（理论70.583Hz，偏差3.767%） | 2xBSF=138.428Hz 幅值0.033697（理论141.166Hz，偏差1.94%）",
+        "knowledge_basis": "故障类型「inner_race」知识库引用：",
+        "diagnosis": {
+          "fault_type": "inner_race",
+          "confidence": 1.0,
+          "reasoning": "以 1D-CNN 分类为主判断：内圈故障（置信度 0.9958）；信号分析主导峰 BPFI 指向 inner_race，与 CNN 一致；物理残差严重度 severe，健康分等级 abnormal。"
+        },
+        "impact": "设备已进入异常状态（健康分 30.15），「内圈故障」可能导致停机或损坏，建议尽快处置。",
+        "recommendation": "建议停机检查轴承内圈，重点关注 BPFI 特征频率及其转频边带。",
+        "follow_up_questions": [
+          "是否观察到 BPFI 转频边带随转速变化？",
+          "是否需要拆解确认内圈滚道剥落/点蚀的缺陷尺寸？"
+        ]
+      },
+      "conflicts": [],
+      "conflict_detected": false
+    }
+  },
+  {
+    "class": "IR",
+    "index": 982,
+    "result": {
+      "device_id": "e2e-IR-982",
+      "fault_type": "inner_race",
+      "fault_label": "内圈故障",
+      "confidence": 0.9984,
+      "health_score": 31.65,
+      "health_level": "abnormal",
+      "level_label": "异常",
+      "available_channels": [
+        "vibration"
+      ],
+      "agent_results": [
+        {
+          "agent_role": "signal_analyst",
+          "agent_name": "信号分析 Agent",
+          "conclusion": "包络谱在 BSF=68.848Hz 处出现显著峰值，提示滚动体故障（信号可靠性 low）",
+          "fault_type": "ball",
+          "confidence": 0.4,
+          "evidence": "BPFO=109.863Hz 幅值0.02496（理论107.365Hz，偏差2.327%） | BPFI=159.668Hz 幅值0.053339（理论162.185Hz，偏差1.552%） | BSF=68.848Hz 幅值0.061743（理论70.583Hz，偏差2.459%） | 2xBSF=142.09Hz 幅值0.030149（理论141.166Hz，偏差0.654%）",
+          "details": {
+            "rpm": 1797.0,
+            "horsepower": null,
+            "spectrum_peaks": [
+              {
+                "frequency": 1388.672,
+                "amplitude": 0.07154
+              },
+              {
+                "frequency": 3287.109,
+                "amplitude": 0.05864
+              },
+              {
+                "frequency": 3439.453,
+                "amplitude": 0.0482
+              },
+              {
+                "frequency": 2835.938,
+                "amplitude": 0.04747
+              },
+              {
+                "frequency": 3427.734,
+                "amplitude": 0.04279
+              }
+            ],
+            "envelope_peaks": [
+              {
+                "frequency": 27.832,
+                "amplitude": 0.06888
+              },
+              {
+                "frequency": 156.006,
+                "amplitude": 0.06724
+              },
+              {
+                "frequency": 68.848,
+                "amplitude": 0.06174
+              },
+              {
+                "frequency": 87.158,
+                "amplitude": 0.06053
+              },
+              {
+                "frequency": 16.113,
+                "amplitude": 0.04495
+              }
+            ],
+            "signal_evidence": {
+              "dominant_peak": "BSF",
+              "peaks": {
+                "BPFO": {
+                  "freq": 109.863,
+                  "theoretical": 107.365,
+                  "deviation_pct": 2.327,
+                  "magnitude": 0.02496,
+                  "significant": false
+                },
+                "BPFI": {
+                  "freq": 159.668,
+                  "theoretical": 162.185,
+                  "deviation_pct": 1.552,
+                  "magnitude": 0.053339,
+                  "significant": true
+                },
+                "BSF": {
+                  "freq": 68.848,
+                  "theoretical": 70.583,
+                  "deviation_pct": 2.459,
+                  "magnitude": 0.061743,
+                  "significant": true
+                },
+                "2xBSF": {
+                  "freq": 142.09,
+                  "theoretical": 141.166,
+                  "deviation_pct": 0.654,
+                  "magnitude": 0.030149,
+                  "significant": false
+                }
+              },
+              "significance_ratio": 1.1576,
+              "evidence": [
+                "BPFO=109.863Hz 幅值0.02496（理论107.365Hz，偏差2.327%）",
+                "BPFI=159.668Hz 幅值0.053339（理论162.185Hz，偏差1.552%）",
+                "BSF=68.848Hz 幅值0.061743（理论70.583Hz，偏差2.459%）",
+                "2xBSF=142.09Hz 幅值0.030149（理论141.166Hz，偏差0.654%）"
+              ],
+              "signal_reliability": "low"
+            }
+          }
+        },
+        {
+          "agent_role": "physical_residual",
+          "agent_name": "物理残差 Agent",
+          "conclusion": "PINN 物理残差 mild 级偏离，存在物理异常信号",
+          "fault_type": "normal",
+          "confidence": 0.7,
+          "evidence": "PINN残差0.1830，是Normal基线的9.6倍，提示显著异常",
+          "details": {
+            "residual": 0.183,
+            "pinn_source": "trained_model",
+            "residual_severity": "mild",
+            "residual_ratio": 9.6
+          }
+        },
+        {
+          "agent_role": "knowledge_retrieval",
+          "agent_name": "知识检索 Agent",
+          "conclusion": "知识库检索到「内圈故障」故障模式，提供频谱特征与维护依据",
+          "fault_type": "inner_race",
+          "confidence": 1.0,
+          "evidence": "故障类型「inner_race」知识库引用：",
+          "details": {
+            "kb_entry": {},
+            "matched": true,
+            "citation": "故障类型「inner_race」知识库引用：",
+            "recommendation": ""
+          }
+        },
+        {
+          "agent_role": "fault_diagnosis",
+          "agent_name": "故障分类 Agent",
+          "conclusion": "故障分类结论：内圈故障（置信度 0.9984）",
+          "fault_type": "inner_race",
+          "confidence": 0.9984,
+          "evidence": "CNN 识别到 内圈故障，各类置信度：{'normal': 5.8007495681522414e-05, 'inner_race': 0.99842369556427, 'outer_race': 3.2504241971764714e-05, 'ball': 0.00148581073153764}",
+          "details": {
+            "cnn_source": "trained_model",
+            "probabilities": {
+              "normal": 5.8007495681522414e-05,
+              "inner_race": 0.99842369556427,
+              "outer_race": 3.2504241971764714e-05,
+              "ball": 0.00148581073153764
+            }
+          }
+        },
+        {
+          "agent_role": "decision",
+          "agent_name": "决策 Agent",
+          "conclusion": "设备判定为「内圈故障」，但各证据存在 1 处冲突，以 CNN 为主判断（置信度 0.9984）。",
+          "fault_type": "inner_race",
+          "confidence": 0.9984,
+          "evidence": "健康分=31.65，参与 Agent=['signal_analyst', 'physical_residual', 'knowledge_retrieval', 'fault_diagnosis']",
+          "details": {
+            "report": {
+              "summary": "设备判定为「内圈故障」，但各证据存在 1 处冲突，以 CNN 为主判断（置信度 0.9984）。",
+              "physical_evidence": "PINN残差0.1830，是Normal基线的9.6倍，提示显著异常",
+              "signal_evidence": "信号证据不足（无显著特征频率峰）",
+              "knowledge_basis": "故障类型「inner_race」知识库引用：",
+              "diagnosis": {
+                "fault_type": "inner_race",
+                "confidence": 0.9984,
+                "reasoning": "以 1D-CNN 分类为主判断：内圈故障（置信度 0.9984）；信号分析未提供充分主导峰证据；物理残差严重度 mild，健康分等级 abnormal。"
+              },
+              "impact": "设备已进入异常状态（健康分 31.65），「内圈故障」可能导致停机或损坏，建议尽快处置。",
+              "recommendation": "建议停机检查轴承内圈，重点关注 BPFI 特征频率及其转频边带。",
+              "follow_up_questions": [
+                "是否观察到 BPFI 转频边带随转速变化？",
+                "是否需要拆解确认内圈滚道剥落/点蚀的缺陷尺寸？"
+              ]
+            },
+            "conflict_detected": true,
+            "conflicts": [
+              "物理残差严重度 mild 与健康分等级 abnormal 不一致"
+            ],
+            "resolution": "检测到 1 处冲突，以 CNN 分类结果（inner_race）为主判断，其余证据作为交叉验证参考",
+            "signal_evidence": "insufficient"
+          }
+        }
+      ],
+      "recommendation": "建议停机检查轴承内圈，重点关注 BPFI 特征频率及其转频边带。",
+      "report": {
+        "summary": "设备判定为「内圈故障」，但各证据存在 1 处冲突，以 CNN 为主判断（置信度 0.9984）。",
+        "physical_evidence": "PINN残差0.1830，是Normal基线的9.6倍，提示显著异常",
+        "signal_evidence": "信号证据不足（无显著特征频率峰）",
+        "knowledge_basis": "故障类型「inner_race」知识库引用：",
+        "diagnosis": {
+          "fault_type": "inner_race",
+          "confidence": 0.9984,
+          "reasoning": "以 1D-CNN 分类为主判断：内圈故障（置信度 0.9984）；信号分析未提供充分主导峰证据；物理残差严重度 mild，健康分等级 abnormal。"
+        },
+        "impact": "设备已进入异常状态（健康分 31.65），「内圈故障」可能导致停机或损坏，建议尽快处置。",
+        "recommendation": "建议停机检查轴承内圈，重点关注 BPFI 特征频率及其转频边带。",
+        "follow_up_questions": [
+          "是否观察到 BPFI 转频边带随转速变化？",
+          "是否需要拆解确认内圈滚道剥落/点蚀的缺陷尺寸？"
+        ]
+      },
+      "conflicts": [
+        "物理残差严重度 mild 与健康分等级 abnormal 不一致"
+      ],
+      "conflict_detected": true
+    }
+  },
+  {
+    "class": "Ball",
+    "index": 4582,
+    "result": {
+      "device_id": "e2e-Ball-4582",
+      "fault_type": "ball",
+      "fault_label": "滚动体故障",
+      "confidence": 0.9999,
+      "health_score": 33.1,
+      "health_level": "abnormal",
+      "level_label": "异常",
+      "available_channels": [
+        "vibration"
+      ],
+      "agent_results": [
+        {
+          "agent_role": "signal_analyst",
+          "agent_name": "信号分析 Agent",
+          "conclusion": "包络谱在 2xBSF=143.555Hz 处出现显著峰值，提示滚动体故障（信号可靠性 low）",
+          "fault_type": "ball",
+          "confidence": 0.4,
+          "evidence": "BPFO=109.863Hz 幅值0.047556（理论107.365Hz，偏差2.327%） | BPFI=162.598Hz 幅值0.028187（理论162.185Hz，偏差0.254%） | BSF=73.242Hz 幅值0.060208（理论70.583Hz，偏差3.767%） | 2xBSF=143.555Hz 幅值0.063608（理论141.166Hz，偏差1.692%）",
+          "details": {
+            "rpm": 1797.0,
+            "horsepower": null,
+            "spectrum_peaks": [
+              {
+                "frequency": 3193.359,
+                "amplitude": 0.09206
+              },
+              {
+                "frequency": 3339.844,
+                "amplitude": 0.06864
+              },
+              {
+                "frequency": 3210.938,
+                "amplitude": 0.05846
+              },
+              {
+                "frequency": 357.422,
+                "amplitude": 0.05144
+              },
+              {
+                "frequency": 3322.266,
+                "amplitude": 0.04978
+              }
+            ],
+            "envelope_peaks": [
+              {
+                "frequency": 16.113,
+                "amplitude": 0.10303
+              },
+              {
+                "frequency": 55.664,
+                "amplitude": 0.07731
+              },
+              {
+                "frequency": 129.639,
+                "amplitude": 0.07179
+              },
+              {
+                "frequency": 145.02,
+                "amplitude": 0.06567
+              },
+              {
+                "frequency": 73.975,
+                "amplitude": 0.06032
+              }
+            ],
+            "signal_evidence": {
+              "dominant_peak": "2xBSF",
+              "peaks": {
+                "BPFO": {
+                  "freq": 109.863,
+                  "theoretical": 107.365,
+                  "deviation_pct": 2.327,
+                  "magnitude": 0.047556,
+                  "significant": false
+                },
+                "BPFI": {
+                  "freq": 162.598,
+                  "theoretical": 162.185,
+                  "deviation_pct": 0.254,
+                  "magnitude": 0.028187,
+                  "significant": false
+                },
+                "BSF": {
+                  "freq": 73.242,
+                  "theoretical": 70.583,
+                  "deviation_pct": 3.767,
+                  "magnitude": 0.060208,
+                  "significant": true
+                },
+                "2xBSF": {
+                  "freq": 143.555,
+                  "theoretical": 141.166,
+                  "deviation_pct": 1.692,
+                  "magnitude": 0.063608,
+                  "significant": true
+                }
+              },
+              "significance_ratio": 1.0565,
+              "evidence": [
+                "BPFO=109.863Hz 幅值0.047556（理论107.365Hz，偏差2.327%）",
+                "BPFI=162.598Hz 幅值0.028187（理论162.185Hz，偏差0.254%）",
+                "BSF=73.242Hz 幅值0.060208（理论70.583Hz，偏差3.767%）",
+                "2xBSF=143.555Hz 幅值0.063608（理论141.166Hz，偏差1.692%）"
+              ],
+              "signal_reliability": "low"
+            }
+          }
+        },
+        {
+          "agent_role": "physical_residual",
+          "agent_name": "物理残差 Agent",
+          "conclusion": "PINN 物理残差 mild 级偏离，存在物理异常信号",
+          "fault_type": "normal",
+          "confidence": 0.7,
+          "evidence": "PINN残差0.1650，是Normal基线的8.7倍，提示显著异常",
+          "details": {
+            "residual": 0.165,
+            "pinn_source": "trained_model",
+            "residual_severity": "mild",
+            "residual_ratio": 8.7
+          }
+        },
+        {
+          "agent_role": "knowledge_retrieval",
+          "agent_name": "知识检索 Agent",
+          "conclusion": "知识库检索到「滚动体故障」故障模式，提供频谱特征与维护依据",
+          "fault_type": "ball",
+          "confidence": 1.0,
+          "evidence": "故障类型「ball」知识库引用：",
+          "details": {
+            "kb_entry": {},
+            "matched": true,
+            "citation": "故障类型「ball」知识库引用：",
+            "recommendation": ""
+          }
+        },
+        {
+          "agent_role": "fault_diagnosis",
+          "agent_name": "故障分类 Agent",
+          "conclusion": "故障分类结论：滚动体故障（置信度 0.9999）",
+          "fault_type": "ball",
+          "confidence": 0.9999,
+          "evidence": "CNN 识别到 滚动体故障，各类置信度：{'normal': 1.2505880476965103e-05, 'inner_race': 6.224568551260745e-06, 'outer_race': 5.678963862010278e-05, 'ball': 0.9999244213104248}",
+          "details": {
+            "cnn_source": "trained_model",
+            "probabilities": {
+              "normal": 1.2505880476965103e-05,
+              "inner_race": 6.224568551260745e-06,
+              "outer_race": 5.678963862010278e-05,
+              "ball": 0.9999244213104248
+            }
+          }
+        },
+        {
+          "agent_role": "decision",
+          "agent_name": "决策 Agent",
+          "conclusion": "设备判定为「滚动体故障」，但各证据存在 1 处冲突，以 CNN 为主判断（置信度 0.9999）。",
+          "fault_type": "ball",
+          "confidence": 0.9999,
+          "evidence": "健康分=33.10，参与 Agent=['signal_analyst', 'physical_residual', 'knowledge_retrieval', 'fault_diagnosis']",
+          "details": {
+            "report": {
+              "summary": "设备判定为「滚动体故障」，但各证据存在 1 处冲突，以 CNN 为主判断（置信度 0.9999）。",
+              "physical_evidence": "PINN残差0.1650，是Normal基线的8.7倍，提示显著异常",
+              "signal_evidence": "信号证据不足（无显著特征频率峰）",
+              "knowledge_basis": "故障类型「ball」知识库引用：",
+              "diagnosis": {
+                "fault_type": "ball",
+                "confidence": 0.9999,
+                "reasoning": "以 1D-CNN 分类为主判断：滚动体故障（置信度 0.9999）；信号分析未提供充分主导峰证据；物理残差严重度 mild，健康分等级 abnormal。"
+              },
+              "impact": "设备已进入异常状态（健康分 33.10），「滚动体故障」可能导致停机或损坏，建议尽快处置。",
+              "recommendation": "建议检查滚动体磨损，重点关注 BSF/2×BSF 谐波族与保持架 FTF 调制。",
+              "follow_up_questions": [
+                "滚动体是否存在磨损、划痕或剥落？",
+                "是否需要同步检查保持架状态？"
+              ]
+            },
+            "conflict_detected": true,
+            "conflicts": [
+              "物理残差严重度 mild 与健康分等级 abnormal 不一致"
+            ],
+            "resolution": "检测到 1 处冲突，以 CNN 分类结果（ball）为主判断，其余证据作为交叉验证参考",
+            "signal_evidence": "insufficient"
+          }
+        }
+      ],
+      "recommendation": "建议检查滚动体磨损，重点关注 BSF/2×BSF 谐波族与保持架 FTF 调制。",
+      "report": {
+        "summary": "设备判定为「滚动体故障」，但各证据存在 1 处冲突，以 CNN 为主判断（置信度 0.9999）。",
+        "physical_evidence": "PINN残差0.1650，是Normal基线的8.7倍，提示显著异常",
+        "signal_evidence": "信号证据不足（无显著特征频率峰）",
+        "knowledge_basis": "故障类型「ball」知识库引用：",
+        "diagnosis": {
+          "fault_type": "ball",
+          "confidence": 0.9999,
+          "reasoning": "以 1D-CNN 分类为主判断：滚动体故障（置信度 0.9999）；信号分析未提供充分主导峰证据；物理残差严重度 mild，健康分等级 abnormal。"
+        },
+        "impact": "设备已进入异常状态（健康分 33.10），「滚动体故障」可能导致停机或损坏，建议尽快处置。",
+        "recommendation": "建议检查滚动体磨损，重点关注 BSF/2×BSF 谐波族与保持架 FTF 调制。",
+        "follow_up_questions": [
+          "滚动体是否存在磨损、划痕或剥落？",
+          "是否需要同步检查保持架状态？"
+        ]
+      },
+      "conflicts": [
+        "物理残差严重度 mild 与健康分等级 abnormal 不一致"
+      ],
+      "conflict_detected": true
+    }
+  },
+  {
+    "class": "Ball",
+    "index": 2515,
+    "result": {
+      "device_id": "e2e-Ball-2515",
+      "fault_type": "ball",
+      "fault_label": "滚动体故障",
+      "confidence": 0.9998,
+      "health_score": 34.56,
+      "health_level": "abnormal",
+      "level_label": "异常",
+      "available_channels": [
+        "vibration"
+      ],
+      "agent_results": [
+        {
+          "agent_role": "signal_analyst",
+          "agent_name": "信号分析 Agent",
+          "conclusion": "包络谱无显著特征频率峰值，提示正常工况",
+          "fault_type": "normal",
+          "confidence": 0.4,
+          "evidence": "BPFO=104.736Hz 幅值0.037404（理论107.365Hz，偏差2.448%） | BPFI=159.668Hz 幅值0.02012（理论162.185Hz，偏差1.552%） | BSF=68.115Hz 幅值0.01602（理论70.583Hz，偏差3.496%） | 2xBSF=138.428Hz 幅值0.014976（理论141.166Hz，偏差1.94%）",
+          "details": {
+            "rpm": 1797.0,
+            "horsepower": null,
+            "spectrum_peaks": [
+              {
+                "frequency": 3433.594,
+                "amplitude": 0.0726
+              },
+              {
+                "frequency": 3351.562,
+                "amplitude": 0.04873
+              },
+              {
+                "frequency": 3375.0,
+                "amplitude": 0.04862
+              },
+              {
+                "frequency": 3328.125,
+                "amplitude": 0.04114
+              },
+              {
+                "frequency": 3404.297,
+                "amplitude": 0.03341
+              }
+            ],
+            "envelope_peaks": [
+              {
+                "frequency": 102.539,
+                "amplitude": 0.04014
+              },
+              {
+                "frequency": 9.521,
+                "amplitude": 0.0283
+              },
+              {
+                "frequency": 156.738,
+                "amplitude": 0.02681
+              },
+              {
+                "frequency": 170.654,
+                "amplitude": 0.02384
+              },
+              {
+                "frequency": 55.664,
+                "amplitude": 0.02357
+              }
+            ],
+            "signal_evidence": {
+              "dominant_peak": "none",
+              "peaks": {
+                "BPFO": {
+                  "freq": 104.736,
+                  "theoretical": 107.365,
+                  "deviation_pct": 2.448,
+                  "magnitude": 0.037404,
+                  "significant": false
+                },
+                "BPFI": {
+                  "freq": 159.668,
+                  "theoretical": 162.185,
+                  "deviation_pct": 1.552,
+                  "magnitude": 0.02012,
+                  "significant": false
+                },
+                "BSF": {
+                  "freq": 68.115,
+                  "theoretical": 70.583,
+                  "deviation_pct": 3.496,
+                  "magnitude": 0.01602,
+                  "significant": false
+                },
+                "2xBSF": {
+                  "freq": 138.428,
+                  "theoretical": 141.166,
+                  "deviation_pct": 1.94,
+                  "magnitude": 0.014976,
+                  "significant": false
+                }
+              },
+              "significance_ratio": 1.859,
+              "evidence": [
+                "BPFO=104.736Hz 幅值0.037404（理论107.365Hz，偏差2.448%）",
+                "BPFI=159.668Hz 幅值0.02012（理论162.185Hz，偏差1.552%）",
+                "BSF=68.115Hz 幅值0.01602（理论70.583Hz，偏差3.496%）",
+                "2xBSF=138.428Hz 幅值0.014976（理论141.166Hz，偏差1.94%）"
+              ],
+              "signal_reliability": "low"
+            }
+          }
+        },
+        {
+          "agent_role": "physical_residual",
+          "agent_name": "物理残差 Agent",
+          "conclusion": "PINN 物理残差 mild 级偏离，存在物理异常信号",
+          "fault_type": "normal",
+          "confidence": 0.7,
+          "evidence": "PINN残差0.1477，是Normal基线的7.8倍，提示显著异常",
+          "details": {
+            "residual": 0.1477,
+            "pinn_source": "trained_model",
+            "residual_severity": "mild",
+            "residual_ratio": 7.8
+          }
+        },
+        {
+          "agent_role": "knowledge_retrieval",
+          "agent_name": "知识检索 Agent",
+          "conclusion": "知识库检索到「滚动体故障」故障模式，提供频谱特征与维护依据",
+          "fault_type": "ball",
+          "confidence": 1.0,
+          "evidence": "故障类型「ball」知识库引用：",
+          "details": {
+            "kb_entry": {},
+            "matched": true,
+            "citation": "故障类型「ball」知识库引用：",
+            "recommendation": ""
+          }
+        },
+        {
+          "agent_role": "fault_diagnosis",
+          "agent_name": "故障分类 Agent",
+          "conclusion": "故障分类结论：滚动体故障（置信度 0.9998）",
+          "fault_type": "ball",
+          "confidence": 0.9998,
+          "evidence": "CNN 识别到 滚动体故障，各类置信度：{'normal': 2.682216654648073e-05, 'inner_race': 0.00016065021918620914, 'outer_race': 4.768443977809511e-05, 'ball': 0.9997648596763611}",
+          "details": {
+            "cnn_source": "trained_model",
+            "probabilities": {
+              "normal": 2.682216654648073e-05,
+              "inner_race": 0.00016065021918620914,
+              "outer_race": 4.768443977809511e-05,
+              "ball": 0.9997648596763611
+            }
+          }
+        },
+        {
+          "agent_role": "decision",
+          "agent_name": "决策 Agent",
+          "conclusion": "设备判定为「滚动体故障」，但各证据存在 1 处冲突，以 CNN 为主判断（置信度 0.9998）。",
+          "fault_type": "ball",
+          "confidence": 0.9998,
+          "evidence": "健康分=34.56，参与 Agent=['signal_analyst', 'physical_residual', 'knowledge_retrieval', 'fault_diagnosis']",
+          "details": {
+            "report": {
+              "summary": "设备判定为「滚动体故障」，但各证据存在 1 处冲突，以 CNN 为主判断（置信度 0.9998）。",
+              "physical_evidence": "PINN残差0.1477，是Normal基线的7.8倍，提示显著异常",
+              "signal_evidence": "信号证据不足（无显著特征频率峰）",
+              "knowledge_basis": "故障类型「ball」知识库引用：",
+              "diagnosis": {
+                "fault_type": "ball",
+                "confidence": 0.9998,
+                "reasoning": "以 1D-CNN 分类为主判断：滚动体故障（置信度 0.9998）；信号分析未提供充分主导峰证据；物理残差严重度 mild，健康分等级 abnormal。"
+              },
+              "impact": "设备已进入异常状态（健康分 34.56），「滚动体故障」可能导致停机或损坏，建议尽快处置。",
+              "recommendation": "建议检查滚动体磨损，重点关注 BSF/2×BSF 谐波族与保持架 FTF 调制。",
+              "follow_up_questions": [
+                "滚动体是否存在磨损、划痕或剥落？",
+                "是否需要同步检查保持架状态？"
+              ]
+            },
+            "conflict_detected": true,
+            "conflicts": [
+              "物理残差严重度 mild 与健康分等级 abnormal 不一致"
+            ],
+            "resolution": "检测到 1 处冲突，以 CNN 分类结果（ball）为主判断，其余证据作为交叉验证参考",
+            "signal_evidence": "insufficient"
+          }
+        }
+      ],
+      "recommendation": "建议检查滚动体磨损，重点关注 BSF/2×BSF 谐波族与保持架 FTF 调制。",
+      "report": {
+        "summary": "设备判定为「滚动体故障」，但各证据存在 1 处冲突，以 CNN 为主判断（置信度 0.9998）。",
+        "physical_evidence": "PINN残差0.1477，是Normal基线的7.8倍，提示显著异常",
+        "signal_evidence": "信号证据不足（无显著特征频率峰）",
+        "knowledge_basis": "故障类型「ball」知识库引用：",
+        "diagnosis": {
+          "fault_type": "ball",
+          "confidence": 0.9998,
+          "reasoning": "以 1D-CNN 分类为主判断：滚动体故障（置信度 0.9998）；信号分析未提供充分主导峰证据；物理残差严重度 mild，健康分等级 abnormal。"
+        },
+        "impact": "设备已进入异常状态（健康分 34.56），「滚动体故障」可能导致停机或损坏，建议尽快处置。",
+        "recommendation": "建议检查滚动体磨损，重点关注 BSF/2×BSF 谐波族与保持架 FTF 调制。",
+        "follow_up_questions": [
+          "滚动体是否存在磨损、划痕或剥落？",
+          "是否需要同步检查保持架状态？"
+        ]
+      },
+      "conflicts": [
+        "物理残差严重度 mild 与健康分等级 abnormal 不一致"
+      ],
+      "conflict_detected": true
+    }
+  },
+  {
+    "class": "Ball",
+    "index": 3846,
+    "result": {
+      "device_id": "e2e-Ball-3846",
+      "fault_type": "ball",
+      "fault_label": "滚动体故障",
+      "confidence": 0.9996,
+      "health_score": 32.72,
+      "health_level": "abnormal",
+      "level_label": "异常",
+      "available_channels": [
+        "vibration"
+      ],
+      "agent_results": [
+        {
+          "agent_role": "signal_analyst",
+          "agent_name": "信号分析 Agent",
+          "conclusion": "包络谱无显著特征频率峰值，提示正常工况",
+          "fault_type": "normal",
+          "confidence": 0.4,
+          "evidence": "BPFO=109.863Hz 幅值0.008468（理论107.365Hz，偏差2.327%） | BPFI=164.795Hz 幅值0.02281（理论162.185Hz，偏差1.609%） | BSF=68.115Hz 幅值0.016918（理论70.583Hz，偏差3.496%） | 2xBSF=138.428Hz 幅值0.009922（理论141.166Hz，偏差1.94%）",
+          "details": {
+            "rpm": 1797.0,
+            "horsepower": null,
+            "spectrum_peaks": [
+              {
+                "frequency": 3281.25,
+                "amplitude": 0.04104
+              },
+              {
+                "frequency": 3146.484,
+                "amplitude": 0.04078
+              },
+              {
+                "frequency": 357.422,
+                "amplitude": 0.04044
+              },
+              {
+                "frequency": 3222.656,
+                "amplitude": 0.03718
+              },
+              {
+                "frequency": 3193.359,
+                "amplitude": 0.0349
+              }
+            ],
+            "envelope_peaks": [
+              {
+                "frequency": 9.521,
+                "amplitude": 0.10827
+              },
+              {
+                "frequency": 21.24,
+                "amplitude": 0.05144
+              },
+              {
+                "frequency": 34.424,
+                "amplitude": 0.05135
+              },
+              {
+                "frequency": 170.654,
+                "amplitude": 0.02662
+              },
+              {
+                "frequency": 61.523,
+                "amplitude": 0.02341
+              }
+            ],
+            "signal_evidence": {
+              "dominant_peak": "none",
+              "peaks": {
+                "BPFO": {
+                  "freq": 109.863,
+                  "theoretical": 107.365,
+                  "deviation_pct": 2.327,
+                  "magnitude": 0.008468,
+                  "significant": false
+                },
+                "BPFI": {
+                  "freq": 164.795,
+                  "theoretical": 162.185,
+                  "deviation_pct": 1.609,
+                  "magnitude": 0.02281,
+                  "significant": false
+                },
+                "BSF": {
+                  "freq": 68.115,
+                  "theoretical": 70.583,
+                  "deviation_pct": 3.496,
+                  "magnitude": 0.016918,
+                  "significant": false
+                },
+                "2xBSF": {
+                  "freq": 138.428,
+                  "theoretical": 141.166,
+                  "deviation_pct": 1.94,
+                  "magnitude": 0.009922,
+                  "significant": false
+                }
+              },
+              "significance_ratio": 1.3483,
+              "evidence": [
+                "BPFO=109.863Hz 幅值0.008468（理论107.365Hz，偏差2.327%）",
+                "BPFI=164.795Hz 幅值0.02281（理论162.185Hz，偏差1.609%）",
+                "BSF=68.115Hz 幅值0.016918（理论70.583Hz，偏差3.496%）",
+                "2xBSF=138.428Hz 幅值0.009922（理论141.166Hz，偏差1.94%）"
+              ],
+              "signal_reliability": "low"
+            }
+          }
+        },
+        {
+          "agent_role": "physical_residual",
+          "agent_name": "物理残差 Agent",
+          "conclusion": "PINN 物理残差 mild 级偏离，存在物理异常信号",
+          "fault_type": "normal",
+          "confidence": 0.7,
+          "evidence": "PINN残差0.1696，是Normal基线的8.9倍，提示显著异常",
+          "details": {
+            "residual": 0.1696,
+            "pinn_source": "trained_model",
+            "residual_severity": "mild",
+            "residual_ratio": 8.9
+          }
+        },
+        {
+          "agent_role": "knowledge_retrieval",
+          "agent_name": "知识检索 Agent",
+          "conclusion": "知识库检索到「滚动体故障」故障模式，提供频谱特征与维护依据",
+          "fault_type": "ball",
+          "confidence": 1.0,
+          "evidence": "故障类型「ball」知识库引用：",
+          "details": {
+            "kb_entry": {},
+            "matched": true,
+            "citation": "故障类型「ball」知识库引用：",
+            "recommendation": ""
+          }
+        },
+        {
+          "agent_role": "fault_diagnosis",
+          "agent_name": "故障分类 Agent",
+          "conclusion": "故障分类结论：滚动体故障（置信度 0.9996）",
+          "fault_type": "ball",
+          "confidence": 0.9996,
+          "evidence": "CNN 识别到 滚动体故障，各类置信度：{'normal': 4.4955180783290416e-05, 'inner_race': 0.00015851017087697983, 'outer_race': 0.00015299890947062522, 'ball': 0.9996435642242432}",
+          "details": {
+            "cnn_source": "trained_model",
+            "probabilities": {
+              "normal": 4.4955180783290416e-05,
+              "inner_race": 0.00015851017087697983,
+              "outer_race": 0.00015299890947062522,
+              "ball": 0.9996435642242432
+            }
+          }
+        },
+        {
+          "agent_role": "decision",
+          "agent_name": "决策 Agent",
+          "conclusion": "设备判定为「滚动体故障」，但各证据存在 1 处冲突，以 CNN 为主判断（置信度 0.9996）。",
+          "fault_type": "ball",
+          "confidence": 0.9996,
+          "evidence": "健康分=32.72，参与 Agent=['signal_analyst', 'physical_residual', 'knowledge_retrieval', 'fault_diagnosis']",
+          "details": {
+            "report": {
+              "summary": "设备判定为「滚动体故障」，但各证据存在 1 处冲突，以 CNN 为主判断（置信度 0.9996）。",
+              "physical_evidence": "PINN残差0.1696，是Normal基线的8.9倍，提示显著异常",
+              "signal_evidence": "信号证据不足（无显著特征频率峰）",
+              "knowledge_basis": "故障类型「ball」知识库引用：",
+              "diagnosis": {
+                "fault_type": "ball",
+                "confidence": 0.9996,
+                "reasoning": "以 1D-CNN 分类为主判断：滚动体故障（置信度 0.9996）；信号分析未提供充分主导峰证据；物理残差严重度 mild，健康分等级 abnormal。"
+              },
+              "impact": "设备已进入异常状态（健康分 32.72），「滚动体故障」可能导致停机或损坏，建议尽快处置。",
+              "recommendation": "建议检查滚动体磨损，重点关注 BSF/2×BSF 谐波族与保持架 FTF 调制。",
+              "follow_up_questions": [
+                "滚动体是否存在磨损、划痕或剥落？",
+                "是否需要同步检查保持架状态？"
+              ]
+            },
+            "conflict_detected": true,
+            "conflicts": [
+              "物理残差严重度 mild 与健康分等级 abnormal 不一致"
+            ],
+            "resolution": "检测到 1 处冲突，以 CNN 分类结果（ball）为主判断，其余证据作为交叉验证参考",
+            "signal_evidence": "insufficient"
+          }
+        }
+      ],
+      "recommendation": "建议检查滚动体磨损，重点关注 BSF/2×BSF 谐波族与保持架 FTF 调制。",
+      "report": {
+        "summary": "设备判定为「滚动体故障」，但各证据存在 1 处冲突，以 CNN 为主判断（置信度 0.9996）。",
+        "physical_evidence": "PINN残差0.1696，是Normal基线的8.9倍，提示显著异常",
+        "signal_evidence": "信号证据不足（无显著特征频率峰）",
+        "knowledge_basis": "故障类型「ball」知识库引用：",
+        "diagnosis": {
+          "fault_type": "ball",
+          "confidence": 0.9996,
+          "reasoning": "以 1D-CNN 分类为主判断：滚动体故障（置信度 0.9996）；信号分析未提供充分主导峰证据；物理残差严重度 mild，健康分等级 abnormal。"
+        },
+        "impact": "设备已进入异常状态（健康分 32.72），「滚动体故障」可能导致停机或损坏，建议尽快处置。",
+        "recommendation": "建议检查滚动体磨损，重点关注 BSF/2×BSF 谐波族与保持架 FTF 调制。",
+        "follow_up_questions": [
+          "滚动体是否存在磨损、划痕或剥落？",
+          "是否需要同步检查保持架状态？"
+        ]
+      },
+      "conflicts": [
+        "物理残差严重度 mild 与健康分等级 abnormal 不一致"
+      ],
+      "conflict_detected": true
+    }
+  },
+  {
+    "class": "Ball",
+    "index": 3825,
+    "result": {
+      "device_id": "e2e-Ball-3825",
+      "fault_type": "ball",
+      "fault_label": "滚动体故障",
+      "confidence": 0.9997,
+      "health_score": 32.44,
+      "health_level": "abnormal",
+      "level_label": "异常",
+      "available_channels": [
+        "vibration"
+      ],
+      "agent_results": [
+        {
+          "agent_role": "signal_analyst",
+          "agent_name": "信号分析 Agent",
+          "conclusion": "包络谱无显著特征频率峰值，提示正常工况",
+          "fault_type": "normal",
+          "confidence": 0.4,
+          "evidence": "BPFO=106.934Hz 幅值0.036695（理论107.365Hz，偏差0.402%） | BPFI=159.668Hz 幅值0.028616（理论162.185Hz，偏差1.552%） | BSF=71.045Hz 幅值0.048009（理论70.583Hz，偏差0.654%） | 2xBSF=140.625Hz 幅值0.038191（理论141.166Hz，偏差0.383%）",
+          "details": {
+            "rpm": 1797.0,
+            "horsepower": null,
+            "spectrum_peaks": [
+              {
+                "frequency": 3169.922,
+                "amplitude": 0.09555
+              },
+              {
+                "frequency": 3269.531,
+                "amplitude": 0.05918
+              },
+              {
+                "frequency": 3257.812,
+                "amplitude": 0.05499
+              },
+              {
+                "frequency": 3228.516,
+                "amplitude": 0.04611
+              },
+              {
+                "frequency": 357.422,
+                "amplitude": 0.04499
+              }
+            ],
+            "envelope_peaks": [
+              {
+                "frequency": 13.184,
+                "amplitude": 0.12617
+              },
+              {
+                "frequency": 49.072,
+                "amplitude": 0.0728
+              },
+              {
+                "frequency": 33.691,
+                "amplitude": 0.06871
+              },
+              {
+                "frequency": 84.229,
+                "amplitude": 0.06276
+              },
+              {
+                "frequency": 71.045,
+                "amplitude": 0.04801
+              }
+            ],
+            "signal_evidence": {
+              "dominant_peak": "none",
+              "peaks": {
+                "BPFO": {
+                  "freq": 106.934,
+                  "theoretical": 107.365,
+                  "deviation_pct": 0.402,
+                  "magnitude": 0.036695,
+                  "significant": false
+                },
+                "BPFI": {
+                  "freq": 159.668,
+                  "theoretical": 162.185,
+                  "deviation_pct": 1.552,
+                  "magnitude": 0.028616,
+                  "significant": false
+                },
+                "BSF": {
+                  "freq": 71.045,
+                  "theoretical": 70.583,
+                  "deviation_pct": 0.654,
+                  "magnitude": 0.048009,
+                  "significant": false
+                },
+                "2xBSF": {
+                  "freq": 140.625,
+                  "theoretical": 141.166,
+                  "deviation_pct": 0.383,
+                  "magnitude": 0.038191,
+                  "significant": false
+                }
+              },
+              "significance_ratio": 1.2571,
+              "evidence": [
+                "BPFO=106.934Hz 幅值0.036695（理论107.365Hz，偏差0.402%）",
+                "BPFI=159.668Hz 幅值0.028616（理论162.185Hz，偏差1.552%）",
+                "BSF=71.045Hz 幅值0.048009（理论70.583Hz，偏差0.654%）",
+                "2xBSF=140.625Hz 幅值0.038191（理论141.166Hz，偏差0.383%）"
+              ],
+              "signal_reliability": "low"
+            }
+          }
+        },
+        {
+          "agent_role": "physical_residual",
+          "agent_name": "物理残差 Agent",
+          "conclusion": "PINN 物理残差 mild 级偏离，存在物理异常信号",
+          "fault_type": "normal",
+          "confidence": 0.7,
+          "evidence": "PINN残差0.1731，是Normal基线的9.1倍，提示显著异常",
+          "details": {
+            "residual": 0.1731,
+            "pinn_source": "trained_model",
+            "residual_severity": "mild",
+            "residual_ratio": 9.1
+          }
+        },
+        {
+          "agent_role": "knowledge_retrieval",
+          "agent_name": "知识检索 Agent",
+          "conclusion": "知识库检索到「滚动体故障」故障模式，提供频谱特征与维护依据",
+          "fault_type": "ball",
+          "confidence": 1.0,
+          "evidence": "故障类型「ball」知识库引用：",
+          "details": {
+            "kb_entry": {},
+            "matched": true,
+            "citation": "故障类型「ball」知识库引用：",
+            "recommendation": ""
+          }
+        },
+        {
+          "agent_role": "fault_diagnosis",
+          "agent_name": "故障分类 Agent",
+          "conclusion": "故障分类结论：滚动体故障（置信度 0.9997）",
+          "fault_type": "ball",
+          "confidence": 0.9997,
+          "evidence": "CNN 识别到 滚动体故障，各类置信度：{'normal': 3.745920184883289e-05, 'inner_race': 0.00015062291640788317, 'outer_race': 0.00010683596337912604, 'ball': 0.9997050166130066}",
+          "details": {
+            "cnn_source": "trained_model",
+            "probabilities": {
+              "normal": 3.745920184883289e-05,
+              "inner_race": 0.00015062291640788317,
+              "outer_race": 0.00010683596337912604,
+              "ball": 0.9997050166130066
+            }
+          }
+        },
+        {
+          "agent_role": "decision",
+          "agent_name": "决策 Agent",
+          "conclusion": "设备判定为「滚动体故障」，但各证据存在 1 处冲突，以 CNN 为主判断（置信度 0.9997）。",
+          "fault_type": "ball",
+          "confidence": 0.9997,
+          "evidence": "健康分=32.44，参与 Agent=['signal_analyst', 'physical_residual', 'knowledge_retrieval', 'fault_diagnosis']",
+          "details": {
+            "report": {
+              "summary": "设备判定为「滚动体故障」，但各证据存在 1 处冲突，以 CNN 为主判断（置信度 0.9997）。",
+              "physical_evidence": "PINN残差0.1731，是Normal基线的9.1倍，提示显著异常",
+              "signal_evidence": "信号证据不足（无显著特征频率峰）",
+              "knowledge_basis": "故障类型「ball」知识库引用：",
+              "diagnosis": {
+                "fault_type": "ball",
+                "confidence": 0.9997,
+                "reasoning": "以 1D-CNN 分类为主判断：滚动体故障（置信度 0.9997）；信号分析未提供充分主导峰证据；物理残差严重度 mild，健康分等级 abnormal。"
+              },
+              "impact": "设备已进入异常状态（健康分 32.44），「滚动体故障」可能导致停机或损坏，建议尽快处置。",
+              "recommendation": "建议检查滚动体磨损，重点关注 BSF/2×BSF 谐波族与保持架 FTF 调制。",
+              "follow_up_questions": [
+                "滚动体是否存在磨损、划痕或剥落？",
+                "是否需要同步检查保持架状态？"
+              ]
+            },
+            "conflict_detected": true,
+            "conflicts": [
+              "物理残差严重度 mild 与健康分等级 abnormal 不一致"
+            ],
+            "resolution": "检测到 1 处冲突，以 CNN 分类结果（ball）为主判断，其余证据作为交叉验证参考",
+            "signal_evidence": "insufficient"
+          }
+        }
+      ],
+      "recommendation": "建议检查滚动体磨损，重点关注 BSF/2×BSF 谐波族与保持架 FTF 调制。",
+      "report": {
+        "summary": "设备判定为「滚动体故障」，但各证据存在 1 处冲突，以 CNN 为主判断（置信度 0.9997）。",
+        "physical_evidence": "PINN残差0.1731，是Normal基线的9.1倍，提示显著异常",
+        "signal_evidence": "信号证据不足（无显著特征频率峰）",
+        "knowledge_basis": "故障类型「ball」知识库引用：",
+        "diagnosis": {
+          "fault_type": "ball",
+          "confidence": 0.9997,
+          "reasoning": "以 1D-CNN 分类为主判断：滚动体故障（置信度 0.9997）；信号分析未提供充分主导峰证据；物理残差严重度 mild，健康分等级 abnormal。"
+        },
+        "impact": "设备已进入异常状态（健康分 32.44），「滚动体故障」可能导致停机或损坏，建议尽快处置。",
+        "recommendation": "建议检查滚动体磨损，重点关注 BSF/2×BSF 谐波族与保持架 FTF 调制。",
+        "follow_up_questions": [
+          "滚动体是否存在磨损、划痕或剥落？",
+          "是否需要同步检查保持架状态？"
+        ]
+      },
+      "conflicts": [
+        "物理残差严重度 mild 与健康分等级 abnormal 不一致"
+      ],
+      "conflict_detected": true
+    }
+  },
+  {
+    "class": "Ball",
+    "index": 6535,
+    "result": {
+      "device_id": "e2e-Ball-6535",
+      "fault_type": "ball",
+      "fault_label": "滚动体故障",
+      "confidence": 0.9992,
+      "health_score": 37.44,
+      "health_level": "abnormal",
+      "level_label": "异常",
+      "available_channels": [
+        "vibration"
+      ],
+      "agent_results": [
+        {
+          "agent_role": "signal_analyst",
+          "agent_name": "信号分析 Agent",
+          "conclusion": "包络谱无显著特征频率峰值，提示正常工况",
+          "fault_type": "normal",
+          "confidence": 0.4,
+          "evidence": "BPFO=104.736Hz 幅值0.023557（理论107.365Hz，偏差2.448%） | BPFI=161.133Hz 幅值0.022227（理论162.185Hz，偏差0.649%） | BSF=68.115Hz 幅值0.010079（理论70.583Hz，偏差3.496%） | 2xBSF=143.555Hz 幅值0.01508（理论141.166Hz，偏差1.692%）",
+          "details": {
+            "rpm": 1797.0,
+            "horsepower": null,
+            "spectrum_peaks": [
+              {
+                "frequency": 3427.734,
+                "amplitude": 0.0471
+              },
+              {
+                "frequency": 3210.938,
+                "amplitude": 0.04537
+              },
+              {
+                "frequency": 3339.844,
+                "amplitude": 0.04022
+              },
+              {
+                "frequency": 3404.297,
+                "amplitude": 0.03779
+              },
+              {
+                "frequency": 3240.234,
+                "amplitude": 0.03346
+              }
+            ],
+            "envelope_peaks": [
+              {
+                "frequency": 30.029,
+                "amplitude": 0.03167
+              },
+              {
+                "frequency": 100.342,
+                "amplitude": 0.03001
+              },
+              {
+                "frequency": 131.836,
+                "amplitude": 0.02683
+              },
+              {
+                "frequency": 191.162,
+                "amplitude": 0.02628
+              },
+              {
+                "frequency": 161.133,
+                "amplitude": 0.02223
+              }
+            ],
+            "signal_evidence": {
+              "dominant_peak": "none",
+              "peaks": {
+                "BPFO": {
+                  "freq": 104.736,
+                  "theoretical": 107.365,
+                  "deviation_pct": 2.448,
+                  "magnitude": 0.023557,
+                  "significant": false
+                },
+                "BPFI": {
+                  "freq": 161.133,
+                  "theoretical": 162.185,
+                  "deviation_pct": 0.649,
+                  "magnitude": 0.022227,
+                  "significant": false
+                },
+                "BSF": {
+                  "freq": 68.115,
+                  "theoretical": 70.583,
+                  "deviation_pct": 3.496,
+                  "magnitude": 0.010079,
+                  "significant": false
+                },
+                "2xBSF": {
+                  "freq": 143.555,
+                  "theoretical": 141.166,
+                  "deviation_pct": 1.692,
+                  "magnitude": 0.01508,
+                  "significant": false
+                }
+              },
+              "significance_ratio": 1.0598,
+              "evidence": [
+                "BPFO=104.736Hz 幅值0.023557（理论107.365Hz，偏差2.448%）",
+                "BPFI=161.133Hz 幅值0.022227（理论162.185Hz，偏差0.649%）",
+                "BSF=68.115Hz 幅值0.010079（理论70.583Hz，偏差3.496%）",
+                "2xBSF=143.555Hz 幅值0.01508（理论141.166Hz，偏差1.692%）"
+              ],
+              "signal_reliability": "low"
+            }
+          }
+        },
+        {
+          "agent_role": "physical_residual",
+          "agent_name": "物理残差 Agent",
+          "conclusion": "PINN 物理残差 mild 级偏离，存在物理异常信号",
+          "fault_type": "normal",
+          "confidence": 0.7,
+          "evidence": "PINN残差0.1157，是Normal基线的6.1倍，提示显著异常",
+          "details": {
+            "residual": 0.1157,
+            "pinn_source": "trained_model",
+            "residual_severity": "mild",
+            "residual_ratio": 6.1
+          }
+        },
+        {
+          "agent_role": "knowledge_retrieval",
+          "agent_name": "知识检索 Agent",
+          "conclusion": "知识库检索到「滚动体故障」故障模式，提供频谱特征与维护依据",
+          "fault_type": "ball",
+          "confidence": 1.0,
+          "evidence": "故障类型「ball」知识库引用：",
+          "details": {
+            "kb_entry": {},
+            "matched": true,
+            "citation": "故障类型「ball」知识库引用：",
+            "recommendation": ""
+          }
+        },
+        {
+          "agent_role": "fault_diagnosis",
+          "agent_name": "故障分类 Agent",
+          "conclusion": "故障分类结论：滚动体故障（置信度 0.9992）",
+          "fault_type": "ball",
+          "confidence": 0.9992,
+          "evidence": "CNN 识别到 滚动体故障，各类置信度：{'normal': 4.6558623580494896e-05, 'inner_race': 0.0003266445128247142, 'outer_race': 0.0003856543335132301, 'ball': 0.9992411136627197}",
+          "details": {
+            "cnn_source": "trained_model",
+            "probabilities": {
+              "normal": 4.6558623580494896e-05,
+              "inner_race": 0.0003266445128247142,
+              "outer_race": 0.0003856543335132301,
+              "ball": 0.9992411136627197
+            }
+          }
+        },
+        {
+          "agent_role": "decision",
+          "agent_name": "决策 Agent",
+          "conclusion": "设备判定为「滚动体故障」，但各证据存在 1 处冲突，以 CNN 为主判断（置信度 0.9992）。",
+          "fault_type": "ball",
+          "confidence": 0.9992,
+          "evidence": "健康分=37.44，参与 Agent=['signal_analyst', 'physical_residual', 'knowledge_retrieval', 'fault_diagnosis']",
+          "details": {
+            "report": {
+              "summary": "设备判定为「滚动体故障」，但各证据存在 1 处冲突，以 CNN 为主判断（置信度 0.9992）。",
+              "physical_evidence": "PINN残差0.1157，是Normal基线的6.1倍，提示显著异常",
+              "signal_evidence": "信号证据不足（无显著特征频率峰）",
+              "knowledge_basis": "故障类型「ball」知识库引用：",
+              "diagnosis": {
+                "fault_type": "ball",
+                "confidence": 0.9992,
+                "reasoning": "以 1D-CNN 分类为主判断：滚动体故障（置信度 0.9992）；信号分析未提供充分主导峰证据；物理残差严重度 mild，健康分等级 abnormal。"
+              },
+              "impact": "设备已进入异常状态（健康分 37.44），「滚动体故障」可能导致停机或损坏，建议尽快处置。",
+              "recommendation": "建议检查滚动体磨损，重点关注 BSF/2×BSF 谐波族与保持架 FTF 调制。",
+              "follow_up_questions": [
+                "滚动体是否存在磨损、划痕或剥落？",
+                "是否需要同步检查保持架状态？"
+              ]
+            },
+            "conflict_detected": true,
+            "conflicts": [
+              "物理残差严重度 mild 与健康分等级 abnormal 不一致"
+            ],
+            "resolution": "检测到 1 处冲突，以 CNN 分类结果（ball）为主判断，其余证据作为交叉验证参考",
+            "signal_evidence": "insufficient"
+          }
+        }
+      ],
+      "recommendation": "建议检查滚动体磨损，重点关注 BSF/2×BSF 谐波族与保持架 FTF 调制。",
+      "report": {
+        "summary": "设备判定为「滚动体故障」，但各证据存在 1 处冲突，以 CNN 为主判断（置信度 0.9992）。",
+        "physical_evidence": "PINN残差0.1157，是Normal基线的6.1倍，提示显著异常",
+        "signal_evidence": "信号证据不足（无显著特征频率峰）",
+        "knowledge_basis": "故障类型「ball」知识库引用：",
+        "diagnosis": {
+          "fault_type": "ball",
+          "confidence": 0.9992,
+          "reasoning": "以 1D-CNN 分类为主判断：滚动体故障（置信度 0.9992）；信号分析未提供充分主导峰证据；物理残差严重度 mild，健康分等级 abnormal。"
+        },
+        "impact": "设备已进入异常状态（健康分 37.44），「滚动体故障」可能导致停机或损坏，建议尽快处置。",
+        "recommendation": "建议检查滚动体磨损，重点关注 BSF/2×BSF 谐波族与保持架 FTF 调制。",
+        "follow_up_questions": [
+          "滚动体是否存在磨损、划痕或剥落？",
+          "是否需要同步检查保持架状态？"
+        ]
+      },
+      "conflicts": [
+        "物理残差严重度 mild 与健康分等级 abnormal 不一致"
+      ],
+      "conflict_detected": true
+    }
+  }
+]

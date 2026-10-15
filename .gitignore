@@ -1,0 +1,16 @@
+__pycache__/
+.venv/
+node_modules/
+datasets/
+models/*.pt
+tmp/
+*.db
+*.sqlite
+*.sqlite3
+
+# 环境变量与密钥（严禁提交）
+.env
+backend/requirements_check.txt
+
+# 包管理器缓存
+.cache/

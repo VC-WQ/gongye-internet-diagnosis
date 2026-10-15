@@ -1,0 +1,155 @@
+{
+  "full": {
+    "baseline_acc": 1.0,
+    "fp_acc": 1.0,
+    "delta": 0.0
+  },
+  "few_shot": [
+    {
+      "ratio": 0.5,
+      "n_train": 3762,
+      "baseline_acc": 1.0,
+      "fp_acc": 1.0,
+      "delta": 0.0
+    },
+    {
+      "ratio": 0.2,
+      "n_train": 1505,
+      "baseline_acc": 1.0,
+      "fp_acc": 0.9973,
+      "delta": -0.0027
+    },
+    {
+      "ratio": 0.1,
+      "n_train": 752,
+      "baseline_acc": 1.0,
+      "fp_acc": 0.9989,
+      "delta": -0.0011
+    }
+  ],
+  "noise": [
+    {
+      "snr_db": 10,
+      "baseline_acc": 0.8501,
+      "fp_acc": 0.8942,
+      "delta": 0.0441
+    },
+    {
+      "snr_db": 5,
+      "baseline_acc": 0.487,
+      "fp_acc": 0.4923,
+      "delta": 0.0053
+    },
+    {
+      "snr_db": 0,
+      "baseline_acc": 0.2504,
+      "fp_acc": 0.2504,
+      "delta": 0.0
+    },
+    {
+      "snr_db": -5,
+      "baseline_acc": 0.2504,
+      "fp_acc": 0.2504,
+      "delta": 0.0
+    }
+  ],
+  "confusion": {
+    "baseline": [
+      [
+        473,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        469,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        471,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        468
+      ]
+    ],
+    "fp_cnn": [
+      [
+        473,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        469,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        471,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        468
+      ]
+    ]
+  },
+  "bands": {
+    "theory_hz": {
+      "BPFO": 107.36,
+      "BPFI": 162.19,
+      "BSF": 70.58,
+      "FTF": 11.93
+    },
+    "learned": {
+      "BPFO": {
+        "theory_hz": 107.36,
+        "learned_hz": 96.29,
+        "bandwidth_hz": 14.41,
+        "gain": 1.0
+      },
+      "BPFI": {
+        "theory_hz": 162.19,
+        "learned_hz": 178.25,
+        "bandwidth_hz": 14.4,
+        "gain": 0.999
+      },
+      "BSF": {
+        "theory_hz": 70.58,
+        "learned_hz": 67.24,
+        "bandwidth_hz": 14.39,
+        "gain": 1.0
+      },
+      "FTF": {
+        "theory_hz": 11.93,
+        "learned_hz": 16.56,
+        "bandwidth_hz": 14.39,
+        "gain": 0.999
+      }
+    }
+  },
+  "config": {
+    "epochs": 30,
+    "device": "cpu",
+    "classes": [
+      "Normal",
+      "IR",
+      "OR",
+      "Ball"
+    ],
+    "note": "基线与 FP-CNN 使用完全相同的数据划分、随机种子与训练轮数，保证对比公平。"
+  }
+}
