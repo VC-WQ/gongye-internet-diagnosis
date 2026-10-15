@@ -543,7 +543,7 @@ export default function ModelLab() {
                       extra={
                         <ChartNote
                           desc="线性回归 / 岭回归 / 随机森林 / 梯度提升 / XGBoost 五模型在蒸汽量预测上的「真实值 vs 预测值」散点，叠加 y=x 理想线。"
-                          dataSource="工业蒸汽量预测数据集（天池工业赛 · 2888 样本 · 38 维特征 + 1 目标，真实公开数据）。"
+                          dataSource="工业蒸汽量预测数据集（2888 样本 · 38 维特征 + 1 目标，真实公开数据）。"
                           insight="散点越贴近 y=x 理想线，模型回归越准（R² 越接近 1）。"
                         />
                       }
@@ -563,7 +563,7 @@ export default function ModelLab() {
                       extra={
                         <ChartNote
                           desc="随机森林模型在蒸汽量回归任务上的特征重要性排序（取前 15 维）。"
-                          dataSource="工业蒸汽量预测数据集（天池工业赛 · 38 维传感器特征，真实公开数据）。"
+                          dataSource="工业蒸汽量预测数据集（38 维传感器特征，真实公开数据）。"
                           insight="重要性越高的传感器特征，对蒸汽量预测的贡献越大。"
                         />
                       }
@@ -604,7 +604,7 @@ export default function ModelLab() {
                             <Tag color="blue">{ds.samples} 样本</Tag>
                             <ChartNote
                               desc={`${ds.best_model} 在「${ds.name}」上的混淆矩阵，展示实际类别 vs 预测类别的二分类计数（对角=判对，非对角=判错）。`}
-                              dataSource={`${ds.name}数据集（${ds.samples} 样本 · ${ds.features_dim} 维特征 · 真实公开比赛数据）。`}
+                              dataSource={`${ds.name}数据集（${ds.samples} 样本 · ${ds.features_dim} 维特征 · 真实公开数据集）。`}
                               insight="对角线数值越大（TP/TN 多）、非对角越小（FP/FN 少），说明模型判别越准。"
                             />
                           </Space>
@@ -626,7 +626,7 @@ export default function ModelLab() {
                       extra={
                         <ChartNote
                           desc="两个表格分类数据集各自的 ROC 曲线（真正率 vs 假正率），并叠加随机基线（对角线）。"
-                          dataSource="机器故障预测 + 工业制造缺陷预测两个表格分类数据集（真实公开比赛数据）。"
+                          dataSource="机器故障预测 + 工业制造缺陷预测两个表格分类数据集（真实公开数据集）。"
                           insight="曲线越贴近左上角、越远离对角线，AUC 越高、二分类判别能力越强。"
                         />
                       }
@@ -646,7 +646,7 @@ export default function ModelLab() {
                       extra={
                         <ChartNote
                           desc={`最佳树模型在「${clsData[0]?.name ?? ''}」任务上的特征重要性排序（取前 15 维）。`}
-                          dataSource={`${clsData[0]?.name ?? ''}数据集（真实公开比赛数据，结构化表格特征）。`}
+                          dataSource={`${clsData[0]?.name ?? ''}数据集（真实公开数据集，结构化表格特征）。`}
                           insight="重要性越高的特征，对该任务故障/缺陷判别的贡献越大。"
                         />
                       }
@@ -681,7 +681,7 @@ export default function ModelLab() {
                       extra={
                         <ChartNote
                           desc="38 维蒸汽传感器特征两两之间的线性相关系数热力图（红=正相关，蓝=负相关，深色=弱相关）。"
-                          dataSource="工业蒸汽量预测数据集（天池工业赛 · 38 维传感器特征 V0~V37，真实公开数据）。"
+                          dataSource="工业蒸汽量预测数据集（38 维传感器特征 V0~V37，真实公开数据）。"
                           insight="识别高度相关的冗余特征，可为特征工程（降维/去冗余）提供依据。"
                         />
                       }

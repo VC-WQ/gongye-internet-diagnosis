@@ -5,7 +5,7 @@
     pip install ultralytics
 
 设计目标：**无人值守** —— 训练完自动完成三件事，一次跑完即可把整个
-产物目录 scp 回本地，供答辩 PPT / 前端"视觉智能体"直接使用：
+产物目录 scp 回本地，供前端「视觉智能体」直接使用：
 
   1. 解析 NEU-DET 的 VOC 格式 XML 标注，转 YOLO txt 并按 85%/15% 划分
   2. 训练 YOLOv8s（一阶段、轻量、边缘实时部署主模型）+ RT-DETR-l（Transformer SOTA 对比）

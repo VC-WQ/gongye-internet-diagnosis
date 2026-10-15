@@ -23,7 +23,7 @@ import urllib.request
 
 import numpy as np
 
-# 数据（天池比赛，train/test 为 txt，以空白分隔，无表头）
+# 数据（公开数据集，train/test 为 txt，以空白分隔，无表头）
 TRAIN_URL_TEMPLATE = ""  # 已本地化的数据不再远程下载
 DATA_DIR = r"d:\企业云系统\工业互联网系统\datasets\工业蒸汽量预测"
 OUT_DIR = r"d:\企业云系统\工业互联网系统\backend\app\data"

@@ -170,7 +170,7 @@ def build_datasets() -> list[dict]:
         "dim": f"{mf_cols} 维特征",
         "classes": 2,
         "class_names": ["正常", "故障"],
-        "source": "公开比赛数据",
+        "source": "公开数据集",
         "size_gb": _gb(mf_bytes),
         "used_in": "XGBoost 分类实证",
     })
@@ -189,7 +189,7 @@ def build_datasets() -> list[dict]:
         "dim": f"{md_cols} 维特征",
         "classes": 2,
         "class_names": ["合格", "缺陷"],
-        "source": "公开比赛数据",
+        "source": "公开数据集",
         "size_gb": _gb(md_bytes),
         "used_in": "XGBoost 分类实证",
     })
@@ -208,7 +208,7 @@ def build_datasets() -> list[dict]:
         "dim": f"{steam_cols - 1} 维特征 + 1 目标",
         "classes": 1,
         "class_names": ["连续目标 target"],
-        "source": "天池工业赛",
+        "source": "公开数据集",
         "size_gb": _gb(steam_bytes),
         "used_in": "sklearn/XGBoost 多模型回归",
     })

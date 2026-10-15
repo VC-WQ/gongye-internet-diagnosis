@@ -2,12 +2,11 @@
 
 > Industrial Equipment Multi-Agent Diagnosis System driven by Physical Digital Twin
 >
-> 赛题方向：**AI 大模型在工业互联网的应用创新（方向三）**
 > 统一接口前缀：`/api/v1`　后端：FastAPI　前端：React + TypeScript + Ant Design　实时通信：MQTT + WebSocket
 
 ---
 
-## 0. 这是什么 / 给接手同学的话
+## 0. 这是什么
 
 本系统面向工业旋转机械（离心泵、驱动电机、空压机）的**预测性维护与故障诊断**。核心设计原则一句话：
 
@@ -17,12 +16,10 @@
 
 **接手前请务必先读第 4 节（启动）与第 9 节（注意事项）**，其中包含了数据库、大模型 Key、MQTT 等最容易踩坑的配置点。
 
-> 📌 本仓库相关文档（按读者分类）：
-> - **`docs/用户使用手册.md`** —— ★给非技术读者（厂长/老板/设备主管/维修工）★：每个页面谁该看、看什么、点哪里，机械术语全部用大白话解释，**零基础也能看懂**
+> 📌 本仓库相关文档：
+> - **`docs/用户使用手册.md`** —— 给非技术读者（厂长/老板/设备主管/维修工）：每个页面谁该看、看什么、点哪里，机械术语全部用大白话解释
 > - `docs/用户使用说明.md` —— 面向操作人员：逐页操作详解 + 名词大白话字典
-> - `docs/系统说明报告（方向3·评审详细版）.md` —— 面向评委：架构/数据/算法公式/页面/图表逐项解读
-> - `docs/设计文档（作品报告·方向3）.md`（及 `.docx`）—— 按大赛报告模板撰写（六章）
-> - `docs/系统落地与部署说明.md`、`docs/演示话术.md`、`docs/VC说明.md`
+> - `docs/系统落地与部署说明.md` —— 部署与落地说明
 
 ---
 
@@ -444,7 +441,7 @@ SECRET_KEY=industrial-diagnosis-2026-secret-key-7f3a
 
 ## 9. 接手须知（注意事项 / 技术要点）
 
-1. **诚实标注数据来源**：系统同时使用 **真实公开数据集**（CWRU/XJTU-SY/NEU-DET/蒸汽量等）与 **物理仿真数据**（数字孪生 SDE / SmartFactory / DigitalTwin）。评审与答辩时务必区分，切勿把仿真结果表述为实测数据。
+1. **诚实标注数据来源**：系统同时使用 **真实公开数据集**（CWRU/XJTU-SY/NEU-DET/蒸汽量等）与 **物理仿真数据**（数字孪生 SDE / SmartFactory / DigitalTwin）。对外介绍时务必区分，切勿把仿真结果表述为实测数据。
 2. **大模型只在解读环节**：修改 `multi_agent/llm_client.py` 时不要让它参与数值计算，这是系统的核心设计约束。
 3. **`.env` 含真实密钥**：`DEEPSEEK_API_KEY` 与 `SECRET_KEY` 属敏感信息，**不要提交到公开仓库**，生产环境务必更换 `SECRET_KEY`。
 4. **模型权重**：`models/*.pt` 与 `backend/app/modules/vision/weights/`、`data/neu_det_export/weights/` 分别服务于轴承诊断与视觉检测，缺一不可。
@@ -459,7 +456,7 @@ SECRET_KEY=industrial-diagnosis-2026-secret-key-7f3a
 
 ---
 
-## 10. 快速自查清单（交付/演示前）
+## 10. 快速自查清单
 
 - [ ] 后端能启动，`http://localhost:8000/health` 返回 `{"status":"ok"}`
 - [ ] 前端能打开并用 `admin/admin123` 登录
