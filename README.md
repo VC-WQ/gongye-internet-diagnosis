@@ -464,4 +464,4 @@ SECRET_KEY=industrial-diagnosis-2026-secret-key-7f3a
 
 *本 README 内容全部核对自项目源码（`backend/app/main.py`、`config.py`、`docker-compose.yml`、`frontend/src/App.tsx`、`services/api.ts`、各页面与组件）与运行配置，力求与代码一致。如与运行环境不符，以实际代码为准。*
 
-**文档最后更新：2026-10-15**（去掉比赛/评委文档引用，目录结构与本仓库实际内容对齐）。
+**文档最后更新：2026-10-15**（目录结构与本仓库实际内容对齐，移除不存在的文档引用）。
