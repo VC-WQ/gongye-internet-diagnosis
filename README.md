@@ -14,12 +14,7 @@
 
 所有数值判断（振动分类、物理残差、数字孪生、健康评分）交给可解释的算法；大模型（DeepSeek）只负责把硬指标转述成自然语言诊断报告，从机制上规避数值幻觉。
 
-**接手前请务必先读第 4 节（启动）与第 9 节（注意事项）**，其中包含了数据库、大模型 Key、MQTT 等最容易踩坑的配置点。
-
-> 📌 本仓库相关文档：
-> - **`docs/用户使用手册.md`** —— 给非技术读者（厂长/老板/设备主管/维修工）：每个页面谁该看、看什么、点哪里，机械术语全部用大白话解释
-> - `docs/用户使用说明.md` —— 面向操作人员：逐页操作详解 + 名词大白话字典
-> - `docs/系统落地与部署说明.md` —— 部署与落地说明
+使用前请先读第 4 节（启动）与第 9 节（注意事项），其中包含数据库、大模型 Key、MQTT 等最容易踩坑的配置点。说明文档就是本 README。
 
 ---
 
@@ -68,22 +63,21 @@
 ## 3. 目录结构详解（每个文件夹/文件是干什么的）
 
 ```
-工业互联网系统/
+.
 ├── backend/                # 后端服务（FastAPI）
 ├── frontend/               # 前端应用（React + Vite）
 ├── simulators/             # 虚拟设备模拟器（物理数字孪生 SDE）
-├── datasets/               # 原始/公开数据集（8 个）
-├── data/                   # 运行时数据（数据库、导出物）
-├── models/                 # 训练好的模型权重（.pt）
+├── data/                   # 运行时导出物（视觉检测曲线/样例图等）
 ├── mqtt/                   # Mosquitto broker 配置
-├── scripts/                # 数据分析、训练、演示、一键启动脚本
+├── scripts/                # 数据分析、训练、一键启动脚本
 ├── tools/                  # 工具与开发期脚本（非运行时依赖）
-├── docs/                   # 各类说明/设计文档
-├── .venv/                  # Python 虚拟环境（已预置）
-├── docker-compose.yml      # 一键编排（生产/演示推荐）
+├── docker-compose.yml      # 一键编排
+├── start-local.bat         # Windows 本机一键启动
 ├── .npmrc                  # npm 源配置
 └── .gitignore
 ```
+
+> 原始数据集（`datasets/`）和模型权重（`models/*.pt`）体积较大，未纳入本仓库。需要时按第 3.4 / 3.5 节自行准备。
 
 ### 3.1 `backend/` —— 后端服务
 
@@ -170,7 +164,10 @@ frontend/
 | `VisionDetect.tsx` | 视觉检测智能体（上传图→YOLOv8s/RT-DETR 检测） |
 | `DataAssetRegistry.tsx` | 数据资产总览（数据集目录卡片） |
 | `DigitalHuman3D.tsx` | Three.js 全息数字人（会诊播报，中文 TTS） |
-| `index.ts` | 组件统一导出 |
+| `DomainAdapt.tsx` | CWRU 域适应对比 |
+| `FPCnnCompare.tsx` | FP-CNN 对比实验 |
+| `RulSdePf.tsx` | SDE + 粒子滤波剩余寿命 |
+| `SelfEvolutionLoop.tsx` | 自进化闭环可视化 |
 
 **`src/pages/` 页面（对应路由）：**
 
@@ -202,7 +199,7 @@ frontend/
 | `local_broker.py` | 本地轻量 Broker（无 Mosquitto 时可用） |
 | `Dockerfile` | 模拟器镜像 |
 
-### 3.4 `datasets/` —— 数据集（8 个）
+### 3.4 `datasets/` —— 数据集（8 个，未随仓库分发）
 
 | 目录 | 用途 |
 |---|---|
@@ -215,16 +212,16 @@ frontend/
 | `SmartFactory/` | 产线级多机组异常 |
 | `DigitalTwin/` | 数字孪生仿真数据 |
 
-> 数据体量较大（约 1.3 万个文件），如需分发给他人请注意体积。
+> 数据体量较大，本仓库不包含原始数据集目录。可视化用的预计算结果在 `backend/app/data/*.json`。
 
-### 3.5 `models/` —— 模型权重
+### 3.5 `models/` —— 模型权重（未随仓库分发）
 
 | 文件 | 说明 |
 |---|---|
 | `cnn_bearing.pt` | 1D-CNN 轴承故障分类模型 |
 | `pinn_baseline.pt` | PINN 物理正则自编码器基线 |
 
-### 3.6 `scripts/` —— 脚本（分析 / 训练 / 演示 / 启动）
+### 3.6 `scripts/` —— 脚本（分析 / 训练 / 启动）
 
 | 脚本 | 作用 |
 |---|---|
@@ -245,8 +242,8 @@ frontend/
 
 | 文件 | 作用 |
 |---|---|
-| `mosquitto-install.exe` | Windows 版 Mosquitto 安装包 |
-| `dev-scripts/` | 开发期一次性脚本（验收、数据集 profiling、docx 读取、e2e 冒烟等），**不影响系统运行，可忽略/清理** |
+| `docker-cleanup-admin.bat` | Docker 清理辅助脚本 |
+| `dev-scripts/` | 开发期一次性脚本（验收、数据集 profiling、e2e 冒烟等），**不影响系统运行，可忽略/清理** |
 
 ### 3.8 `data/` —— 运行时数据
 
@@ -254,10 +251,6 @@ frontend/
 |---|---|
 | `industrial_diagnosis.db` | SQLite 数据库（若用 SQLite 模式） |
 | `neu_det_export/` | 视觉检测导出：曲线、样例图、模型权重、`comparison.json` |
-
-### 3.9 `docs/` —— 文档
-
-见文件头部「相关文档」列表。
 
 ---
 
@@ -268,7 +261,7 @@ frontend/
 **要求**：安装 Docker Desktop。
 
 ```bash
-cd 工业互联网系统
+# 在仓库根目录执行
 # 如需大模型解读，先设置 Key（否则可用 Mock）
 export DEEPSEEK_API_KEY=你的key        # Windows PowerShell: $env:DEEPSEEK_API_KEY="你的key"
 docker compose up --build
@@ -353,7 +346,7 @@ start-local.bat
 
 ---
 
-## 5. 关键配置说明（★接手必看★）
+## 5. 关键配置说明
 
 配置优先级：**环境变量 > `backend/.env` > `config.py` 默认值**。
 
@@ -439,7 +432,7 @@ SECRET_KEY=industrial-diagnosis-2026-secret-key-7f3a
 
 ---
 
-## 9. 接手须知（注意事项 / 技术要点）
+## 9. 注意事项 / 技术要点
 
 1. **诚实标注数据来源**：系统同时使用 **真实公开数据集**（CWRU/XJTU-SY/NEU-DET/蒸汽量等）与 **物理仿真数据**（数字孪生 SDE / SmartFactory / DigitalTwin）。对外介绍时务必区分，切勿把仿真结果表述为实测数据。
 2. **大模型只在解读环节**：修改 `multi_agent/llm_client.py` 时不要让它参与数值计算，这是系统的核心设计约束。
@@ -471,4 +464,4 @@ SECRET_KEY=industrial-diagnosis-2026-secret-key-7f3a
 
 *本 README 内容全部核对自项目源码（`backend/app/main.py`、`config.py`、`docker-compose.yml`、`frontend/src/App.tsx`、`services/api.ts`、各页面与组件）与运行配置，力求与代码一致。如与运行环境不符，以实际代码为准。*
 
-**文档最后更新：2026-10-15**（同步内容：会诊超时根因排查与 `DEEPSEEK_MOCK=true` 默认启用、前端 Vite `host: '0.0.0.0'` 修复 IPv4 拒绝连接、bat 启动 npm 路径空格修复、前端会诊接口实际走 `command-loop/events` 路径、清理 `.workbuddy/` 与 `scripts/_*` 调试产物 112 个）。
+**文档最后更新：2026-10-15**（去掉比赛/评委文档引用，目录结构与本仓库实际内容对齐）。
