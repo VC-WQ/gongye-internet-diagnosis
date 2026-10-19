@@ -33,43 +33,7 @@ export function moodFromHealthLevel(level: string | undefined): DigitalMood {
 // ---------------------------------------------------------------------------
 // 中文语音播报（Web Speech API，浏览器内置 TTS，离线可用）
 // ---------------------------------------------------------------------------
-let zhVoice: SpeechSynthesisVoice | undefined
-
-function cacheVoices(): void {
-  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
-  const vs = window.speechSynthesis.getVoices() ?? []
-  zhVoice =
-    vs.find((v) => /zh[-_]CN/i.test(v.lang)) ??
-    vs.find((v) => /^zh/i.test(v.lang)) ??
-    vs.find((v) => /chinese|CMN/i.test(v.name))
-}
-
-if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-  cacheVoices()
-  window.speechSynthesis.onvoiceschanged = cacheVoices
-}
-
-/** 用中文语音朗读文本；返回是否成功发起（浏览器支持且文本非空）。 */
-export function speakChinese(text: string, onEnd?: () => void): boolean {
-  if (typeof window === 'undefined' || !('speechSynthesis' in window) || !text) return false
-  window.speechSynthesis.cancel()
-  cacheVoices()
-  const u = new SpeechSynthesisUtterance(text)
-  u.lang = 'zh-CN'
-  if (zhVoice) u.voice = zhVoice
-  u.rate = 1.02
-  u.pitch = 1
-  if (onEnd) u.onend = onEnd
-  window.speechSynthesis.speak(u)
-  return true
-}
-
-/** 立即停止当前语音播报。 */
-export function stopChineseSpeech(): void {
-  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-    window.speechSynthesis.cancel()
-  }
-}
+export { speakChinese, stopChineseSpeech } from '../services/speech'
 
 interface DigitalHuman3DProps {
   /** 情绪状态，影响脸色配色 */
@@ -102,7 +66,18 @@ export default function DigitalHuman3D({
     camera.position.set(0, 0.35, 5.4)
     camera.lookAt(0, -0.1, 0)
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
+    let renderer: THREE.WebGLRenderer
+    try {
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
+    } catch {
+      const fallback = document.createElement('div')
+      fallback.className = 'assistant-caption'
+      fallback.textContent = '当前环境不支持三维形象，语音功能仍可使用'
+      fallback.setAttribute('role', 'status')
+      mount.appendChild(fallback)
+      return () => fallback.remove()
+    }
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     renderer.setSize(size, size)
     renderer.setClearColor(0x000000, 0)
@@ -120,12 +95,20 @@ export default function DigitalHuman3D({
     const root = new THREE.Group()
     scene.add(root)
 
-    const moodColor = (): THREE.Color => new THREE.Color(MOOD_COLOR[moodRef.current])
+    const moodColor = (): THREE.Color =>
+      new THREE.Color(MOOD_COLOR[moodRef.current])
 
     // ---- 头部 ----
     const head = new THREE.Group()
-    const skinMat = new THREE.MeshStandardMaterial({ color: 0x1c2b40, roughness: 0.45, metalness: 0.45 })
-    const skull = new THREE.Mesh(new THREE.SphereGeometry(0.88, 48, 32), skinMat)
+    const skinMat = new THREE.MeshStandardMaterial({
+      color: 0x1c2b40,
+      roughness: 0.45,
+      metalness: 0.45,
+    })
+    const skull = new THREE.Mesh(
+      new THREE.SphereGeometry(0.88, 48, 32),
+      skinMat,
+    )
     head.add(skull)
 
     // 发光眼睛
@@ -146,15 +129,29 @@ export default function DigitalHuman3D({
     head.add(mouth)
 
     // 面罩光环
-    const visorMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.65 })
-    const visor = new THREE.Mesh(new THREE.TorusGeometry(0.44, 0.022, 16, 48), visorMat)
+    const visorMat = new THREE.MeshBasicMaterial({
+      color: 0x38bdf8,
+      transparent: true,
+      opacity: 0.65,
+    })
+    const visor = new THREE.Mesh(
+      new THREE.TorusGeometry(0.44, 0.022, 16, 48),
+      visorMat,
+    )
     visor.position.set(0, 0.1, 0.76)
     head.add(visor)
     root.add(head)
 
     // ---- 身体 ----
-    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x0f1e2e, roughness: 0.7, metalness: 0.35 })
-    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.78, 1.02, 1.35, 48), bodyMat)
+    const bodyMat = new THREE.MeshStandardMaterial({
+      color: 0x0f1e2e,
+      roughness: 0.7,
+      metalness: 0.35,
+    })
+    const body = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.78, 1.02, 1.35, 48),
+      bodyMat,
+    )
     body.position.y = -1.55
     root.add(body)
 
@@ -165,21 +162,42 @@ export default function DigitalHuman3D({
     root.add(core)
 
     // 领口光环
-    const collarMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.9 })
-    const collar = new THREE.Mesh(new THREE.TorusGeometry(0.58, 0.03, 16, 48), collarMat)
+    const collarMat = new THREE.MeshBasicMaterial({
+      color: 0x38bdf8,
+      transparent: true,
+      opacity: 0.9,
+    })
+    const collar = new THREE.Mesh(
+      new THREE.TorusGeometry(0.58, 0.03, 16, 48),
+      collarMat,
+    )
     collar.rotation.x = Math.PI / 2
     collar.position.y = -0.88
     root.add(collar)
 
     // 全息底环（双层）
-    const ringMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.6 })
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(1.18, 0.02, 16, 64), ringMat)
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: 0x38bdf8,
+      transparent: true,
+      opacity: 0.6,
+    })
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(1.18, 0.02, 16, 64),
+      ringMat,
+    )
     ring.rotation.x = Math.PI / 2
     ring.position.y = -2.0
     root.add(ring)
 
-    const ring2Mat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.35 })
-    const ring2 = new THREE.Mesh(new THREE.TorusGeometry(1.34, 0.012, 16, 64), ring2Mat)
+    const ring2Mat = new THREE.MeshBasicMaterial({
+      color: 0x38bdf8,
+      transparent: true,
+      opacity: 0.35,
+    })
+    const ring2 = new THREE.Mesh(
+      new THREE.TorusGeometry(1.34, 0.012, 16, 64),
+      ring2Mat,
+    )
     ring2.rotation.x = Math.PI / 2
     ring2.position.y = -2.02
     root.add(ring2)
@@ -198,7 +216,12 @@ export default function DigitalHuman3D({
     pGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3))
     const particles = new THREE.Points(
       pGeo,
-      new THREE.PointsMaterial({ color: 0x38bdf8, size: 0.032, transparent: true, opacity: 0.7 }),
+      new THREE.PointsMaterial({
+        color: 0x38bdf8,
+        size: 0.032,
+        transparent: true,
+        opacity: 0.7,
+      }),
     )
     root.add(particles)
 
@@ -206,7 +229,7 @@ export default function DigitalHuman3D({
     const clock = new THREE.Clock()
     let raf = 0
     const render = (): void => {
-      const t = clock.getElapsedTime()
+      const t = reducedMotion.matches ? 0 : clock.getElapsedTime()
       const c = moodColor()
       eyeMat.color.copy(c)
       mouthMat.color.copy(c)
@@ -245,6 +268,11 @@ export default function DigitalHuman3D({
       renderer.render(scene, camera)
       raf = requestAnimationFrame(render)
     }
+    const visibility = () => {
+      cancelAnimationFrame(raf)
+      if (!document.hidden) render()
+    }
+    document.addEventListener('visibilitychange', visibility)
     render()
 
     // 自适应容器宽度（正方形渲染）
@@ -261,6 +289,7 @@ export default function DigitalHuman3D({
 
     return () => {
       cancelAnimationFrame(raf)
+      document.removeEventListener('visibilitychange', visibility)
       ro.disconnect()
       scene.traverse((obj) => {
         const m = obj as THREE.Mesh
@@ -270,14 +299,21 @@ export default function DigitalHuman3D({
         else if (mat) mat.dispose()
       })
       renderer.dispose()
-      if (renderer.domElement.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement)
+      if (renderer.domElement.parentNode)
+        renderer.domElement.parentNode.removeChild(renderer.domElement)
     }
   }, [size])
 
   return (
     <div
       ref={mountRef}
-      style={{ width: '100%', maxWidth: size, aspectRatio: '1', margin: '0 auto', ...style }}
+      style={{
+        width: '100%',
+        maxWidth: size,
+        aspectRatio: '1',
+        margin: '0 auto',
+        ...style,
+      }}
     />
   )
 }

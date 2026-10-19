@@ -18,11 +18,12 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error('[API]', error?.response?.status, error?.response?.data ?? error.message)
     if (error?.response?.status === 401 && window.location.pathname !== '/login') {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
-      window.location.href = '/login'
+      const next = window.location.pathname + window.location.search
+      sessionStorage.setItem('auth:returnTo', next)
+      window.location.assign('/login')
     }
     return Promise.reject(error)
   },
@@ -92,6 +93,7 @@ export interface EventSummary {
   health_score: number | null
   report: DiagnosisReport | null
   timestamp: string | null
+  agent_diagnosis?: ConsultResult
 }
 
 // ---------------------------------------------------------------------------

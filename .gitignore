@@ -14,3 +14,6 @@ backend/requirements_check.txt
 
 # 包管理器缓存
 .cache/
+# 前端生成文件
+frontend/dist/
+*.tsbuildinfo
