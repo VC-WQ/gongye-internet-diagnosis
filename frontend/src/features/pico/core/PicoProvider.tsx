@@ -14,6 +14,7 @@ import { speakChinese, stopChineseSpeech } from '../../../services/speech'
 import { useWorkspace } from '../../../services/workspace'
 import { errorText } from '../../../hooks/useResource'
 import { postPicoChat } from '../api/pico'
+import { NotificationGate } from './notificationGate'
 import type {
   PicoChatResponse,
   PicoEmotion,
@@ -42,6 +43,8 @@ interface PicoValue {
   busy: boolean
   emotion: PicoEmotion
   talking: boolean
+  speakingId?: string
+  speechError: string
   unread: boolean
   contextLabel: string
   deviceId?: string
@@ -50,7 +53,7 @@ interface PicoValue {
     text: string,
     override?: { device_id?: string; event_id?: number },
   ) => Promise<void>
-  speak: (text: string) => void
+  speak: (text: string, messageId?: string) => void
   stopSpeaking: () => void
   notify: (notification: PicoNotification) => void
   cancel: () => void
@@ -80,7 +83,17 @@ export function PicoProvider({ children }: { children: ReactNode }) {
   const [busy, setBusy] = useState(false)
   const [emotion, setEmotion] = useState<PicoEmotion>('idle')
   const [talking, setTalking] = useState(false)
+  const [speakingId, setSpeakingId] = useState<string>()
+  const [speechError, setSpeechError] = useState('')
+  const notificationGate = useRef(new NotificationGate())
   const [unread, setUnread] = useState(false)
+
+  // A business reaction settles back to quiet idle; active work/speech owns its state.
+  useEffect(() => {
+    if (emotion === 'idle' || busy || talking) return
+    const timer = setTimeout(() => setEmotion('idle'), 4000)
+    return () => clearTimeout(timer)
+  }, [emotion, busy, talking])
 
   const busyRef = useRef(false)
   const requestRef = useRef(0)
@@ -96,6 +109,7 @@ export function PicoProvider({ children }: { children: ReactNode }) {
   const stopSpeaking = useCallback(() => {
     stopChineseSpeech()
     setTalking(false)
+    setSpeakingId(undefined)
     setEmotion('idle')
   }, [])
 
@@ -109,7 +123,7 @@ export function PicoProvider({ children }: { children: ReactNode }) {
   )
   const toggle = useCallback(() => setOpen(!openRef.current), [setOpen])
 
-  // 上下文变化：中止旧请求、停止播报，并在对话里标明切换
+  // 上下文变化保持静默：仅取消旧请求、停止播报和失效数据。
   const lastContext = useRef('')
   useEffect(() => {
     const key = `${workspace.mode}|${workspace.selectedDeviceId ?? ''}|${
@@ -127,18 +141,7 @@ export function PicoProvider({ children }: { children: ReactNode }) {
     setBusy(false)
     stopSpeaking()
     setEmotion('idle')
-    setMessages((previous) =>
-      previous.length
-        ? [
-            ...previous,
-            {
-              id: nextId('context'),
-              role: 'system',
-              text: `上下文已切换至 ${contextLabel}，后续回答针对新上下文。`,
-            },
-          ]
-        : previous,
-    )
+
   }, [
     workspace.mode,
     workspace.selectedDeviceId,
@@ -153,20 +156,34 @@ export function PicoProvider({ children }: { children: ReactNode }) {
     stopSpeaking()
   }, [location.pathname, stopSpeaking])
 
-  useEffect(() => () => stopChineseSpeech(), [])
+  useEffect(() => () => {
+    requestRef.current += 1
+    abortRef.current?.abort()
+    stopChineseSpeech()
+  }, [])
 
-  const speak = useCallback((text: string) => {
-    const started = speakChinese(text, () => {
-      setTalking(false)
-      setEmotion('idle')
+  const speak = useCallback((text: string, messageId?: string) => {
+    stopChineseSpeech()
+    setSpeakingId(messageId ?? text)
+    setSpeechError('')
+    const queued = speakChinese(text, undefined, (state) => {
+      const playing = state === 'start' || state === 'resume'
+      setTalking(playing)
+      setEmotion(playing ? 'talking' : 'idle')
+      if (state === 'end' || state === 'error' || state === 'cancel') setSpeakingId(undefined)
+      if (state === 'error') setSpeechError('语音播放失败，请检查系统语音服务')
     })
-    if (started) {
-      setTalking(true)
-      setEmotion('talking')
-    }
+    if (!queued) { setSpeakingId(undefined); setTalking(false); setEmotion('idle'); setSpeechError('当前浏览器无法播放语音') }
   }, [])
 
   const notify = useCallback((notification: PicoNotification) => {
+    // A completed business write invalidates any in-flight read even when its toast is enough.
+    requestRef.current += 1
+    abortRef.current?.abort()
+    busyRef.current = false
+    setBusy(false)
+    if (!notificationGate.current.accept(notification)) return
+    setEmotion(notification.severity === 'critical' ? 'alert' : 'curious')
     const prefix =
       notification.severity === 'critical'
         ? '重要通知'
@@ -283,6 +300,8 @@ export function PicoProvider({ children }: { children: ReactNode }) {
       busy,
       emotion,
       talking,
+      speakingId,
+      speechError,
       unread,
       contextLabel,
       deviceId: workspace.selectedDeviceId,
@@ -301,6 +320,8 @@ export function PicoProvider({ children }: { children: ReactNode }) {
       busy,
       emotion,
       talking,
+      speakingId,
+      speechError,
       unread,
       contextLabel,
       workspace.selectedDeviceId,

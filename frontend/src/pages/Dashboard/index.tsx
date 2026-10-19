@@ -179,7 +179,7 @@ export default function Dashboard({ active = true }: { active?: boolean }) {
                   <button
                     key={d.id}
                     className={`risk-device ${selectedId === d.id ? 'selected' : ''}`}
-                    onClick={() => update({ device: d.id }, true)}
+                    onClick={() => update({ device: d.id, event: d.id === selectedId ? params.get('event') ?? undefined : undefined }, true)}
                   >
                     <span>
                       <b>{d.name}</b>
@@ -233,7 +233,7 @@ export default function Dashboard({ active = true }: { active?: boolean }) {
               <FactoryScene
                 devices={devices}
                 selected={selectedId}
-                onSelect={(id) => update({ device: id }, true)}
+                onSelect={(id) => update({ device: id, event: id === selectedId ? params.get('event') ?? undefined : undefined }, true)}
               />
             </LoadState>
             <div className="scene-legend">

@@ -10,7 +10,9 @@ export const ALLOWED_ACTIONS = [
 
 /** 仅接受站内相对路径，拒绝任意协议/外链注入。 */
 export function isSafeInternalPath(path: string): boolean {
-  return path.startsWith('/') && !path.startsWith('//')
+  if (!path.startsWith('/') || path.startsWith('//') || /[\\\u0000-\u0020]/.test(path)) return false
+  try { if (/[\\\u0000-\u0020]/.test(decodeURIComponent(path))) return false } catch { return false }
+  return path === '/' || /^\/(dashboard|devices|diagnose|events|reports|lab|ops)([?#]|$)/.test(path) || /^\/device\/[^/?#]+([?#]|$)/.test(path)
 }
 
 export function actionPath(action: PicoAction): string | null {

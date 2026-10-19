@@ -1,427 +1,210 @@
 import { useEffect, useRef } from 'react'
+import * as THREE from 'three'
 import type { PicoEmotion } from '../core/types'
+import { PicoController, deformVertex, faceVertex } from '../animation/controller'
+import { paintFace } from '../animation/face'
+import { subscribePicoFrame, wakePicoFrames } from '../animation/scheduler'
 
-const TALK_SYMBOLS = ['Q', 'O', 'P', 'D', 'B', 'R', '@', '&']
-const SEARCH_SYMBOLS = ['#', '%', '&', '*', '+', '=', '?', '!', '0', '1', '<', '>', '/', '\\']
-
-function roundRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  radius: number,
-) {
-  const r = Math.min(radius, width / 2, height / 2)
-  ctx.beginPath()
-  ctx.moveTo(x + r, y)
-  ctx.lineTo(x + width - r, y)
-  ctx.quadraticCurveTo(x + width, y, x + width, y + r)
-  ctx.lineTo(x + width, y + height - r)
-  ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height)
-  ctx.lineTo(x + r, y + height)
-  ctx.quadraticCurveTo(x, y + height, x, y + height - r)
-  ctx.lineTo(x, y + r)
-  ctx.quadraticCurveTo(x, y, x + r, y)
-  ctx.closePath()
-}
-
-function stroke(ctx: CanvasRenderingContext2D, width: number) {
-  ctx.strokeStyle = '#8ef0ff'
-  ctx.lineWidth = Math.max(1.5, width)
-  ctx.lineCap = 'round'
-  ctx.lineJoin = 'round'
-  ctx.shadowColor = 'rgba(126, 227, 255, 0.85)'
-  ctx.shadowBlur = Math.max(3, width * 2)
-}
-
-function drawChevron(
-  ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  size: number,
-  alpha = 1,
-) {
-  ctx.save()
-  ctx.globalAlpha = alpha
-  stroke(ctx, size * 0.13)
-  ctx.beginPath()
-  ctx.moveTo(cx - size * 0.22, cy - size * 0.32)
-  ctx.lineTo(cx + size * 0.16, cy)
-  ctx.lineTo(cx - size * 0.22, cy + size * 0.32)
-  ctx.stroke()
-  ctx.restore()
-}
-
-function drawUnderscore(
-  ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  size: number,
-  scale = 1,
-) {
-  ctx.save()
-  stroke(ctx, size * 0.13)
-  const width = size * 0.48 * scale
-  ctx.beginPath()
-  ctx.moveTo(cx - width / 2, cy + size * 0.22)
-  ctx.lineTo(cx + width / 2, cy + size * 0.22)
-  ctx.stroke()
-  ctx.restore()
-}
-
-function drawQuestion(
-  ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  size: number,
-) {
-  ctx.save()
-  stroke(ctx, size * 0.12)
-  ctx.beginPath()
-  ctx.arc(cx, cy - size * 0.12, size * 0.24, Math.PI * 0.95, Math.PI * 2.15)
-  ctx.stroke()
-  ctx.beginPath()
-  ctx.moveTo(cx + size * 0.2, cy + size * 0.02)
-  ctx.lineTo(cx, cy + size * 0.22)
-  ctx.stroke()
-  ctx.beginPath()
-  ctx.arc(cx, cy + size * 0.42, size * 0.06, 0, Math.PI * 2)
-  ctx.fillStyle = '#8ef0ff'
-  ctx.fill()
-  ctx.restore()
-}
-
-function drawExclamation(
-  ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  size: number,
-) {
-  ctx.save()
-  stroke(ctx, size * 0.13)
-  ctx.beginPath()
-  ctx.moveTo(cx, cy - size * 0.38)
-  ctx.lineTo(cx, cy + size * 0.16)
-  ctx.stroke()
-  ctx.beginPath()
-  ctx.arc(cx, cy + size * 0.4, size * 0.06, 0, Math.PI * 2)
-  ctx.fillStyle = '#8ef0ff'
-  ctx.fill()
-  ctx.restore()
-}
-
-function drawDots(
-  ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  size: number,
-  count: number,
-) {
-  ctx.save()
-  ctx.fillStyle = '#8ef0ff'
-  ctx.shadowColor = 'rgba(126, 227, 255, 0.85)'
-  ctx.shadowBlur = 6
-  for (let index = 0; index < count; index += 1) {
-    ctx.beginPath()
-    ctx.arc(
-      cx + (index - (count - 1) / 2) * size * 0.28,
-      cy + size * 0.2,
-      size * 0.075,
-      0,
-      Math.PI * 2,
-    )
-    ctx.fill()
-  }
-  ctx.restore()
-}
-
-function drawColon(
-  ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  size: number,
-) {
-  ctx.save()
-  ctx.fillStyle = '#8ef0ff'
-  ctx.shadowColor = 'rgba(126, 227, 255, 0.85)'
-  ctx.shadowBlur = 6
-  for (const offset of [-0.18, 0.18]) {
-    ctx.beginPath()
-    ctx.arc(cx, cy + size * offset, size * 0.068, 0, Math.PI * 2)
-    ctx.fill()
-  }
-  ctx.restore()
-}
-
-function drawD(
-  ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  size: number,
-) {
-  ctx.save()
-  stroke(ctx, size * 0.12)
-  ctx.beginPath()
-  ctx.moveTo(cx - size * 0.2, cy - size * 0.34)
-  ctx.lineTo(cx - size * 0.2, cy + size * 0.34)
-  ctx.stroke()
-  ctx.beginPath()
-  ctx.arc(cx - size * 0.2, cy, size * 0.34, -Math.PI / 2, Math.PI / 2)
-  ctx.stroke()
-  ctx.restore()
-}
-
-function drawTextSymbol(
-  ctx: CanvasRenderingContext2D,
-  symbol: string,
-  cx: number,
-  cy: number,
-  size: number,
-) {
-  ctx.save()
-  ctx.fillStyle = '#8ef0ff'
-  ctx.font = `600 ${size}px "JetBrains Mono", ui-monospace, Menlo, monospace`
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.shadowColor = 'rgba(126, 227, 255, 0.85)'
-  ctx.shadowBlur = Math.max(4, size * 0.16)
-  ctx.fillText(symbol, cx, cy)
-  ctx.restore()
-}
-
-function drawSearchRows(
-  ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  size: number,
-  tick: number,
-) {
-  ctx.save()
-  ctx.fillStyle = '#8ef0ff'
-  ctx.font = `500 ${size * 0.26}px "JetBrains Mono", ui-monospace, Menlo, monospace`
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.shadowColor = 'rgba(126, 227, 255, 0.7)'
-  ctx.shadowBlur = 4
-  for (let row = 0; row < 2; row += 1) {
-    let text = ''
-    for (let col = 0; col < 5; col += 1) {
-      const index = (tick * 7 + row * 13 + col * 5) % SEARCH_SYMBOLS.length
-      text += SEARCH_SYMBOLS[index]
-    }
-    ctx.globalAlpha = row === 0 ? 0.95 : 0.55
-    ctx.fillText(text, cx, cy + (row === 0 ? -size * 0.14 : size * 0.16))
-  }
-  ctx.restore()
-}
-
-function drawFace(
-  ctx: CanvasRenderingContext2D,
-  emotion: PicoEmotion,
-  width: number,
-  height: number,
-  tick: number,
-) {
-  const plateWidth = width * 0.54
-  const plateHeight = height * 0.23
-  const plateX = (width - plateWidth) / 2
-  const plateY = height * 0.39
-
-  ctx.save()
-  ctx.shadowColor = 'rgba(80, 200, 235, 0.28)'
-  ctx.shadowBlur = width * 0.08
-  roundRect(ctx, plateX, plateY, plateWidth, plateHeight, width * 0.07)
-  ctx.fillStyle = 'rgba(8, 20, 29, 0.86)'
-  ctx.fill()
-  ctx.shadowBlur = 0
-  ctx.strokeStyle = 'rgba(142, 240, 255, 0.18)'
-  ctx.lineWidth = Math.max(1, width * 0.006)
-  ctx.stroke()
-  ctx.restore()
-
-  const leftX = width * 0.4
-  const rightX = width * 0.61
-  const centerY = height * 0.505
-  const glyph = width * 0.16
-
-  switch (emotion) {
-    case 'thinking':
-      drawChevron(ctx, leftX, centerY, glyph)
-      drawDots(ctx, rightX + glyph * 0.05, centerY - glyph * 0.18, glyph, 1 + (tick % 3))
-      break
-    case 'search':
-      drawSearchRows(ctx, width / 2, centerY, width, tick)
-      break
-    case 'talking':
-      drawChevron(ctx, leftX, centerY, glyph, 0.95)
-      drawTextSymbol(
-        ctx,
-        TALK_SYMBOLS[tick % TALK_SYMBOLS.length],
-        rightX,
-        centerY - glyph * 0.04,
-        glyph * 1.05,
-      )
-      break
-    case 'happy':
-      drawColon(ctx, leftX, centerY, glyph)
-      drawD(ctx, rightX, centerY, glyph)
-      break
-    case 'alert':
-      drawChevron(ctx, leftX, centerY, glyph)
-      drawExclamation(ctx, rightX, centerY, glyph)
-      break
-    case 'confused':
-      drawChevron(ctx, leftX, centerY, glyph, 0.75)
-      drawQuestion(ctx, rightX, centerY, glyph)
-      break
-    case 'curious':
-      drawChevron(ctx, leftX, centerY, glyph)
-      drawQuestion(ctx, rightX, centerY, glyph)
-      break
-    case 'idle':
-    default: {
-      const blink = (tick % 24) < 2 ? 0.35 : 1
-      drawChevron(ctx, leftX, centerY, glyph)
-      drawUnderscore(ctx, rightX, centerY, glyph, blink)
-      break
-    }
-  }
-}
-
-function draw(
-  canvas: HTMLCanvasElement,
-  emotion: PicoEmotion,
-  tick: number,
-  reduced: boolean,
-  size: number,
-) {
-  const ctx = canvas.getContext('2d')
-  if (!ctx) return
-  const width = size
-  const height = size
-  ctx.clearRect(0, 0, width, height)
-
-  const time = reduced ? 0 : tick
-  const breathe = 1 + Math.sin(time / 26) * 0.012
-  const bounce =
-    emotion === 'happy' && !reduced ? Math.max(0, Math.sin(time / 7)) * -0.01 : 0
-
-  ctx.save()
-  ctx.translate(width / 2, height / 2 + height * bounce)
-  ctx.scale(1, breathe)
-  ctx.translate(-width / 2, -height / 2)
-
-  const halo = ctx.createRadialGradient(
-    width * 0.5,
-    height * 0.5,
-    width * 0.18,
-    width * 0.5,
-    height * 0.5,
-    width * 0.52,
-  )
-  halo.addColorStop(0, 'rgba(125, 227, 255, 0.42)')
-  halo.addColorStop(1, 'rgba(125, 227, 255, 0)')
-  ctx.fillStyle = halo
-  ctx.beginPath()
-  ctx.arc(width / 2, height / 2, width * 0.5, 0, Math.PI * 2)
-  ctx.fill()
-
-  const sphere = ctx.createRadialGradient(
-    width * 0.36,
-    height * 0.28,
-    width * 0.04,
-    width * 0.5,
-    height * 0.52,
-    width * 0.46,
-  )
-  sphere.addColorStop(0, '#f4fbff')
-  sphere.addColorStop(0.45, '#c3e6f6')
-  sphere.addColorStop(1, '#6b9fbd')
-  ctx.fillStyle = sphere
-  ctx.beginPath()
-  ctx.arc(width / 2, height / 2, width * 0.43, 0, Math.PI * 2)
-  ctx.fill()
-
-  ctx.save()
-  ctx.globalAlpha = 0.6
-  ctx.translate(width * 0.37, height * 0.29)
-  ctx.rotate(-0.42)
-  ctx.fillStyle = '#ffffff'
-  ctx.beginPath()
-  ctx.ellipse(0, 0, width * 0.15, height * 0.075, 0, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.restore()
-
-  drawFace(ctx, emotion, width, height, tick)
-  ctx.restore()
-}
-
-export default function PicoAvatar({
-  emotion,
-  size = 84,
-}: {
+interface PicoAvatarProps {
   emotion: PicoEmotion
   size?: number
-}) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
+  /** Lab controls; ordinary product instances retain quiet autonomous movement. */
+  rotation?: number
+  speed?: number
+  reducedMotion?: boolean
+}
+
+function curvedDisplay(): THREE.BufferGeometry {
+  const geometry = new THREE.PlaneGeometry(1, 1, 40, 16)
+  const position = geometry.getAttribute('position')
+  const uv = geometry.getAttribute('uv')
+  for (let i = 0; i < position.count; i++) position.setXYZ(i, ...faceVertex(uv.getX(i), uv.getY(i)))
+  geometry.computeVertexNormals()
+  return geometry
+}
+
+function deform(geometry: THREE.BufferGeometry, source: Float32Array, pose: { squash: number; wobble: number }, normals = true) {
+  const positions = geometry.getAttribute('position')
+  for (let i = 0; i < positions.count; i++) {
+    positions.setXYZ(i, ...deformVertex(source[i * 3], source[i * 3 + 1], source[i * 3 + 2], pose))
+  }
+  positions.needsUpdate = true
+  if (normals) geometry.computeVertexNormals()
+}
+
+export default function PicoAvatar({ emotion, size = 84, rotation = 0, speed = 1, reducedMotion }: PicoAvatarProps) {
+  const mountRef = useRef<HTMLSpanElement>(null)
+  const stateRef = useRef({ emotion, rotation, speed, reducedMotion })
+  stateRef.current = { emotion, rotation, speed, reducedMotion }
 
   useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const dpr = Math.min(window.devicePixelRatio || 1, 2)
-    canvas.width = size * dpr
-    canvas.height = size * dpr
-    canvas.style.width = `${size}px`
-    canvas.style.height = `${size}px`
-
-    const ctx = canvas.getContext('2d')
-    if (ctx) ctx.scale(dpr, dpr)
-
-    const reduced =
-      typeof window.matchMedia === 'function' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    const animated = ['idle', 'thinking', 'talking', 'search', 'happy'].includes(
-      emotion,
-    )
-    let frame = 0
-    let tick = 0
-
-    const render = () => {
-      const scaled = canvas
-      const context = scaled.getContext('2d')
-      if (!context) return
-      context.setTransform(dpr, 0, 0, dpr, 0, 0)
-      draw(scaled, emotion, tick, reduced, size)
+    const mount = mountRef.current
+    if (!mount) return
+    const scene = new THREE.Scene()
+    const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 20)
+    camera.position.set(0, 0.12, 4.45)
+    camera.lookAt(0, -0.015, 0)
+    let renderer: THREE.WebGLRenderer
+    try {
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'low-power' })
+    } catch {
+      mount.dataset.picoRenderer = 'unavailable'
+      const fallback = document.createElement('span')
+      fallback.textContent = '三维形象不可用'
+      fallback.style.cssText = 'font-size:10px;line-height:1.5;color:var(--muted);text-align:center;align-self:center'
+      fallback.setAttribute('role', 'status')
+      mount.appendChild(fallback)
+      return () => fallback.remove()
     }
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, size <= 84 ? 1.75 : 2))
+    renderer.setSize(size, size)
+    renderer.setClearColor(0x000000, 0)
+    renderer.outputColorSpace = THREE.SRGBColorSpace
+    renderer.toneMapping = THREE.ACESFilmicToneMapping
+    renderer.toneMappingExposure = 1.12
+    renderer.domElement.setAttribute('aria-hidden', 'true')
+    mount.appendChild(renderer.domElement)
+    mount.dataset.picoRenderer = 'webgl'
+    scene.add(new THREE.HemisphereLight(0xfff9ed, 0x737976, 2.4))
+    const key = new THREE.DirectionalLight(0xfff8eb, 3.1)
+    key.position.set(-3, 4, 5)
+    scene.add(key)
+    const rim = new THREE.DirectionalLight(0xe1e4df, 1.6)
+    rim.position.set(3, 1, -2)
+    scene.add(rim)
 
-    render()
-    if (!animated || reduced) {
-      return () => cancelAnimationFrame(frame)
-    }
+    const actor = new THREE.Group()
+    scene.add(actor)
+    const bodyGeometry = new THREE.SphereGeometry(1, size < 60 ? 32 : 48, size < 60 ? 24 : 32)
+    const bodySource = new Float32Array(bodyGeometry.getAttribute('position').array)
+    const bodyMaterial = new THREE.MeshPhysicalMaterial({
+      color: 0xe9e5dc, metalness: 0.12, roughness: 0.29, clearcoat: 0.65, clearcoatRoughness: 0.23,
+    })
+    actor.add(new THREE.Mesh(bodyGeometry, bodyMaterial))
 
+    const faceCanvas = document.createElement('canvas')
+    faceCanvas.width = 512
+    faceCanvas.height = 256
+    const faceContext = faceCanvas.getContext('2d')
+    const texture = new THREE.CanvasTexture(faceCanvas)
+    texture.colorSpace = THREE.SRGBColorSpace
+    texture.minFilter = THREE.LinearFilter
+    texture.magFilter = THREE.LinearFilter
+    texture.generateMipmaps = false
+    const faceGeometry = curvedDisplay()
+    const faceSource = new Float32Array(faceGeometry.getAttribute('position').array)
+    const faceMaterial = new THREE.MeshBasicMaterial({ map: texture, toneMapped: false, side: THREE.FrontSide })
+    actor.add(new THREE.Mesh(faceGeometry, faceMaterial))
+
+    // Small side hardware makes true rotation legible without neon effects.
+    const accentGeometry = new THREE.SphereGeometry(0.075, 16, 12)
+    const accentMaterial = new THREE.MeshStandardMaterial({ color: 0xc13d46, roughness: 0.45, metalness: 0.2 })
+    const accent = new THREE.Mesh(accentGeometry, accentMaterial)
+    accent.position.set(0.73, 0.43, 0.57)
+    actor.add(accent)
+    const seamGeometry = new THREE.TorusGeometry(0.997, 0.008, 6, 80)
+    const seamMaterial = new THREE.MeshStandardMaterial({ color: 0xb6b1a7, roughness: 0.7 })
+    const seam = new THREE.Mesh(seamGeometry, seamMaterial)
+    seam.rotation.x = Math.PI / 2
+    seam.position.y = -0.035
+    actor.add(seam)
+
+    const controller = new PicoController(21 + size)
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)')
+    let visible = true
+    let lost = false
     let last = 0
-    const interval = emotion === 'search' || emotion === 'talking' ? 150 : 180
-    const loop = (now: number) => {
-      if (now - last >= interval) {
-        last = now
-        tick += 1
-        render()
-      }
-      frame = requestAnimationFrame(loop)
+    let rendered = 0
+    let frameCount = 0
+    let needsFrame = true
+    let previousEmotion = emotion
+    const onMedia = () => { needsFrame = true; wakePicoFrames() }
+    media.addEventListener('change', onMedia)
+    const observer = typeof IntersectionObserver !== 'undefined' ? new IntersectionObserver((entries) => {
+      visible = entries[0]?.isIntersecting ?? true
+      if (visible) { last = 0; needsFrame = true; wakePicoFrames() }
+    }) : null
+    observer?.observe(mount)
+    const onLost = (event: Event) => {
+      event.preventDefault()
+      lost = true
+      mount.dataset.picoRenderer = 'context-lost'
+      renderer.domElement.style.opacity = '0.25'
+      mount.title = '三维绘图上下文暂不可用'
     }
-    frame = requestAnimationFrame(loop)
-    return () => cancelAnimationFrame(frame)
-  }, [emotion, size])
+    const onRestored = () => {
+      lost = false
+      needsFrame = true
+      mount.dataset.picoRenderer = 'webgl'
+      renderer.domElement.style.opacity = '1'
+      mount.removeAttribute('title')
+      wakePicoFrames()
+    }
+    renderer.domElement.addEventListener('webglcontextlost', onLost)
+    renderer.domElement.addEventListener('webglcontextrestored', onRestored)
+    const unsubscribe = subscribePicoFrame({
+      active: () => visible && !lost,
+      render: (now) => {
+        const state = stateRef.current
+        const reduced = state.reducedMotion ?? media.matches
+        if (previousEmotion !== state.emotion) { needsFrame = true; previousEmotion = state.emotion }
+        const interval = reduced ? 180 : size <= 84 ? 33 : 1000 / 45
+        if (!needsFrame && now - rendered < interval) return
+        needsFrame = false
+        const dt = last ? Math.min(0.064, (now - last) / 1000) : 1 / 60
+        last = now
+        rendered = now
+        controller.setEmotion(state.emotion)
+        const pose = controller.step(dt * Math.max(0, Math.min(2, state.speed)), reduced)
+        actor.position.y = pose.bob
+        actor.rotation.set(pose.pitch, pose.yaw + state.rotation, pose.roll)
+        deform(bodyGeometry, bodySource, pose)
+        deform(faceGeometry, faceSource, pose, false)
+        accent.position.set(...deformVertex(0.73, 0.43, 0.57, pose))
+        seam.scale.set(1 / Math.sqrt(1 + pose.squash), 1 / Math.sqrt(1 + pose.squash), 1)
+        seam.position.y = -0.035 * (1 + pose.squash)
+        if (faceContext) {
+          paintFace(faceContext, pose, size <= 60)
+          texture.needsUpdate = true
+        }
+        renderer.render(scene, camera)
+        if (import.meta.env.DEV) {
+          mount.dataset.picoFrames = String(++frameCount)
+          mount.dataset.picoYaw = actor.rotation.y.toFixed(4)
+          mount.dataset.picoBlink = pose.blink.toFixed(4)
+          mount.dataset.picoSquash = pose.squash.toFixed(4)
+          mount.dataset.picoVertices = String(bodyGeometry.getAttribute('position').count)
+          mount.dataset.picoReduced = String(reduced)
+          mount.dataset.picoTime = pose.time.toFixed(4)
+        }
+      },
+    })
+    return () => {
+      unsubscribe()
+      observer?.disconnect()
+      media.removeEventListener('change', onMedia)
+      renderer.domElement.removeEventListener('webglcontextlost', onLost)
+      renderer.domElement.removeEventListener('webglcontextrestored', onRestored)
+      bodyGeometry.dispose()
+      bodyMaterial.dispose()
+      faceGeometry.dispose()
+      faceMaterial.dispose()
+      texture.dispose()
+      accentGeometry.dispose()
+      accentMaterial.dispose()
+      seamGeometry.dispose()
+      seamMaterial.dispose()
+      renderer.dispose()
+      renderer.forceContextLoss()
+      renderer.domElement.remove()
+    }
+  }, [size])
 
-  return (
-    <span
-      className={`pico-avatar pico-avatar--${emotion}`}
-      style={{ width: size, height: size }}
-      role="img"
-      aria-label={`Pico ${emotion}`}
-    >
-      <canvas ref={canvasRef} aria-hidden />
-    </span>
-  )
+  return <span
+    ref={mountRef}
+    className={`pico-avatar pico-avatar--${emotion}`}
+    style={{ width: size, height: size, animation: 'none', filter: 'drop-shadow(0 6px 10px rgba(35, 30, 24, .12))' }}
+    role="img"
+    aria-label={`Pico 三维球形助手 · ${emotion}`}
+  />
 }

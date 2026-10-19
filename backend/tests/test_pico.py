@@ -152,3 +152,16 @@ def test_prompt_injection_cannot_return_write_actions() -> None:
         body = response.json()
         assert all(item["type"] in ALLOWED_ACTIONS for item in body["actions"])
         assert all(item["type"] not in {"execute", "confirm", "inject"} for item in body["actions"])
+
+
+def test_declared_simulation_is_labelled_and_display_readings_use_units() -> None:
+    import time
+    from app.modules.mqtt_pipeline.service import mqtt_pipeline_service
+    with TestClient(app) as client:
+        headers = _headers(client)
+        mqtt_pipeline_service.handle_message('pump-001', {'timestamp': time.time(), 'vibration': 0.12345678, 'temperature': 43.2345, 'source': 'simulation'}, 'sandbox/test')
+        body=client.post('/api/v1/pico/chat',headers=headers,json={'message':'这台设备怎么样？','device_id':'pump-001'}).json()
+        assert body['meta']['source_kind'] == 'simulated'
+        assert '0.123 g' in body['text']
+        assert '43.2 ℃' in body['text']
+        assert '0.12345678' not in body['text']

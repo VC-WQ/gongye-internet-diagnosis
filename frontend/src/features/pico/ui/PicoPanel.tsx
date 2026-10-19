@@ -24,6 +24,8 @@ function MetaTags({ message }: { message: PicoMessage }) {
   if (!meta) return null
   return (
     <div className="pico-meta">
+      {meta.source_kind === 'simulated' && <Tag>设备仿真</Tag>}
+      {meta.source_kind === 'offline' && <Tag>离线数据</Tag>}
       {meta.llm === 'live' && <Tag color="green">真实模型</Tag>}
       {meta.llm === 'unconfigured' && <Tag>AI 服务未配置 · 模板回答</Tag>}
       {meta.llm === 'fallback' && <Tag color="orange">AI 暂不可用 · 模板回答</Tag>}
@@ -38,7 +40,9 @@ export default function PicoPanel() {
     messages,
     busy,
     emotion,
+    speakingId,
     talking,
+    speechError,
     contextLabel,
     deviceId,
     send,
@@ -70,12 +74,9 @@ export default function PicoPanel() {
     setOpen(false)
   }
 
-  const lastAssistant = [...messages]
-    .reverse()
-    .find((message) => message.role === 'assistant')
 
   return (
-    <section className="pico-panel" aria-label="Pico 助手">
+    <section className="pico-panel" aria-label="Pico 助手" data-pico-emotion={emotion} data-talking={talking}>
       <header className="pico-panel__header">
         <PicoAvatar emotion={emotion} size={44} />
         <div className="pico-panel__title">
@@ -83,17 +84,7 @@ export default function PicoPanel() {
           <span>{contextLabel}</span>
         </div>
         <div className="pico-panel__actions">
-          {lastAssistant && (
-            <Button
-              size="small"
-              type="text"
-              onClick={() =>
-                talking ? stopSpeaking() : speak(lastAssistant.text)
-              }
-            >
-              {talking ? '停止' : '朗读'}
-            </Button>
-          )}
+
           <Button
             size="small"
             type="text"
@@ -105,7 +96,7 @@ export default function PicoPanel() {
         </div>
       </header>
 
-      <div className="pico-panel__messages" ref={listRef} aria-live="polite">
+      <div className="pico-panel__messages" data-message-count={messages.length} ref={listRef} aria-live="polite">
         {messages.length === 0 && (
           <div className="pico-empty">
             <PicoAvatar emotion="curious" size={230} />
@@ -165,9 +156,14 @@ export default function PicoPanel() {
                 <button
                   type="button"
                   className="pico-speak"
-                  onClick={() => speak(message.text)}
+                  aria-label={speakingId === message.id ? '停止播放' : '播放回复'}
+                  title={speakingId === message.id ? '停止播放' : '播放回复'}
+                  aria-pressed={speakingId === message.id}
+                  onClick={() => speakingId === message.id ? stopSpeaking() : speak(message.text, message.id)}
                 >
-                  朗读
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+                    {speakingId === message.id ? <path d="M7 6h10v12H7z" fill="currentColor" /> : <><path d="M4 9v6h4l5 4V5L8 9H4Z" /><path d="M16 8c3 2 3 6 0 8m3-11c5 4 5 10 0 14" /></>}
+                  </svg>
                 </button>
               )}
             </div>
@@ -188,6 +184,7 @@ export default function PicoPanel() {
       </div>
 
       <footer className="pico-composer">
+        {speechError && <p role="status" className="pico-speech-error">{speechError}</p>}
         <Input.TextArea
           autoFocus
           value={draft}
@@ -196,14 +193,14 @@ export default function PicoPanel() {
           placeholder="问 Pico：这台设备怎么样？"
           onChange={(event) => setDraft(event.target.value)}
           onPressEnter={(event) => {
-            if (!event.shiftKey) {
+            if (!event.shiftKey && !event.nativeEvent.isComposing) {
               event.preventDefault()
               submit()
             }
           }}
         />
         <div className="pico-composer__buttons">
-          <span>语音需手动点击</span>
+          <span className="pico-input-hint">Enter 发送 · Shift + Enter 换行</span>
           {busy ? (
             <Button size="small" onClick={cancel}>
               停止

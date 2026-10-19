@@ -90,3 +90,10 @@ test('unknown action types are rejected', () => {
     null,
   )
 })
+
+test('workspace navigation rejects encoded backslashes, control text and write/admin destinations', () => {
+ for (const target of ['/\\evil.example', '/%5cevil.example', '/events\n', '/admin/records', '/api/v1/command-loop/events/1/execute', '/%ZZ']) {
+  assert.equal(isSafeInternalPath(target), false)
+ }
+ assert.equal(isSafeInternalPath('/dashboard?view=reports&device=pump-001&event=1'), true)
+})

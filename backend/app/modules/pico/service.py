@@ -110,11 +110,13 @@ def _device_text(overview: dict[str, Any]) -> str:
             else "当前没有可用的实时采样。"
         )
     elif last:
-        sampling = (
-            f"最近一次采样在 {age} 秒前，振动 {vibration}，温度 {temperature}℃。"
-            if age is not None
-            else "已有实时采样。"
-        )
+        readings = []
+        if isinstance(vibration, (float, int)):
+            readings.append(f"振动 {vibration:.3f} g")
+        if isinstance(temperature, (float, int)):
+            readings.append(f"温度 {temperature:.1f} ℃")
+        sampling = f"最近采样 {age} 秒前" + ("，" + "，".join(readings) if readings else "") + "。"
+
     else:
         sampling = "当前没有实时采样数据。"
 
@@ -378,6 +380,12 @@ def chat(db: Session, user: User, body: PicoChatRequest) -> PicoChatResponse:
         )
         text, llm_status = _llm_answer(body.message, str(facts), fallback, body.history)
 
+    sample = (overview or {}).get("last_sample") or {}
+    if event is not None:
+        saved = event.sensor_data if isinstance(event.sensor_data, list) else []
+        sample = saved[-1] if saved and isinstance(saved[-1], dict) else {}
+    source_kind = {"simulation": "simulated", "simulated": "simulated", "real": "real", "history": "offline", "offline": "offline"}.get(sample.get("source"), "unknown")
+
     return PicoChatResponse(
         message_id=uuid.uuid4().hex,
         request_id=uuid.uuid4().hex,
@@ -388,7 +396,7 @@ def chat(db: Session, user: User, body: PicoChatRequest) -> PicoChatResponse:
         actions=actions,
         meta=PicoMeta(
             data_status=data_status,  # type: ignore[arg-type]
-            source_kind="unknown",
+            source_kind=source_kind,
             degraded=llm_status != "live",
             llm=llm_status,  # type: ignore[arg-type]
         ),

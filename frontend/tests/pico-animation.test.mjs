@@ -1,0 +1,133 @@
+import { readFile } from 'node:fs/promises'
+import assert from 'node:assert/strict'
+import test from 'node:test'
+import ts from 'typescript'
+
+async function loadModule(path) {
+  const source = await readFile(new URL(path, import.meta.url), 'utf8')
+  const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2020 } })
+  return import(`data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`)
+}
+const { PicoController, PICO_EMOTIONS, TALK_SYMBOLS, springTo, blinkAmount, chevronPoints, idleLineY, deformVertex, faceVertex } =
+  await loadModule('../src/features/pico/animation/controller.ts')
+
+test('spring preserves velocity on retarget and converges independently of ordinary frame rate', () => {
+  const a = { value: 0, velocity: 0 }, b = { value: 0, velocity: 0 }
+  for (let i = 0; i < 120; i++) springTo(a, 1, 1 / 120)
+  for (let i = 0; i < 30; i++) springTo(b, 1, 1 / 30)
+  assert.ok(Math.abs(a.value - b.value) < 1e-10)
+  const before = { ...a }
+  springTo(a, -1, 0)
+  assert.ok(Math.abs(a.value - before.value) < 1e-12)
+  assert.ok(Math.abs(a.velocity - before.velocity) < 1e-12)
+  for (let i = 0; i < 180; i++) springTo(a, -1, 1 / 60)
+  assert.ok(Math.abs(a.value + 1) < 1e-8)
+})
+
+test('left chevron closes continuously into a horizontal stroke and reopens', () => {
+  assert.deepEqual(chevronPoints(0).map((p) => p[1]), [-35, 0, 35])
+  assert.ok(chevronPoints(1).every((p) => p[1] === 0))
+  assert.ok(chevronPoints(1)[0][0] < chevronPoints(1)[1][0])
+  assert.ok(chevronPoints(1)[1][0] < chevronPoints(1)[2][0])
+  for (const boundary of [0, 0.12, 0.17, 0.36]) {
+    assert.ok(Math.abs(blinkAmount(boundary - 1e-6) - blinkAmount(boundary + 1e-6)) < 0.0001)
+  }
+  const samples = Array.from({ length: 73 }, (_, i) => blinkAmount(i * 0.005))
+  assert.ok(samples.some((value) => value > 0.2 && value < 0.8))
+  assert.equal(blinkAmount(0.14), 1)
+  assert.equal(blinkAmount(0.36), 0)
+  assert.equal(idleLineY(0, 0, false), 148)
+  assert.equal(idleLineY(0.5, 0, false), 128)
+  assert.equal(idleLineY(1, 0, false), 148)
+})
+
+test('curved face vertices lie on the sphere and share body deformation without separating', () => {
+  assert.ok(faceVertex(0, 0.5)[2] < faceVertex(0.5, 0.5)[2] - 0.2)
+  for (let u = 0; u <= 1; u += 0.1) for (let v = 0; v <= 1; v += 0.1) {
+    const face = faceVertex(u, v), body = faceVertex(u, v, 1)
+    assert.ok(Math.abs(Math.hypot(...face) - 1.008) < 1e-12)
+    const pose = { squash: 0.11, wobble: 0.08 }
+    const f = deformVertex(...face, pose), b = deformVertex(...body, pose)
+    const gap = Math.hypot(...f.map((value, i) => value - b[i]))
+    assert.ok(gap > 0.006 && gap < 0.011)
+  }
+})
+
+test('rapid interruptions retain pose, normalized expression weights and finite bounded motion', () => {
+  const controller = new PicoController(73)
+  let frame = controller.step(1 / 60)
+  for (let i = 0; i < 2000; i++) {
+    if (i % 7 === 0) {
+      controller.setEmotion(PICO_EMOTIONS[(i / 7 | 0) % PICO_EMOTIONS.length])
+      const sameTime = controller.step(0)
+      assert.ok(Math.abs(sameTime.yaw - frame.yaw) < 1e-12)
+      assert.ok(Math.abs(sameTime.squash - frame.squash) < 1e-12)
+    }
+    frame = controller.step(i % 31 === 0 ? 100 : 1 / 60)
+    assert.ok(Math.abs(Object.values(frame.weights).reduce((a, b) => a + b, 0) - 1) < 1e-10)
+    for (const key of ['yaw', 'pitch', 'roll', 'bob', 'squash', 'wobble']) assert.ok(Number.isFinite(frame[key]) && Math.abs(frame[key]) < 0.5, key)
+    assert.ok(Object.values(frame.weights).every((v) => v >= 0 && v <= 1))
+  }
+})
+
+test('talking is seeded mixed symbols with continuous blend, not a fixed array loop', () => {
+  const a = new PicoController(44), b = new PicoController(44)
+  const symbols = [], blended = []
+  a.setEmotion('talking'); b.setEmotion('talking')
+  for (let i = 0; i < 1200; i++) {
+    const one = a.step(1 / 60), two = b.step(1 / 60)
+    assert.deepEqual(one, two)
+    if (symbols.at(-1) !== one.mouthTo) symbols.push(one.mouthTo)
+    if (one.mouthMix > 0 && one.mouthMix < 1) blended.push(one.mouthMix)
+  }
+  assert.ok(new Set(symbols).size >= 7)
+  assert.ok(blended.length > 100)
+  assert.ok(symbols.every((symbol) => TALK_SYMBOLS.includes(symbol)))
+  assert.notDeepEqual(symbols.slice(0, 8), [...TALK_SYMBOLS])
+})
+
+test('thinking dots have independent continuous alpha; reduced motion preserves a clear static meaning', () => {
+  const controller = new PicoController(84)
+  controller.setEmotion('thinking')
+  let independent = false
+  for (let i = 0; i < 240; i++) {
+    const frame = controller.step(1 / 60)
+    if (frame.dots.some((value) => value > 0.1 && value < 0.9) && Math.abs(frame.dots[0] - frame.dots[1]) > 0.2) independent = true
+  }
+  assert.equal(independent, true)
+  let frame
+  for (let i = 0; i < 240; i++) frame = controller.step(1 / 60, true)
+  assert.equal(frame.weights.thinking, 1)
+  assert.equal(frame.blink, 0)
+  assert.deepEqual(frame.dots, [1, 1, 1])
+  assert.ok(Math.abs(frame.yaw) < 1e-8)
+  assert.ok(Math.abs(frame.squash) < 1e-8)
+})
+
+test('one shared scheduler sleeps when hidden or offscreen and releases listeners after the last avatar', async () => {
+  const saved = { document: globalThis.document, requestAnimationFrame: globalThis.requestAnimationFrame, cancelAnimationFrame: globalThis.cancelAnimationFrame }
+  const listeners = new Map(), frames = new Map()
+  let id = 0, one = 0, two = 0, visible = true
+  globalThis.document = { hidden: false, addEventListener: (name, fn) => listeners.set(name, fn), removeEventListener: (name) => listeners.delete(name) }
+  globalThis.requestAnimationFrame = (fn) => { frames.set(++id, fn); return id }
+  globalThis.cancelAnimationFrame = (frame) => frames.delete(frame)
+  const tick = () => { const current = [...frames.values()]; frames.clear(); current.forEach((fn) => fn(1)) }
+  try {
+    const { subscribePicoFrame, wakePicoFrames } = await loadModule('../src/features/pico/animation/scheduler.ts')
+    const offOne = subscribePicoFrame({ active: () => visible, render: () => one++ })
+    const offTwo = subscribePicoFrame({ active: () => visible, render: () => two++ })
+    assert.equal(frames.size, 1)
+    tick(); assert.equal(one, 1); assert.equal(two, 1); assert.equal(frames.size, 1)
+    visible = false; tick(); assert.equal(frames.size, 0)
+    visible = true; wakePicoFrames(); tick(); assert.equal(one, 2)
+    document.hidden = true; listeners.get('visibilitychange')(); assert.equal(frames.size, 0)
+    document.hidden = false; listeners.get('visibilitychange')(); assert.equal(frames.size, 1)
+    offOne(); assert.equal(listeners.size, 1)
+    offTwo(); assert.equal(listeners.size, 0); assert.equal(frames.size, 0)
+  } finally {
+    for (const [key, value] of Object.entries(saved)) {
+      if (value === undefined) delete globalThis[key]
+      else globalThis[key] = value
+    }
+  }
+})

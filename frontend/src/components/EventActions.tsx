@@ -126,7 +126,7 @@ export default function EventActions({
             mode === 'execute'
               ? '维护指令已下发，等待设备回执。'
               : '人工操作已保存，事件状态已更新。',
-          severity: mode === 'reject' ? 'warning' : 'info',
+          severity: 'info', // The action toast already communicates ordinary user writes.
           eventId: event.id,
           deviceId: event.device_id,
         })
