@@ -1568,3 +1568,29 @@ img {
     margin-bottom: 0;
   }
 }
+
+@media (min-width: 1051px) {
+  .overview-grid {
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .overview-left {
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #3a5061 transparent;
+  }
+}
+@media (min-width: 1051px) and (max-height: 850px) {
+  .overview-left .overview-footnote {
+    display: none;
+  }
+  .overview-left .overview-panel {
+    padding: 14px 12px;
+  }
+  .overview-left .device-type-list > div {
+    padding: 10px 0;
+  }
+}
+.diagnosis-layout > div > .surface + .surface {
+  margin-top: 20px;
+}

@@ -158,7 +158,11 @@ function Workspace({ user }: { user: AuthUser }) {
   const navigationType = useNavigationType()
   const dashboard = location.pathname === '/dashboard'
   const [seenDashboard, setSeenDashboard] = useState(dashboard)
-  const maxIndex = useRef(Number(window.history.state?.idx ?? 0))
+  const maxIndex = useRef(
+    Number(
+      window.history.state?.workspaceMax ?? window.history.state?.idx ?? 0,
+    ),
+  )
   const scroll = useRef<Record<string, number>>({})
   const idx = Number(window.history.state?.idx ?? 0)
   const current = location.pathname.startsWith('/device/')
@@ -187,6 +191,10 @@ function Workspace({ user }: { user: AuthUser }) {
   useEffect(() => {
     if (navigationType === 'PUSH') maxIndex.current = idx
     else maxIndex.current = Math.max(maxIndex.current, idx)
+    window.history.replaceState(
+      { ...window.history.state, workspaceMax: maxIndex.current },
+      '',
+    )
     if (device) sessionStorage.setItem('workspace:device', device)
     sessionStorage.setItem(
       `workspace:path:${location.pathname}`,
