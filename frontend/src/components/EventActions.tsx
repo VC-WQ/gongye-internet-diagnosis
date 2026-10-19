@@ -3,12 +3,24 @@ import { Alert, Button, Input, Modal, Space, message } from 'antd'
 import {
   confirmEvent,
   executeEvent,
+  getHealthHistory,
+  observeEvent,
   rejectEvent,
   reviseEvent,
   type EventSummary,
 } from '../services/api'
 import { errorText } from '../hooks/useResource'
 import { usePicoOptional } from '../features/pico/core/PicoProvider'
+
+function currentOperator(): string {
+  try {
+    return (
+      JSON.parse(localStorage.getItem('user') ?? '{}').username || 'operator'
+    )
+  } catch {
+    return 'operator'
+  }
+}
 
 export default function EventActions({
   event,
@@ -39,6 +51,14 @@ export default function EventActions({
   const [failure, setFailure] = useState('')
   const pico = usePicoOptional()
   const alive = useRef(true)
+  // 状态推进后清除上一状态的操作提示，避免“已恢复”仍显示观察期样本不足
+  const lastStatus = useRef(event.status_state)
+  useEffect(() => {
+    if (lastStatus.current !== event.status_state) {
+      lastStatus.current = event.status_state
+      setFailure('')
+    }
+  }, [event.status_state])
   useEffect(() => {
     alive.current = true
     return () => {
@@ -47,6 +67,7 @@ export default function EventActions({
   }, [])
   const pending = event.status_state === 'pending'
   const handling = event.status_state === 'handling'
+  const observing = event.status_state === 'observing'
   const open = (next: typeof mode) => {
     setReason('')
     setFailure('')
@@ -68,13 +89,7 @@ export default function EventActions({
       setFailure('请填写故障结论和维护建议')
       return
     }
-    let operator = 'operator'
-    try {
-      operator =
-        JSON.parse(localStorage.getItem('user') ?? '{}').username || operator
-    } catch {
-      /* Backend validates request. */
-    }
+    const operator = currentOperator()
     setBusy(true)
     setFailure('')
     try {
@@ -122,6 +137,60 @@ export default function EventActions({
       if (alive.current) setBusy(false)
     }
   }
+  const observe = async () => {
+    if (busy || awaitingRefresh) return
+    setBusy(true)
+    setFailure('')
+    try {
+      const history = (await getHealthHistory(event.device_id)) as Array<{
+        health_score?: number
+      }>
+      const curve = history
+        .map((item) => item.health_score)
+        .filter(
+          (value): value is number =>
+            typeof value === 'number' && Number.isFinite(value),
+        )
+      if (curve.length < 3) {
+        setFailure(
+          `观察期健康采样不足（当前 ${curve.length} 个，至少需要 3 个），请等待更多采样后再评估。`,
+        )
+        return
+      }
+      const result = await observeEvent(
+        event.id,
+        curve.slice(-10),
+        currentOperator(),
+      )
+      if (!alive.current) return
+      const status = result?.status_state
+      message.success(
+        status === 'recovered'
+          ? '观察期评估完成：已恢复'
+          : status === 'observing'
+            ? '观察期评估完成：继续观察'
+            : '观察期评估完成：复发，已重新会诊',
+      )
+      setAwaitingRefresh(true)
+      onChanged()
+      pico?.notify({
+        title: `事件 #${event.id}`,
+        text:
+          status === 'recovered'
+            ? '观察期评估完成：设备已恢复。'
+            : status === 'observing'
+              ? '观察期评估完成：仍需继续观察。'
+              : '观察期评估完成：设备复发，已触发再诊断。',
+        severity: status === 'relapsed' ? 'critical' : 'info',
+        eventId: event.id,
+        deviceId: event.device_id,
+      })
+    } catch (error) {
+      if (alive.current) setFailure(errorText(error))
+    } finally {
+      if (alive.current) setBusy(false)
+    }
+  }
   const titles = {
     confirm: '确认诊断建议',
     execute: '下发维护指令',
@@ -135,7 +204,15 @@ export default function EventActions({
           showIcon
           type="info"
           message={sent ? `指令已下发 · ${sent}` : '事件处于观察期'}
-          description="设备回执暂不可查询；恢复状态以服务端评估结果为准。"
+          description="点击“观察期评估”读取真实健康采样并推进状态；样本不足时不会给出结论。"
+        />
+      )}
+      {failure && !mode && (
+        <Alert
+          type="error"
+          showIcon
+          message={failure}
+          style={{ marginBottom: 12 }}
         />
       )}
       <div className="actions-row">
@@ -166,6 +243,16 @@ export default function EventActions({
             onClick={() => open('execute')}
           >
             下发指令
+          </Button>
+        )}
+        {observing && (
+          <Button
+            type="primary"
+            loading={busy}
+            disabled={awaitingRefresh}
+            onClick={observe}
+          >
+            观察期评估
           </Button>
         )}
       </div>

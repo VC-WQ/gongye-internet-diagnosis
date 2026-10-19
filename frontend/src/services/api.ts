@@ -151,6 +151,18 @@ export const reviseEvent = (
 export const executeEvent = (id: number, operator: string, command?: string) =>
   api.post(`/command-loop/events/${id}/execute`, { operator, command }).then((r) => r.data)
 
+export const observeEvent = (
+  id: number,
+  actualCurve: number[],
+  operator: string,
+) =>
+  api
+    .post(`/command-loop/events/${id}/observe`, {
+      actual_curve: actualCurve,
+      operator,
+    })
+    .then((r) => r.data)
+
 export const getEventTimeline = (id: number) =>
   api.get(`/command-loop/events/${id}/timeline`).then((r) => r.data)
 
