@@ -1,9 +1,10 @@
 import * as echarts from 'echarts'
 export const TECH_DARK_THEME = 'tech-dark'
-export const AXIS_LABEL_COLOR = '#697786'
-export const AXIS_NAME_COLOR = '#697786'
-export const AXIS_LINE_COLOR = '#b6c0c9'
-export const AXIS_SPLIT_COLOR = '#e9edf1'
+// 中性灰在浅色与深色卡片上都保持可读，避免深色模式下坐标轴文字消失。
+export const AXIS_LABEL_COLOR = '#8a97a5'
+export const AXIS_NAME_COLOR = '#8a97a5'
+export const AXIS_LINE_COLOR = 'rgba(140, 160, 175, 0.55)'
+export const AXIS_SPLIT_COLOR = 'rgba(150, 170, 185, 0.18)'
 export function xAxisBase(extra: Record<string, unknown> = {}) {
   return {
     nameTextStyle: { color: AXIS_NAME_COLOR, fontSize: 11 },
@@ -26,12 +27,12 @@ export function registerTechDarkTheme() {
   const base = {
     color: ['#477d9e', '#4b9b88', '#c39752', '#b56570', '#7c82a8', '#7d9f5a'],
     backgroundColor: 'transparent',
-    textStyle: { color: '#536170' },
+    textStyle: { color: '#8a97a5' },
     title: {
       textStyle: { color: '#27323e' },
       subtextStyle: { color: '#788695' },
     },
-    legend: { textStyle: { color: '#697786' } },
+    legend: { textStyle: { color: '#8a97a5' } },
     tooltip: {
       backgroundColor: '#fff',
       borderColor: '#dce3e9',

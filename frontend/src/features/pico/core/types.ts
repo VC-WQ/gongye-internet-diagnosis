@@ -3,6 +3,7 @@ export type PicoEmotion =
   | 'idle'
   | 'curious'
   | 'thinking'
+  | 'search'
   | 'happy'
   | 'alert'
   | 'confused'

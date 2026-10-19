@@ -13,6 +13,7 @@ import VisionDetect from '../../components/VisionDetect'
 import FPCnnCompare from '../../components/FPCnnCompare'
 import RulSdePf from '../../components/RulSdePf'
 import DomainAdapt from '../../components/DomainAdapt'
+import PicoLab from '../../features/pico/ui/PicoLab'
 import { xAxisBase, yAxisBase, AXIS_LABEL_COLOR } from '../../theme/echarts'
 
 const cardBodyStyle = { padding: 12 }
@@ -680,6 +681,7 @@ export default function ModelLab() {
       <SectionTitle idx="G" title="工厂数据与预测性维护" />
       <SmartFactory />
       <DigitalTwinPhm />
+      {import.meta.env.DEV && <PicoLab />}
     </Spin></div>
   )
 }

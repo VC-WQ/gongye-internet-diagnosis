@@ -16,7 +16,7 @@ import {
   Result,
   Skeleton,
   Space,
-  theme,
+  theme as antdTheme,
 } from 'antd'
 import {
   Navigate,
@@ -64,6 +64,16 @@ const ADMIN = [
   { key: '/admin/devices', label: '设备管理' },
   { key: '/admin/records', label: '诊断记录管理' },
 ]
+type UiTheme = 'light' | 'dark'
+
+function readTheme(): UiTheme {
+  try {
+    return localStorage.getItem('ui:theme') === 'dark' ? 'dark' : 'light'
+  } catch {
+    return 'light'
+  }
+}
+
 export const productTheme = {
   token: {
     colorPrimary: '#c13d46',
@@ -83,9 +93,35 @@ export const productTheme = {
       "-apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif",
   },
   components: {
+    Button: {
+      borderRadius: 0,
+      borderRadiusLG: 0,
+      borderRadiusSM: 0,
+      defaultShadow: 'none',
+      primaryShadow: 'none',
+    },
     Table: { headerBg: '#f7f8fa', cellPaddingBlock: 15 },
     Card: { headerFontSize: 15 },
     Tabs: { horizontalItemGutter: 28 },
+  },
+}
+
+/** 深色主题只覆盖语义 token，品牌主色与按钮直角规则保持不变。 */
+const darkThemeOverrides = {
+  ...productTheme,
+  token: {
+    ...productTheme.token,
+    colorBgLayout: '#0c141c',
+    colorBgContainer: '#131e28',
+    colorBgElevated: '#182532',
+    colorText: '#e6eef5',
+    colorTextSecondary: '#93a5b5',
+    colorBorder: 'rgba(190, 220, 240, 0.14)',
+    colorBorderSecondary: 'rgba(190, 220, 240, 0.1)',
+  },
+  components: {
+    ...productTheme.components,
+    Table: { headerBg: '#1b2a37', cellPaddingBlock: 15 },
   },
 }
 class PageBoundary extends Component<
@@ -137,7 +173,13 @@ function LegacyDiagnosis() {
   }
   return <DiagnoseWorkbench />
 }
-function MainLayout() {
+function MainLayout({
+  uiTheme,
+  onToggleTheme,
+}: {
+  uiTheme: UiTheme
+  onToggleTheme: () => void
+}) {
   const account = useResource('account', getMe)
   if (!account.data)
     return (
@@ -153,13 +195,25 @@ function MainLayout() {
     <RealtimeProvider>
       <WorkspaceProvider>
         <PicoProvider>
-          <Workspace user={account.data} />
+          <Workspace
+            user={account.data}
+            uiTheme={uiTheme}
+            onToggleTheme={onToggleTheme}
+          />
         </PicoProvider>
       </WorkspaceProvider>
     </RealtimeProvider>
   )
 }
-function Workspace({ user }: { user: AuthUser }) {
+function Workspace({
+  user,
+  uiTheme,
+  onToggleTheme,
+}: {
+  user: AuthUser
+  uiTheme: UiTheme
+  onToggleTheme: () => void
+}) {
   const navigate = useNavigate()
   const location = useLocation()
   const navigationType = useNavigationType()
@@ -179,6 +233,38 @@ function Workspace({ user }: { user: AuthUser }) {
   const title =
     [...PRIMARY, ...SECONDARY, ...ADMIN].find((i) => i.key === current)
       ?.label ?? '页面未找到'
+  const navRef = useRef<HTMLElement | null>(null)
+  const [indicator, setIndicator] = useState({
+    left: 0,
+    width: 0,
+    visible: false,
+  })
+  useLayoutEffect(() => {
+    const nav = navRef.current
+    if (!nav) return
+    const update = () => {
+      const active = nav.querySelector<HTMLElement>('button.active')
+      if (!active) {
+        setIndicator((value) => ({ ...value, visible: false }))
+        return
+      }
+      const navRect = nav.getBoundingClientRect()
+      const rect = active.getBoundingClientRect()
+      setIndicator({
+        left: rect.left - navRect.left,
+        width: rect.width,
+        visible: true,
+      })
+    }
+    update()
+    const observer = new ResizeObserver(update)
+    observer.observe(nav)
+    window.addEventListener('resize', update)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', update)
+    }
+  }, [current, uiTheme])
   const params = new URLSearchParams(location.search)
   const workspace = useWorkspace()
   const device = workspace.selectedDeviceId
@@ -313,7 +399,7 @@ function Workspace({ user }: { user: AuthUser }) {
             工业设备<span className="brand-sub">智能诊断平台</span>
           </span>
         </button>
-        <nav className="primary-nav" aria-label="主导航">
+        <nav className="primary-nav" aria-label="主导航" ref={navRef}>
           {PRIMARY.map((item) => (
             <button
               key={item.key}
@@ -324,6 +410,15 @@ function Workspace({ user }: { user: AuthUser }) {
               {item.label}
             </button>
           ))}
+          <span
+            className="nav-indicator"
+            aria-hidden
+            style={{
+              transform: `translateX(${indicator.left}px)`,
+              width: indicator.width,
+              opacity: indicator.visible ? 1 : 0,
+            }}
+          />
         </nav>
         <Dropdown
           trigger={['click']}
@@ -346,6 +441,9 @@ function Workspace({ user }: { user: AuthUser }) {
             {user.username.slice(0, 1).toUpperCase()}
           </span>
           <span>{user.username}</span>
+          <Button type="text" onClick={onToggleTheme} aria-label="切换深浅主题">
+            {uiTheme === 'dark' ? '浅色' : '深色'}
+          </Button>
           <Button type="text" onClick={logout}>
             退出
           </Button>
@@ -465,9 +563,26 @@ function Workspace({ user }: { user: AuthUser }) {
   )
 }
 export default function App() {
+  const [uiTheme, setUiTheme] = useState<UiTheme>(readTheme)
+  useEffect(() => {
+    document.documentElement.dataset.theme = uiTheme
+    try {
+      localStorage.setItem('ui:theme', uiTheme)
+    } catch {
+      /* 隐私模式下忽略存储失败 */
+    }
+  }, [uiTheme])
+  const toggleTheme = () =>
+    setUiTheme((value) => (value === 'dark' ? 'light' : 'dark'))
   return (
     <ConfigProvider
-      theme={{ ...productTheme, algorithm: theme.defaultAlgorithm }}
+      theme={{
+        ...(uiTheme === 'dark' ? darkThemeOverrides : productTheme),
+        algorithm:
+          uiTheme === 'dark'
+            ? antdTheme.darkAlgorithm
+            : antdTheme.defaultAlgorithm,
+      }}
     >
       <Suspense fallback={<Skeleton active />}>
         <Routes>
@@ -476,7 +591,10 @@ export default function App() {
             path="*"
             element={
               <RequireAuth>
-                <MainLayout />
+                <MainLayout
+                  uiTheme={uiTheme}
+                  onToggleTheme={toggleTheme}
+                />
               </RequireAuth>
             }
           />

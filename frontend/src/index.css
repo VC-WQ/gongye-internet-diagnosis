@@ -2,23 +2,55 @@
   font-family:
     -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei',
     sans-serif;
-  color: #202631;
-  background: #f3f4f6;
+  color: var(--text);
+  background: var(--bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  --brand: #c13d46;
+  --bg: #f3f4f6;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-muted: #f7f8fa;
+  --text: #202631;
   --muted: #697381;
   --line: #e4e7ec;
-  --surface: #fff;
+  --brand: #c13d46;
+  --brand-soft: rgba(193, 61, 70, 0.08);
+  --status-ok: #348875;
+  --status-warn: #aa751f;
+  --status-danger: #c13d46;
+  --status-info: #376c95;
   --radius: 8px;
+  --radius-card: 12px;
+  --motion-fast: 120ms;
   --motion: 180ms;
+  --motion-slow: 320ms;
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --shadow-soft: 0 10px 30px rgba(18, 32, 46, 0.06);
+}
+[data-theme='dark'] {
+  --bg: #0c141c;
+  --surface: #131e28;
+  --surface-raised: #182532;
+  --surface-muted: #1b2a37;
+  --text: #e6eef5;
+  --muted: #93a5b5;
+  --line: rgba(190, 220, 240, 0.14);
+  --brand: #e05a63;
+  --brand-soft: rgba(224, 90, 99, 0.14);
+  --status-ok: #4cc2a5;
+  --status-warn: #e0a93f;
+  --status-danger: #ef6b73;
+  --status-info: #6aa6cf;
+  --shadow-soft: 0 18px 40px rgba(0, 0, 0, 0.35);
 }
 * {
   box-sizing: border-box;
 }
 body {
   margin: 0;
+  color: var(--text);
+  background: var(--bg);
 }
 button,
 input,
@@ -609,7 +641,7 @@ img {
 .lab-nav {
   position: sticky;
   top: 76px;
-  background: rgba(243, 244, 246, 0.97);
+  background: var(--bg);
   z-index: 12;
   display: flex;
   gap: 8px;
@@ -625,7 +657,7 @@ img {
   border-radius: 4px;
 }
 .lab-nav a:hover {
-  background: #e8ebef;
+  background: var(--surface-muted);
 }
 .lab-section {
   scroll-margin-top: 150px;
@@ -1601,3 +1633,237 @@ img {
 .diagnosis-layout > div > .surface + .surface {
   margin-top: 20px;
 }
+
+/* ==========================================================================
+   Phase 3：统一主题、直角按钮、导航指示器与克制动效
+   ========================================================================== */
+
+/* 1. 基础容器改用语义 token，深浅主题共用一套层级 */
+.workspace-header,
+.workspace-toolbar {
+  background: var(--surface);
+  border-color: var(--line);
+  color: var(--text);
+}
+.brand {
+  color: var(--text);
+}
+.brand-sub {
+  color: var(--muted);
+}
+.primary-nav {
+  position: relative;
+}
+.primary-nav button {
+  color: var(--muted);
+}
+.primary-nav button:hover {
+  color: var(--text);
+  background: var(--surface-muted);
+}
+.primary-nav button.active {
+  color: var(--text);
+}
+.primary-nav button.active:after {
+  display: none;
+}
+.account .ant-btn {
+  color: var(--muted);
+}
+.account-avatar {
+  background: var(--surface-muted);
+  color: var(--muted);
+}
+.breadcrumb {
+  color: var(--muted);
+}
+.breadcrumb > span {
+  color: var(--line);
+}
+.toolbar-end {
+  color: var(--muted);
+}
+.business-content {
+  background: var(--bg);
+  color: var(--text);
+}
+.surface {
+  background: var(--surface);
+  border-color: var(--line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-soft);
+}
+.record-item {
+  border-color: var(--line);
+}
+.record-item:hover,
+.record-item.selected {
+  background: var(--surface-muted);
+}
+
+/* 2. 导航连续指示器 */
+.nav-indicator {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: var(--brand);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform var(--motion) var(--ease),
+    width var(--motion) var(--ease),
+    opacity var(--motion-fast) linear;
+}
+
+/* 3. 按钮全部直角（用户冻结要求，含图标与胶囊按钮） */
+.ant-btn,
+.ant-btn-lg,
+.ant-btn-sm,
+.ant-btn-icon-only,
+.ant-btn-round,
+.ant-btn-circle {
+  border-radius: 0 !important;
+}
+
+/* 4. 深色工作台时，顶栏与工具栏随场景适配，消除白色断层 */
+.workspace-overview .workspace-header,
+.workspace-overview .workspace-toolbar {
+  background: rgba(15, 27, 37, 0.92);
+  border-color: rgba(160, 200, 225, 0.12);
+  color: #e8f3fa;
+  backdrop-filter: blur(14px);
+}
+.workspace-overview .brand {
+  color: #e8f3fa;
+}
+.workspace-overview .brand-sub {
+  color: rgba(200, 220, 235, 0.6);
+}
+.workspace-overview .primary-nav button {
+  color: rgba(220, 235, 245, 0.68);
+}
+.workspace-overview .primary-nav button:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+}
+.workspace-overview .primary-nav button.active {
+  color: #fff;
+}
+.workspace-overview .account,
+.workspace-overview .account .ant-btn,
+.workspace-overview .history-actions .ant-btn {
+  color: rgba(220, 235, 245, 0.75);
+}
+.workspace-overview .account-avatar {
+  color: #e8f3fa;
+  background: rgba(255, 255, 255, 0.08);
+}
+.workspace-overview .breadcrumb {
+  color: rgba(220, 235, 245, 0.62);
+}
+.workspace-overview .breadcrumb > span {
+  color: rgba(220, 235, 245, 0.28);
+}
+.workspace-overview .toolbar-end {
+  color: rgba(220, 235, 245, 0.5);
+}
+.workspace-overview .toolbar-divider {
+  background: rgba(255, 255, 255, 0.12);
+}
+.workspace-overview .more-button {
+  color: rgba(220, 235, 245, 0.7);
+}
+
+/* 5. 深色主题下补齐自定义容器的对比度 */
+[data-theme='dark'] .workspace-header,
+[data-theme='dark'] .workspace-toolbar {
+  background: var(--surface);
+}
+[data-theme='dark'] .surface,
+[data-theme='dark'] .ant-card,
+[data-theme='dark'] .ant-modal-content,
+[data-theme='dark'] .ant-table {
+  background: var(--surface);
+  color: var(--text);
+}
+[data-theme='dark'] .ant-table-thead > tr > th {
+  color: var(--muted);
+  background: var(--surface-muted);
+  border-color: var(--line);
+}
+[data-theme='dark'] .ant-table-tbody > tr > td {
+  border-color: var(--line);
+}
+[data-theme='dark'] .ant-table-tbody > tr:hover > td {
+  background: var(--surface-muted);
+}
+[data-theme='dark'] .ant-input,
+[data-theme='dark'] .ant-input-affix-wrapper,
+[data-theme='dark'] .ant-select-selector,
+[data-theme='dark'] .ant-picker {
+  color: var(--text);
+  background: var(--surface-muted);
+  border-color: var(--line);
+}
+[data-theme='dark'] .ant-empty-description,
+[data-theme='dark'] .ant-form-item-label > label {
+  color: var(--muted);
+}
+[data-theme='dark'] .record-item strong {
+  color: var(--text);
+}
+
+/* 6. 克制动效：页面进入、卡片与记录反馈 */
+@media (prefers-reduced-motion: no-preference) {
+  .business-content > * {
+    animation: page-enter var(--motion-slow) var(--ease) both;
+  }
+  .surface {
+    transition:
+      background var(--motion) var(--ease),
+      border-color var(--motion) var(--ease),
+      box-shadow var(--motion) var(--ease);
+  }
+  .record-item {
+    transition:
+      background var(--motion-fast) var(--ease),
+      box-shadow var(--motion-fast) var(--ease);
+  }
+  .primary-nav button {
+    transition:
+      color var(--motion) var(--ease),
+      background var(--motion) var(--ease);
+  }
+}
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (max-width: 640px) {
+  /* 给固定 Pico 悬浮球留出安全区，避免遮住最后一行业务内容 */
+  .business-content {
+    padding-bottom: 120px;
+  }
+  .overview-content {
+    padding-bottom: 110px;
+  }
+}
+
