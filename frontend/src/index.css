@@ -345,6 +345,13 @@ img {
   color: var(--muted);
   font-size: 12px;
 }
+.filter-note {
+  color: var(--brand);
+  font-size: 12px;
+}
+.ant-table-row.row-selected > td {
+  background: rgba(193, 61, 70, 0.06);
+}
 .surface {
   background: #fff;
   border: 1px solid var(--line);

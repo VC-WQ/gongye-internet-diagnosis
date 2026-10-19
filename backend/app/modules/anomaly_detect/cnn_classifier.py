@@ -211,32 +211,39 @@ class FaultClassifier:
             return False
 
     def classify(self, window) -> dict:
-        """对外主入口：优先训练模型推理，失败退回启发式。
+        """对外主入口：优先训练模型推理，权重缺失时明确返回「模型不可用」。
 
         Args:
             window: np.ndarray (1, 1, 2048) / (1, 2048)（训练模型推理），
                     或原始样本（降级路径）
 
         Returns:
-            分类结果，含 cnn_source 字段标记来源（trained_model / heuristic）
+            分类结果，含 cnn_source（trained_model / model_unavailable）
+            与 model_available 标记。权重缺失时不会伪造 normal 结论。
         """
         if self.ensure_weights() and isinstance(window, np.ndarray):
             result = self.predict(window)
             result["cnn_source"] = "trained_model"
+            result["model_available"] = True
             return result
         result = self._classify_heuristic(window)
-        result["cnn_source"] = "heuristic"
+        result["cnn_source"] = "model_unavailable"
+        result["model_available"] = False
         return result
 
     def _classify_heuristic(self, x) -> dict:
-        """启发式分类（无 torch 时）。
+        """无训练权重时的降级结果：如实报告「模型不可用」。
 
-        基于振动 RMS 做粗判：RMS 很小 -> 正常，否则按频谱能量偏向故障。
-        无模型下默认返回正常，保证后端可运行。
+        不返回任何类别概率，避免把未推理的结果伪装成「正常 100%」。
+        健康判定此时完全依赖 PINN 物理残差（见 health_scorer）。
         """
-        probs = np.zeros(len(FAULT_CLASSES))
-        probs[FAULT_CLASSES.index("normal")] = 1.0
-        return self._format_result(probs)
+        logger.warning("1D-CNN 权重不存在，返回 model_unavailable，不做故障分类")
+        return {
+            "fault_type": "unknown",
+            "fault_label": "未分类异常（模型不可用）",
+            "confidence": 0.0,
+            "probabilities": {},
+        }
 
     @staticmethod
     def _format_result(probs: np.ndarray) -> dict:

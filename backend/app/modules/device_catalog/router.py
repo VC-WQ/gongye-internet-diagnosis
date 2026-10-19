@@ -96,11 +96,16 @@ _INJECT_PRESETS = {
 
 
 @router.post("/{device_id}/inject")
-def inject_fault(device_id: str, body: InjectBody, db: Session = Depends(get_db)) -> dict:
-    """设置设备故障/退化场景（概念演示：直接改设备健康状态）。
+def inject_fault(
+    device_id: str,
+    body: InjectBody,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+) -> dict:
+    """设置设备故障/退化场景（仅管理员，仿真测试用）。
 
-    真实产品中故障应由物理数字孪生隐状态涌现驱动；此处为前端演示提供
-    可重复、可控的三种模式。
+    真实产品中故障应由物理数字孪生隐状态涌现驱动；此处为演示提供
+    可重复、可控的三种模式，结果必须在前端明确标注为“仿真”。
     """
     device = db.get(Device, device_id)
     if device is None:

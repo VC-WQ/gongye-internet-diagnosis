@@ -26,15 +26,27 @@ _DATA_DIR = os.path.join(_APP_DIR, "data")
 
 
 def _load(name: str) -> dict:
-    """读取指定 JSON 文件，不存在时返回空结构（避免接口 500）。"""
+    """读取指定 JSON 文件，并标注数据来源为「离线实验结果」。
+
+    这些文件由 scripts/ 预计算生成，不是实时业务数据；
+    接口返回时带 _meta 标记，前端可据此显示来源说明。
+    """
     path = os.path.join(_DATA_DIR, name)
     if not os.path.exists(path):
         return {}
     try:
         with open(path, encoding="utf-8") as f:
-            return json.load(f)
+            data = json.load(f)
     except (json.JSONDecodeError, OSError):
         return {}
+    if isinstance(data, dict):
+        meta = data.get("_meta")
+        if not isinstance(meta, dict):
+            meta = {}
+        meta["source"] = "offline_experiment"
+        meta["note"] = "离线实验结果（由 scripts/ 预计算生成），非实时业务数据"
+        data["_meta"] = meta
+    return data
 
 
 @router.get("/xjtu-rul")

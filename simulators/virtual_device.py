@@ -433,6 +433,20 @@ class DeviceFleet:
         """获取全集群当前遥测快照。"""
         return [dev.generate_telemetry() for dev in self.devices]
 
+    def inject_fault(self, device_id: str, severity: float = 1.2) -> bool:
+        """演示用故障注入：将指定设备的隐状态推过故障阈值。
+
+        注意：这里改变的是仿真初始状态，后续观测值仍由 SDE 正常演化产生，
+        不是伪造上报数据。用于在演示中稳定复现「异常 -> 告警」链路。
+        """
+        for dev in self.devices:
+            if dev.params.device_id == device_id:
+                dev.wear = dev.params.wear_threshold * severity
+                dev.heat = dev.params.heat_threshold * severity
+                dev.efficiency = max(0.0, dev.efficiency - 0.3)
+                return True
+        return False
+
     # ------------------------------------------------------------------
     # MQTT 上报接口
     # ------------------------------------------------------------------
@@ -452,9 +466,83 @@ class DeviceFleet:
                 "paho-mqtt 未安装，无法启用 MQTT 上报。请先执行 pip install paho-mqtt"
             )
         self.topic_prefix = topic_prefix
-        self.mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+        self.mqtt_client = mqtt.Client(
+            mqtt.CallbackAPIVersion.VERSION2,
+            client_id=f"virtual-device-fleet-{int(time.time())}",
+        )
+        # 订阅云端下发的指令，执行后回执（真实闭环的下行半边）
+        self.mqtt_client.on_message = self._on_command
         self.mqtt_client.connect(host, port)
+        self.mqtt_client.subscribe(f"{topic_prefix}/+/command", qos=1)
         self.mqtt_client.loop_start()
+
+    # ------------------------------------------------------------------
+    # 指令执行与回执
+    # ------------------------------------------------------------------
+    def _on_command(self, client, userdata, msg) -> None:
+        """收到云端指令：对虚拟设备执行维护动作并回执。"""
+        try:
+            payload = json.loads(msg.payload.decode("utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            return
+
+        parts = msg.topic.split("/")
+        device_id = parts[1] if len(parts) >= 3 else payload.get("device_id")
+        device = next(
+            (d for d in self.devices if d.params.device_id == device_id), None
+        )
+        if device is None:
+            status, effect = "failed", {"reason": "device_not_found"}
+        else:
+            status, effect = self._apply_command(device, payload.get("command", ""))
+
+        ack = {
+            "command_id": payload.get("command_id"),
+            "event_id": payload.get("event_id"),
+            "device_id": device_id,
+            "status": status,
+            "effect": effect,
+            "timestamp": time.time(),
+        }
+        client.publish(
+            f"{self.topic_prefix}/{device_id}/command_ack",
+            json.dumps(ack, ensure_ascii=False),
+            qos=1,
+        )
+
+    @staticmethod
+    def _apply_command(device: "VirtualDevice", command: str) -> tuple[str, dict]:
+        """按指令关键字对虚拟设备施加维护效果（模拟真实检修动作）。"""
+        text = command or ""
+        before = {
+            "wear": round(device.wear, 4),
+            "heat": round(device.heat, 4),
+            "efficiency": round(device.efficiency, 4),
+        }
+
+        if any(k in text for k in ("更换", "检修", "维修", "replace", "repair")):
+            device.wear = max(0.0, device.wear * 0.3)
+            device.heat = max(0.0, device.heat * 0.4)
+            action = "replace_or_repair"
+        elif any(k in text for k in ("润滑", "lubricat")):
+            device.wear = max(0.0, device.wear * 0.6)
+            device.heat = max(0.0, device.heat * 0.8)
+            action = "lubricate"
+        elif any(k in text for k in ("降载", "降速", "reduce")):
+            device.heat = max(0.0, device.heat * 0.7)
+            action = "reduce_load"
+        else:
+            # 通用处置：小幅缓解，避免「收到指令但什么都没发生」
+            device.wear = max(0.0, device.wear * 0.9)
+            device.heat = max(0.0, device.heat * 0.9)
+            action = "generic_maintenance"
+
+        after = {
+            "wear": round(device.wear, 4),
+            "heat": round(device.heat, 4),
+            "efficiency": round(device.efficiency, 4),
+        }
+        return "done", {"action": action, "before": before, "after": after}
 
     def publish(self) -> None:
         """将全集群当前遥测发布到 MQTT。"""
@@ -531,9 +619,21 @@ def main() -> None:
     parser.add_argument("--port", type=int, default=1883, help="MQTT Broker 端口")
     parser.add_argument("--use-mqtt", action="store_true", help="启用 MQTT 上报")
     parser.add_argument("--max-steps", type=int, default=None, help="最大步数（调试用）")
+    parser.add_argument(
+        "--fault-device",
+        type=str,
+        default=None,
+        help="启动时把指定设备置为故障状态（演示用，改变仿真初始状态）",
+    )
     args = parser.parse_args()
 
     fleet = DeviceFleet.default()
+    if args.fault_device:
+        ok = fleet.inject_fault(args.fault_device)
+        print(
+            f"[fault-injection] {args.fault_device}: "
+            f"{'已置为故障状态' if ok else '设备不存在'}"
+        )
     fleet.run(
         interval=args.interval,
         use_mqtt=args.use_mqtt,

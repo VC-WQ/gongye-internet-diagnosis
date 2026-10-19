@@ -1,5 +1,6 @@
 """FastAPI 应用入口。"""
 import asyncio
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -29,6 +30,8 @@ from app.modules.threshold.router import router as threshold_router
 from app.modules.timeline.router import router as timeline_router
 from app.modules.vision.router import router as vision_router
 from app.modules.viz.router import router as viz_router
+
+logger = logging.getLogger(__name__)
 
 
 def _seed_devices() -> None:
@@ -79,6 +82,11 @@ async def lifespan(app: FastAPI):
     _seed_admin()
     # 注入主事件循环，使 MQTT 线程能够跨线程推送 WebSocket
     mqtt_pipeline_service.attach_event_loop(asyncio.get_running_loop())
+    # 启动即订阅真实 MQTT 数据；Broker 暂不可用时自动重连，不影响服务启动
+    try:
+        mqtt_pipeline_service.start()
+    except Exception as exc:
+        logger.warning("MQTT 数据管道未启动（实时数据暂不可用）：%s", exc)
     yield
     # 关闭时释放资源（MQTT 客户端、模型进程、数据库连接池）
     mqtt_pipeline_service.stop()

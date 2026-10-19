@@ -68,12 +68,13 @@ class HealthScorer:
         pinn_score = self._pinn_score(pinn_result)
         cnn_score = self._cnn_score(cnn_result)
 
-        if pinn_result is None and cnn_result is None:
+        if pinn_result is None and cnn_score is None:
             health = 100.0
+        elif cnn_score is None:
+            # 分类模型不可用：只用物理残差评分，不伪造「正常」置信度
+            health = pinn_score
         elif pinn_result is None:
             health = cnn_score
-        elif cnn_result is None:
-            health = pinn_score
         else:
             health = self.weight_pinn * pinn_score + self.weight_cnn * cnn_score
 
@@ -85,7 +86,8 @@ class HealthScorer:
             "health_level": level,  # healthy / warning / abnormal
             "level_label": label,   # 正常 / 预警 / 异常
             "pinn_score": round(pinn_score, 2),
-            "cnn_score": round(cnn_score, 2),
+            "cnn_score": round(cnn_score, 2) if cnn_score is not None else None,
+            "cnn_model_available": cnn_score is not None,
         }
 
     # ------------------------------------------------------------------
@@ -111,14 +113,22 @@ class HealthScorer:
         # 指数衰减：残差接近 0 时分数趋近 100，残差增大时快速下降
         return 100.0 * float(np.exp(-abs(float(residual)) / max(scale, 1e-6)))
 
-    def _cnn_score(self, cnn_result: Optional[dict]) -> float:
-        """由 CNN 分类结果计算健康分数（正常置信度映射）。"""
+    def _cnn_score(self, cnn_result: Optional[dict]) -> Optional[float]:
+        """由 CNN 分类结果计算健康分数（正常置信度映射）。
+
+        分类模型不可用时返回 None，由调用方仅使用物理残差评分，
+        避免把「未推理」当作「正常 100%」。
+        """
         if not cnn_result:
-            return 100.0
+            return None
+        if cnn_result.get("model_available") is False:
+            return None
+        if cnn_result.get("fault_type") == "unknown":
+            return None
         probs = cnn_result.get("probabilities") or {}
-        normal_prob = probs.get("normal", 1.0)
-        # 正常类别置信度直接作为健康度
-        return 100.0 * float(normal_prob)
+        if "normal" not in probs:
+            return None
+        return 100.0 * float(probs["normal"])
 
     # ------------------------------------------------------------------
     # 分级

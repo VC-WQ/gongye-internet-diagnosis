@@ -3,8 +3,9 @@
 决策对齐：
 - 决策1（A）：初始状态直接映射模块5 health_level（healthy→normal /
   warning→warning / abnormal→alarm）。
-- 决策2：告警仅由「故障类 fault_type != normal 且 confidence > 0.7」触发，
+- 决策2：告警可由「故障类 fault_type != normal 且 confidence > 0.7」触发，
   避免 Normal 样本的 softmax 高置信被误判为告警。
+- 决策2b：健康分 < 30（严重异常）时直接告警，不因分类置信度低而漏报。
 - 决策3：9 个状态，保留独立 relapsed。
 - 决策4：normal→alarm 允许直接跳步（健康分骤降），但 reason 必须留痕说明。
 """
@@ -31,6 +32,9 @@ TRANSITIONS: dict[EventState, set[EventState]] = {
     EventState.RECOVERED:  {EventState.NORMAL},
 }
 
+# 健康分危险阈值：低于该值直接告警（物理残差已确认严重异常）
+CRITICAL_HEALTH_THRESHOLD = 30.0
+
 
 class StateTransitionError(Exception):
     """非法状态转换（跳步）异常。"""
@@ -50,23 +54,38 @@ def can_transition(from_state, to_state) -> bool:
     return t in TRANSITIONS.get(f, set())
 
 
-def classify_state(health_level: str, fault_type: str, confidence: float) -> EventState:
+def classify_state(
+    health_level: str,
+    fault_type: str,
+    confidence: float,
+    health_score: Optional[float] = None,
+) -> EventState:
     """由模块5诊断结果推导事件初始状态。
 
     决策1（A）：以 health_level 为主映射（避免与模块4/5 的85/60阈值矛盾）：
         healthy  -> normal
         warning  -> warning
-        abnormal -> alarm（仅「故障类 + 高置信」时，见决策2）
-    决策2：告警必须满足 fault_type != normal 且 confidence > 0.7，
-        避免 Normal 样本的 softmax 高置信被误判为告警。
+        abnormal -> alarm（满足以下任一条件，见决策2/2b/2c）
+    决策2：物理残差判定异常，且诊断给出具体故障类型 -> alarm。
+        置信度作为报告中的参考值，不作为唯一门限：分类模型缺失或融合置信度偏低时，
+        不能因此漏报已由物理残差与频谱证据共同确认的异常。
+    决策2b：健康分低于危险阈值（<30）-> alarm，即使分类结论为 normal。
+    决策2c：故障分类模型不可用（fault_type=unknown）-> alarm（未分类异常）。
     """
     if health_level == "healthy":
         return EventState.NORMAL
     if health_level == "warning":
         return EventState.WARNING
-    # abnormal：需「故障类 + 高置信」才升告警，否则回落预警
-    if fault_type != "normal" and confidence > 0.7:
+    # abnormal：
+    if health_score is not None and health_score < CRITICAL_HEALTH_THRESHOLD:
         return EventState.ALARM
+    # 物理残差异常 + 具体故障类型 -> 告警
+    if fault_type not in ("normal", "unknown"):
+        return EventState.ALARM
+    # 物理残差异常但分类模型不可用 -> 未分类异常，仍需告警
+    if fault_type == "unknown":
+        return EventState.ALARM
+    # 物理异常但分类结论为 normal：回落预警，等待人工判断
     return EventState.WARNING
 
 

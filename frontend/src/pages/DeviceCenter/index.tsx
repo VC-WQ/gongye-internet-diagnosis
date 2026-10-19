@@ -21,7 +21,19 @@ export default function DeviceCenter() {
   const resource = useDeviceCatalog()
   const keyword = params.get('q') ?? ''
   const status = params.get('status') ?? 'all'
-  const tab = params.get('tab') === 'inject' ? 'inject' : 'list'
+  // 设备监测页消费 ?device=：作为“当前选中设备”上下文，而不是额外筛选条件
+  const selectedDevice = params.get('device') ?? ''
+  const selectedName = resource.data?.find(
+    (d) => d.id === selectedDevice,
+  )?.name
+  let isAdmin = false
+  try {
+    isAdmin = JSON.parse(localStorage.getItem('user') ?? '{}').role === 'admin'
+  } catch {
+    /* 登录态异常时按普通用户处理 */
+  }
+  const tab =
+    isAdmin && params.get('tab') === 'inject' ? 'inject' : 'list'
   const data = (resource.data ?? []).filter(
     (d) =>
       (status === 'all' || d.status === status) &&
@@ -83,6 +95,11 @@ export default function DeviceCenter() {
                       { value: 'offline', label: '离线' },
                     ]}
                   />
+                  {selectedName && (
+                    <span className="filter-note">
+                      当前选中：{selectedName}
+                    </span>
+                  )}
                   <span className="filter-end">{data.length} 台匹配设备</span>
                 </div>
                 <Card>
@@ -90,6 +107,9 @@ export default function DeviceCenter() {
                     <Table<Device>
                       rowKey="id"
                       dataSource={data}
+                      rowClassName={(d) =>
+                        d.id === selectedDevice ? 'row-selected' : ''
+                      }
                       loading={resource.loading && !resource.data}
                       scroll={{ x: 850 }}
                       pagination={{
@@ -191,7 +211,15 @@ export default function DeviceCenter() {
               </>
             ),
           },
-          { key: 'inject', label: '仿真测试', children: <FaultInjection /> },
+          ...(isAdmin
+            ? [
+                {
+                  key: 'inject',
+                  label: '仿真测试',
+                  children: <FaultInjection />,
+                },
+              ]
+            : []),
         ]}
       />
     </>

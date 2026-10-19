@@ -67,14 +67,37 @@ class CommandLoopService:
         window: list[dict],
         operator: str = "system",
         vision: dict | None = None,
+        force: bool = False,
     ) -> dict:
         """创建诊断事件：会诊 -> 判定初始状态 -> 若告警则自动进入会诊/待确认。
+
+        同一设备存在未闭环事件（consulting/pending/handling/observing）时，
+        默认复用该事件，避免重复点击或重复调用生成两条并行处置记录。
+        `force=True` 可显式创建新事件（供管理员/测试使用）。
 
         Args:
             vision: 可选的部件表面视觉检测结果（第五路证据），
                 {"available": bool, "damage_type": str|None, "confidence": float, "count": int}
                 提供后参与 D-S 融合，并与振动结论做交叉验证（可识别"早期窗口期"）。
         """
+        # 0. 未闭环事件保护（幂等）
+        if not force:
+            active = (
+                db.query(Event)
+                .filter(
+                    Event.device_id == device_id,
+                    Event.status_state.in_(
+                        ("consulting", "pending", "handling", "observing")
+                    ),
+                )
+                .order_by(Event.id.desc())
+                .first()
+            )
+            if active is not None:
+                result = self.get_event(db, active.id) or {}
+                result["reused"] = True
+                return result
+
         # 1. 多智能体会诊（模块5）
         _t0 = time.perf_counter()
         consult = multi_agent_service.consult(device_id, window, vision)
@@ -82,9 +105,12 @@ class CommandLoopService:
         health_level = str(consult.get("health_level", "healthy"))
         fault_type = str(consult.get("fault_type", "normal"))
         confidence = float(consult.get("confidence", 0.0))
+        health_score = float(consult.get("health_score", 100.0))
 
-        # 2. 判定初始状态（决策1/决策2）
-        initial_state = state_machine.classify_state(health_level, fault_type, confidence)
+        # 2. 判定初始状态（决策1/决策2/决策2b）
+        initial_state = state_machine.classify_state(
+            health_level, fault_type, confidence, health_score
+        )
 
         # 3. 建事件主表
         event = Event(
@@ -266,26 +292,38 @@ class CommandLoopService:
         recommendation = report.get("recommendation", "执行维护指令")
         cmd = command or recommendation
 
-        # MQTT 下发（mock）
-        command_id = mqtt_command_publisher.publish_command(
-            event.device_id, cmd, {"event_id": event.id}
+        # 先校验状态转换（handling -> observing），非法状态直接拒绝，
+        # 避免「状态不合法却已经把指令发到设备」的副作用。
+        state_machine.advance(
+            db, event, EventState.OBSERVING, "指令下发成功，进入观察期", operator
         )
 
-        # 记录指令
+        # MQTT 真实下发（Broker 不可用时抛 CommandPublishError；事务未提交会自动回滚）
+        published = mqtt_command_publisher.publish_command(
+            event.device_id, cmd, {"event_id": event.id}, event_id=event.id
+        )
+        command_id = published["command_id"]
+
+        # 记录指令（status 由设备回执更新为 done / failed）
         db.add(
             CommandRecord(
                 device_id=event.device_id,
                 event_id=event.id,
                 command=cmd,
-                params={"event_id": event.id},
-                status="executing",
+                params={
+                    "event_id": event.id,
+                    "command_id": command_id,
+                    "topic": published["topic"],
+                },
+                status="sent",
             )
         )
-        state_machine.advance(
-            db, event, EventState.OBSERVING, "指令下发成功，进入观察期", operator
-        )
         db.commit()
-        return {"event": self.get_event(db, event_id), "command_id": command_id}
+        return {
+            "event": self.get_event(db, event_id),
+            "command_id": command_id,
+            "mqtt_topic": published["topic"],
+        }
 
     # ------------------------------------------------------------------
     # 观察期反馈评估

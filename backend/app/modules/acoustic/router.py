@@ -10,8 +10,9 @@ router = APIRouter(prefix="/acoustic", tags=["多模态声音融合"])
 
 @router.get("/spectrum/{device_id}")
 def spectrum(device_id: str) -> dict:
-    """返回模拟声学频谱热力图（概念演示）。"""
-    return acoustic_service.spectrum(device_id)
+    """基于真实 MQTT 声学窗口返回 STFT 频谱热力图（无数据时 available=False）。"""
+    window = mqtt_pipeline_service.get_window(device_id)
+    return acoustic_service.spectrum(device_id, window)
 
 
 @router.get("/fuse-device/{device_id}")

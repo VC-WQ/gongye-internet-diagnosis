@@ -27,6 +27,7 @@ import {
   useNavigationType,
 } from 'react-router-dom'
 import { RealtimeProvider } from './services/realtime'
+import { WorkspaceProvider, useWorkspace } from './services/workspace'
 import { getMe, type AuthUser } from './services/api'
 import { useResource } from './hooks/useResource'
 import { deviceLink } from './hooks/usePageQuery'
@@ -148,7 +149,9 @@ function MainLayout() {
     )
   return (
     <RealtimeProvider>
-      <Workspace user={account.data} />
+      <WorkspaceProvider>
+        <Workspace user={account.data} />
+      </WorkspaceProvider>
     </RealtimeProvider>
   )
 }
@@ -156,7 +159,8 @@ function Workspace({ user }: { user: AuthUser }) {
   const navigate = useNavigate()
   const location = useLocation()
   const navigationType = useNavigationType()
-  const dashboard = location.pathname === '/dashboard'
+  const normalizedPath = location.pathname.replace(/\/+$/, '') || '/'
+  const dashboard = normalizedPath === '/dashboard'
   const [seenDashboard, setSeenDashboard] = useState(dashboard)
   const maxIndex = useRef(
     Number(
@@ -165,16 +169,15 @@ function Workspace({ user }: { user: AuthUser }) {
   )
   const scroll = useRef<Record<string, number>>({})
   const idx = Number(window.history.state?.idx ?? 0)
-  const current = location.pathname.startsWith('/device/')
+  const current = normalizedPath.startsWith('/device/')
     ? '/devices'
-    : location.pathname
+    : normalizedPath
   const title =
     [...PRIMARY, ...SECONDARY, ...ADMIN].find((i) => i.key === current)
       ?.label ?? '页面未找到'
   const params = new URLSearchParams(location.search)
-  const device = location.pathname.startsWith('/device/')
-    ? decodeURIComponent(location.pathname.split('/')[2])
-    : (params.get('device') ?? undefined)
+  const workspace = useWorkspace()
+  const device = workspace.selectedDeviceId
   const parent = location.pathname.startsWith('/device/')
     ? (() => {
         const saved = sessionStorage.getItem('workspace:path:/devices')
@@ -196,6 +199,7 @@ function Workspace({ user }: { user: AuthUser }) {
       '',
     )
     if (device) sessionStorage.setItem('workspace:device', device)
+    else sessionStorage.removeItem('workspace:device')
     sessionStorage.setItem(
       `workspace:path:${location.pathname}`,
       location.pathname + location.search,
@@ -208,6 +212,13 @@ function Workspace({ user }: { user: AuthUser }) {
     const target =
       scroll.current[key] ?? (Number(sessionStorage.getItem(storageKey)) || 0)
     let restoring = target > 0
+    let unlock: ReturnType<typeof setTimeout> | undefined
+    let observer: ResizeObserver | undefined
+    const stopRestoring = () => {
+      restoring = false
+      observer?.disconnect()
+      if (unlock) clearTimeout(unlock)
+    }
     const restore = () => {
       if (!restoring) return
       if (
@@ -215,30 +226,41 @@ function Workspace({ user }: { user: AuthUser }) {
         target
       ) {
         window.scrollTo(0, target)
-        restoring = false
-        observer.disconnect()
+        stopRestoring()
       }
     }
-    const observer = new ResizeObserver(restore)
+    observer = new ResizeObserver(restore)
     const content = document.getElementById('main-content')
     if (content && restoring) observer.observe(content)
+    if (restoring) {
+      // 内容高度迟迟达不到目标时解锁，避免滚动保存被永久锁住
+      unlock = setTimeout(() => {
+        restoring = false
+        observer?.disconnect()
+        window.scrollTo(
+          0,
+          Math.min(target, document.documentElement.scrollHeight),
+        )
+      }, 1500)
+    }
     const frame = requestAnimationFrame(() => {
       if (restoring) restore()
       else window.scrollTo(0, 0)
     })
     const save = () => {
-      if (!restoring) scroll.current[key] = window.scrollY
+      if (!restoring) {
+        scroll.current[key] = window.scrollY
+        sessionStorage.setItem(storageKey, String(window.scrollY))
+      }
     }
-    const interrupt = () => {
-      restoring = false
-      observer.disconnect()
-    }
+    const interrupt = () => stopRestoring()
     window.addEventListener('scroll', save, { passive: true })
     window.addEventListener('wheel', interrupt, { passive: true })
     window.addEventListener('touchstart', interrupt, { passive: true })
     return () => {
       cancelAnimationFrame(frame)
-      observer.disconnect()
+      observer?.disconnect()
+      if (unlock) clearTimeout(unlock)
       window.removeEventListener('scroll', save)
       window.removeEventListener('wheel', interrupt)
       window.removeEventListener('touchstart', interrupt)
@@ -398,6 +420,10 @@ function Workspace({ user }: { user: AuthUser }) {
                   <Route path="/reports" element={<ReportCenter />} />
                   <Route path="/lab" element={<ModelLab />} />
                   <Route path="/ops" element={<SystemOps />} />
+                  <Route
+                    path="/admin"
+                    element={<Navigate to="/admin/users" replace />}
+                  />
                   <Route
                     path="/admin/users"
                     element={adminPage(<UserManagement />)}

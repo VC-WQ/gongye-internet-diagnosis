@@ -24,6 +24,13 @@ export default function EventActions({
   useEffect(() => {
     setAwaitingRefresh(false)
   }, [event])
+  // 刷新失败时 useResource 会保留旧引用，event 不变则上面的 effect 不会触发；
+  // 这里加超时兜底，保证按钮不会永久禁用。
+  useEffect(() => {
+    if (!awaitingRefresh) return
+    const timer = setTimeout(() => setAwaitingRefresh(false), 4000)
+    return () => clearTimeout(timer)
+  }, [awaitingRefresh])
   const [reason, setReason] = useState('')
   const [recommendation, setRecommendation] = useState('')
   const [fault, setFault] = useState('')

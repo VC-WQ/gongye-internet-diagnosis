@@ -14,7 +14,6 @@ import { speakChinese, stopChineseSpeech } from '../../services/speech'
 import type { DigitalMood } from '../../components/DigitalHuman3D'
 const DigitalHuman3D = lazy(() => import('../../components/DigitalHuman3D'))
 import DiagnosisSummary from '../../components/DiagnosisSummary'
-import EventActions from '../../components/EventActions'
 import { LoadState, PageHeading, SourceTag } from '../../components/BusinessUI'
 import {
   createEvent,
@@ -62,6 +61,8 @@ export default function ChatWindow() {
   const [assistant, setAssistant] = useState(false)
   const [speaking, setSpeaking] = useState(false)
   const generation = useRef(0)
+  // 同步锁：同一事件循环内的双击也必须只发一次请求
+  const creating = useRef(false)
   const currentDevice = useRef(deviceId)
   currentDevice.current = deviceId
   const currentLocation = useRef(location.key)
@@ -87,12 +88,19 @@ export default function ChatWindow() {
       update({ device: event.data.device_id }, true)
   }, [event.data?.id, event.data?.device_id, deviceId])
   const validEvent = event.data?.device_id === deviceId ? event.data : undefined
+  // 未闭环事件：禁止在同一设备上重复创建诊断事件
+  const activeEvent =
+    validEvent &&
+    ['consulting', 'pending', 'handling', 'observing'].includes(
+      validEvent.status_state ?? '',
+    )
   const start = async () => {
-    if (!chosen || loading) return
+    if (!chosen || loading || creating.current) return
     if (!telemetry.samples.length || telemetry.stale || telemetry.error) {
       setError('暂无有效采样，请等待数据源恢复后重试')
       return
     }
+    creating.current = true
     const request = ++generation.current
     const originKey = location.key
     const device = chosen.id
@@ -124,6 +132,7 @@ export default function ChatWindow() {
             : errorText(e),
         )
     } finally {
+      creating.current = false
       if (generation.current === request) setLoading(false)
     }
   }
@@ -227,20 +236,38 @@ export default function ChatWindow() {
                     label: `${d.name} · ${d.id}`,
                   }))}
                 />
-                <Button
-                  type="primary"
-                  onClick={start}
-                  loading={loading}
-                  disabled={
-                    !chosen ||
-                    visionLoading ||
-                    !telemetry.samples.length ||
-                    telemetry.stale ||
-                    Boolean(telemetry.error)
-                  }
-                >
-                  发起诊断
-                </Button>
+                {activeEvent ? (
+                  <Button
+                    type="primary"
+                    onClick={() =>
+                      navigate(
+                        deviceLink('/events', deviceId, validEvent?.id),
+                        {
+                          state: {
+                            returnTo: location.pathname + location.search,
+                          },
+                        },
+                      )
+                    }
+                  >
+                    当前事件待处置 · 前往事件处置
+                  </Button>
+                ) : (
+                  <Button
+                    type="primary"
+                    onClick={start}
+                    loading={loading}
+                    disabled={
+                      !chosen ||
+                      visionLoading ||
+                      !telemetry.samples.length ||
+                      telemetry.stale ||
+                      Boolean(telemetry.error)
+                    }
+                  >
+                    发起诊断
+                  </Button>
+                )}
               </Space>
             </LoadState>
             <Collapse
@@ -305,11 +332,9 @@ export default function ChatWindow() {
               {validEvent && (
                 <>
                   <DiagnosisSummary event={validEvent} />
-                  <EventActions
-                    key={validEvent.id}
-                    event={validEvent}
-                    onChanged={event.refresh}
-                  />
+                  <div className="page-meta">
+                    确认、修改、拒绝与下发指令请在「事件处置」中完成；本页只负责创建诊断与查看结论。
+                  </div>
                   <div className="actions-row">
                     <Button
                       onClick={() =>

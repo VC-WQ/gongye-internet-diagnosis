@@ -13,6 +13,8 @@ from sqlalchemy.orm import Session
 from app.models import get_db
 
 from .service import EventNotFoundError, StateTransitionError, command_loop_service
+from .feedback_loop import feedback_loop_service
+from .mqtt_publisher import CommandPublishError
 
 router = APIRouter(prefix="/command-loop", tags=["指令闭环"])
 
@@ -27,6 +29,7 @@ class CreateEventBody(BaseModel):
     window: list[dict]          # 传感器窗口（触发会诊的原始数据）
     operator: str = "system"    # 操作人（who）
     vision: Optional[dict] = None  # 部件表面视觉检测结果（第五路证据，可选）
+    force: bool = False         # 显式跳过“未闭环事件复用”保护（管理员/测试用）
 
 
 class ConfirmBody(BaseModel):
@@ -58,12 +61,21 @@ class ExecuteBody(BaseModel):
     command: str | None = None  # 为空时使用诊断报告中的维护建议
 
 
+class ObserveBody(BaseModel):
+    """观察期反馈评估（观察中 -> 已恢复 / 复发）。"""
+
+    actual_curve: list[float]   # 观察期实际健康分采样序列
+    operator: str = "system"
+
+
 def _http_exc(e: Exception) -> HTTPException:
     """将业务异常映射为 HTTP 异常。"""
     if isinstance(e, EventNotFoundError):
         return HTTPException(status_code=404, detail=str(e))
     if isinstance(e, StateTransitionError):
         return HTTPException(status_code=400, detail=str(e))
+    if isinstance(e, CommandPublishError):
+        return HTTPException(status_code=503, detail=str(e))
     return HTTPException(status_code=500, detail=str(e))
 
 
@@ -84,7 +96,9 @@ def list_events(
 @router.post("/events")
 def create_event(body: CreateEventBody, db: Session = Depends(get_db)) -> dict:
     """创建诊断事件：会诊 -> 判定初始状态 -> 告警自动进入会诊/待确认。"""
-    return command_loop_service.create_event(db, body.device_id, body.window, body.operator, body.vision)
+    return command_loop_service.create_event(
+        db, body.device_id, body.window, body.operator, body.vision, body.force
+    )
 
 
 @router.get("/events/{event_id}")
@@ -130,8 +144,21 @@ def execute(event_id: int, body: ExecuteBody, db: Session = Depends(get_db)) -> 
     """执行指令并进入观察期（handling -> observing）。"""
     try:
         return command_loop_service.execute(db, event_id, body.operator, body.command)
+    except (EventNotFoundError, StateTransitionError, CommandPublishError) as e:
+        raise _http_exc(e)
+
+
+@router.post("/events/{event_id}/observe")
+def observe(event_id: int, body: ObserveBody, db: Session = Depends(get_db)) -> dict:
+    """观察期反馈评估（observing -> recovered / relapsed -> consulting -> pending）。"""
+    try:
+        return feedback_loop_service.observe_and_evaluate(
+            db, event_id, body.actual_curve, body.operator
+        )
     except (EventNotFoundError, StateTransitionError) as e:
         raise _http_exc(e)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
 
 @router.get("/events/{event_id}/timeline")
