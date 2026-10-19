@@ -1,18 +1,18 @@
+import { useResource } from '../../hooks/useResource'
+import { LoadState, PageHeading, StatusTag } from '../../components/BusinessUI'
 import { useEffect, useState } from 'react'
 import { Button, Card, Form, Input, Modal, Popconfirm, Select, Space, Switch, Table, Tag, message } from 'antd'
 import { createUser, deleteUser, listUsers, updateUser, type AuthUser } from '../../services/api'
 
 export default function UserManagement() {
-  const [users, setUsers] = useState<AuthUser[]>([])
+  const resource = useResource<AuthUser[]>('UserManagement', listUsers)
+  const users = resource.data ?? []
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(false)
   const [form] = Form.useForm()
 
-  const load = () => listUsers().then(setUsers).catch(console.error)
-  useEffect(() => {
-    load()
-  }, [])
+  const load = resource.refresh
 
   const openCreate = () => {
     setEditing(null)

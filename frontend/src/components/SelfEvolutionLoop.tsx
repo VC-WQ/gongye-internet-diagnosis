@@ -1,3 +1,5 @@
+import { LoadState } from './BusinessUI'
+import { errorText } from '../hooks/useResource'
 import { useEffect, useState } from 'react'
 import { Card, Col, Empty, Row, Space, Spin, Statistic, Table, Tag } from 'antd'
 import { getSelfEvalLoops } from '../services/api'
@@ -49,21 +51,21 @@ const STATE_LABEL: Record<string, string> = {
 
 // 内闭环链路节点（按顺序）：异常 → 会诊 → 人工确认 → 处置 → 观察 → 评估 → 回流
 const INNER_NODES = [
-  { t: '异常检测', d: '阈值+残差判定告警', c: '#f5222d' },
-  { t: '多智能体会诊', d: '5 路证据 D-S 融合', c: '#fa8c16' },
-  { t: '人工确认/修订', d: '确认·修改·拒绝', c: '#faad14' },
-  { t: '下发指令', d: '进入处置中', c: '#22d3ee' },
-  { t: '观察期评估', d: '恢复曲线偏差判定', c: '#38bdf8' },
-  { t: '自动回流', d: '恢复记准确率 / 复发自动再诊断', c: '#52c41a' },
+  { t: '异常检测', d: '阈值+残差判定告警', c: '#bf5965' },
+  { t: '多智能体会诊', d: '5 路证据 D-S 融合', c: '#9a6a25' },
+  { t: '人工确认/修订', d: '确认·修改·拒绝', c: '#9a752d' },
+  { t: '下发指令', d: '进入处置中', c: '#477d9e' },
+  { t: '观察期评估', d: '恢复曲线偏差判定', c: '#477d9e' },
+  { t: '自动回流', d: '恢复记准确率 / 复发自动再诊断', c: '#348875' },
 ]
 
 // 外闭环链路节点：反馈累积 → 阈值建议 → 人工采纳 → 阈值生效 → 影响下一轮检测
 const OUTER_NODES = [
-  { t: '反馈累积', d: '准确率/误报/漏报', c: '#722ed1' },
-  { t: '阈值建议生成', d: '复发事件自动触发', c: '#eb2f96' },
-  { t: '人工采纳/拒绝', d: '工程师决策留痕', c: '#fa8c16' },
-  { t: '动态阈值生效', d: '写入设备判定边界', c: '#22d3ee' },
-  { t: '反哺下一轮检测', d: '改变异常判定结果', c: '#52c41a' },
+  { t: '反馈累积', d: '准确率/误报/漏报', c: '#76689a' },
+  { t: '阈值建议生成', d: '复发事件自动触发', c: '#a86382' },
+  { t: '人工采纳/拒绝', d: '工程师决策留痕', c: '#9a6a25' },
+  { t: '动态阈值生效', d: '写入设备判定边界', c: '#477d9e' },
+  { t: '反哺下一轮检测', d: '改变异常判定结果', c: '#348875' },
 ]
 
 function NodeChain({ nodes }: { nodes: Array<{ t: string; d: string; c: string }> }) {
@@ -81,8 +83,8 @@ function NodeChain({ nodes }: { nodes: Array<{ t: string; d: string; c: string }
               borderLeft: `3px solid ${n.c}`,
             }}
           >
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#e2e8f0' }}>{n.t}</div>
-            <div style={{ fontSize: 11, color: '#78879b', marginTop: 2 }}>{n.d}</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#293543' }}>{n.t}</div>
+            <div style={{ fontSize: 11, color: '#6e7d8b', marginTop: 2 }}>{n.d}</div>
           </div>
           {i < nodes.length - 1 && <span style={{ color: '#475569', fontSize: 16 }}>→</span>}
         </div>
@@ -106,6 +108,7 @@ function NodeChain({ nodes }: { nodes: Array<{ t: string; d: string; c: string }
 export default function SelfEvolutionLoop() {
   const [data, setData] = useState<LoopData>()
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
 
   useEffect(() => {
     let active = true
@@ -113,7 +116,7 @@ export default function SelfEvolutionLoop() {
       .then((d) => {
         if (active) setData(d)
       })
-      .catch(() => {})
+      .catch((e) => { if (active) setLoadError(errorText(e)) })
       .finally(() => {
         if (active) setLoading(false)
       })
@@ -127,13 +130,13 @@ export default function SelfEvolutionLoop() {
   const m = data?.metrics
 
   return (
-    <Spin spinning={loading}>
+    <LoadState loading={loading} error={loadError} onRetry={() => window.location.reload()}><Spin spinning={false}>
       <Row gutter={16}>
         <Col span={24} style={{ marginBottom: 12 }}>
           <Space size={8} wrap>
-            <Tag color="cyan">创新点五</Tag>
-            <span style={{ color: '#94a3b8', fontSize: 13 }}>
-              内闭环（事件级自动再诊断）× 外闭环（阈值建议人工采纳沉淀为系统能力）
+
+            <span style={{ color: '#6e7d8b', fontSize: 13 }}>
+              事件反馈与阈值调整
             </span>
           </Space>
         </Col>
@@ -155,36 +158,36 @@ export default function SelfEvolutionLoop() {
             <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', marginTop: 16 }}>
               <Statistic
                 title="近 30 天事件总数"
-                value={inner?.total_events ?? 0}
-                valueStyle={{ color: '#22d3ee' }}
+                value={inner?.total_events ?? '—'}
+                valueStyle={{ color: '#477d9e' }}
               />
               <Statistic
                 title="观察期判定·已恢复"
-                value={inner?.feedback_verdict?.recovered ?? 0}
-                valueStyle={{ color: '#52c41a' }}
+                value={inner?.feedback_verdict?.recovered ?? '—'}
+                valueStyle={{ color: '#348875' }}
               />
               <Statistic
                 title="观察期判定·复发"
-                value={inner?.feedback_verdict?.relapsed ?? 0}
-                valueStyle={{ color: '#f5222d' }}
+                value={inner?.feedback_verdict?.relapsed ?? '—'}
+                valueStyle={{ color: '#bf5965' }}
               />
               <Statistic
                 title="自动再诊断次数"
-                value={inner?.auto_reconsult_count ?? 0}
-                valueStyle={{ color: '#fa8c16' }}
+                value={inner?.auto_reconsult_count ?? '—'}
+                valueStyle={{ color: '#9a6a25' }}
               />
               <Statistic
                 title="自动触发阈值建议"
-                value={inner?.auto_suggestion_trigger_count ?? 0}
-                valueStyle={{ color: '#eb2f96' }}
+                value={inner?.auto_suggestion_trigger_count ?? '—'}
+                valueStyle={{ color: '#a86382' }}
               />
             </div>
             {inner?.note && (
-              <div style={{ marginTop: 10, fontSize: 12, color: '#94a3b8' }}>{inner.note}</div>
+              <div style={{ marginTop: 10, fontSize: 12, color: '#6e7d8b' }}>{inner.note}</div>
             )}
             {inner?.by_state && Object.keys(inner.by_state).length > 0 && (
               <div style={{ marginTop: 12 }}>
-                <div style={{ fontSize: 12, color: '#78879b', marginBottom: 6 }}>
+                <div style={{ fontSize: 12, color: '#6e7d8b', marginBottom: 6 }}>
                   事件状态分布（近 30 天）
                 </div>
                 <Space size={6} wrap>
@@ -216,26 +219,26 @@ export default function SelfEvolutionLoop() {
             <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', marginTop: 16 }}>
               <Statistic
                 title="阈值建议总数"
-                value={outer?.suggestions_total ?? 0}
-                valueStyle={{ color: '#22d3ee' }}
+                value={outer?.suggestions_total ?? '—'}
+                valueStyle={{ color: '#477d9e' }}
               />
-              <Statistic title="已采纳" value={outer?.accepted ?? 0} valueStyle={{ color: '#52c41a' }} />
-              <Statistic title="已拒绝" value={outer?.rejected ?? 0} valueStyle={{ color: '#f5222d' }} />
-              <Statistic title="待决策" value={outer?.pending ?? 0} valueStyle={{ color: '#faad14' }} />
+              <Statistic title="已采纳" value={outer?.accepted ?? '—'} valueStyle={{ color: '#348875' }} />
+              <Statistic title="已拒绝" value={outer?.rejected ?? '—'} valueStyle={{ color: '#bf5965' }} />
+              <Statistic title="待决策" value={outer?.pending ?? '—'} valueStyle={{ color: '#9a752d' }} />
               <Statistic
                 title="人工采纳率"
-                value={((outer?.adoption_rate ?? 0) * 100).toFixed(1)}
+                value={(outer?.adoption_rate == null ? '—' : (outer.adoption_rate * 100).toFixed(1))}
                 suffix="%"
-                valueStyle={{ color: '#eb2f96' }}
+                valueStyle={{ color: '#a86382' }}
               />
               <Statistic
                 title="涉及设备数"
-                value={outer?.devices_involved ?? 0}
-                valueStyle={{ color: '#38bdf8' }}
+                value={outer?.devices_involved ?? '—'}
+                valueStyle={{ color: '#477d9e' }}
               />
             </div>
             {outer?.note && (
-              <div style={{ marginTop: 10, fontSize: 12, color: '#94a3b8' }}>{outer.note}</div>
+              <div style={{ marginTop: 10, fontSize: 12, color: '#6e7d8b' }}>{outer.note}</div>
             )}
           </Card>
         </Col>
@@ -260,9 +263,9 @@ export default function SelfEvolutionLoop() {
                     title="诊断准确率"
                     value={(m.accuracy * 100).toFixed(1)}
                     suffix="%"
-                    valueStyle={{ color: '#22d3ee', fontSize: 28 }}
+                    valueStyle={{ color: '#477d9e', fontSize: 28 }}
                   />
-                  <div style={{ fontSize: 11, color: '#78879b' }}>
+                  <div style={{ fontSize: 11, color: '#6e7d8b' }}>
                     已注入根因样本 {m.total} 条
                   </div>
                 </Col>
@@ -271,78 +274,39 @@ export default function SelfEvolutionLoop() {
                     title="误报率"
                     value={(m.false_alarm_rate * 100).toFixed(1)}
                     suffix="%"
-                    valueStyle={{ color: '#faad14', fontSize: 28 }}
+                    valueStyle={{ color: '#9a752d', fontSize: 28 }}
                   />
-                  <div style={{ fontSize: 11, color: '#78879b' }}>告警中实际为正常的比例</div>
+                  <div style={{ fontSize: 11, color: '#6e7d8b' }}>告警中实际为正常的比例</div>
                 </Col>
                 <Col xs={12} lg={6}>
                   <Statistic
                     title="漏报率"
                     value={(m.miss_rate * 100).toFixed(1)}
                     suffix="%"
-                    valueStyle={{ color: '#f5222d', fontSize: 28 }}
+                    valueStyle={{ color: '#bf5965', fontSize: 28 }}
                   />
-                  <div style={{ fontSize: 11, color: '#78879b' }}>实际故障中判为正常的比例</div>
+                  <div style={{ fontSize: 11, color: '#6e7d8b' }}>实际故障中判为正常的比例</div>
                 </Col>
                 <Col xs={12} lg={6}>
                   <Statistic
                     title="平均诊断延迟"
                     value={m.avg_latency_seconds.toFixed(1)}
                     suffix="s"
-                    valueStyle={{ color: '#38bdf8', fontSize: 28 }}
+                    valueStyle={{ color: '#477d9e', fontSize: 28 }}
                   />
-                  <div style={{ fontSize: 11, color: '#78879b' }}>
+                  <div style={{ fontSize: 11, color: '#6e7d8b' }}>
                     阈值累计标定 {m.threshold_calibration_count} 次
                   </div>
                 </Col>
               </Row>
             ) : (
-              <Empty description="暂无已注入根因的诊断记录（在智能会诊中确认事件并注入根因后产生）" />
+              <Empty description="暂无人工确认的诊断记录" />
             )}
           </Card>
         </Col>
 
-        {/* ---------- 两个闭环的差异说明 ---------- */}
-        <Col span={24} style={{ marginTop: 16 }}>
-          <Card title="两个闭环的分工" styles={{ body: cardBodyStyle }}>
-            <Table
-              size="small"
-              rowKey="k"
-              pagination={false}
-              dataSource={[
-                {
-                  k: '内闭环',
-                  scope: '单个事件',
-                  period: '分钟级',
-                  trigger: '观察期恢复曲线评估',
-                  human: '不需人工介入（确认/修改/拒绝除外）',
-                  output: '自动再诊断 + 自动生成阈值建议 + 准确率记录',
-                },
-                {
-                  k: '外闭环',
-                  scope: '整个系统',
-                  period: '天 / 周级',
-                  trigger: '阈值建议生成',
-                  human: '必须人工采纳才生效（可拒绝并留痕）',
-                  output: '动态阈值更新 → 改变下一轮异常判定边界',
-                },
-              ]}
-              columns={[
-                { title: '闭环', dataIndex: 'k', key: 'k', width: 80 },
-                { title: '作用范围', dataIndex: 'scope', key: 'scope', width: 100 },
-                { title: '周期', dataIndex: 'period', key: 'period', width: 90 },
-                { title: '触发条件', dataIndex: 'trigger', key: 'trigger' },
-                { title: '人工参与', dataIndex: 'human', key: 'human' },
-                { title: '产出', dataIndex: 'output', key: 'output' },
-              ]}
-            />
-            <div style={{ marginTop: 10, fontSize: 12, color: '#94a3b8' }}>
-              设计要点：内闭环负责"快"——事件发生后就地自我修正；外闭环负责"稳"——
-              任何会改变判定边界的改动都必须经人工确认，避免模型自我漂移（catastrophic drift）。
-            </div>
-          </Card>
-        </Col>
+
       </Row>
-    </Spin>
+    </Spin></LoadState>
   )
 }

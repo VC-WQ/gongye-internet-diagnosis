@@ -3,6 +3,10 @@ import { Card, Col, Collapse, Empty, Row, Select, Space, Spin, Table, Tag } from
 import ReactECharts from 'echarts-for-react'
 import { getClassification, getSteamAnalysis, getSteamMl, getXjtuRul } from '../../services/api'
 import ChartNote from '../../components/ChartNote'
+import SmartFactory from '../../components/SmartFactory'
+import DigitalTwinPhm from '../../components/DigitalTwinPhm'
+import { PageHeading, SourceTag } from '../../components/BusinessUI'
+import { errorText } from '../../hooks/useResource'
 import CwruSignal from '../../components/CwruSignal'
 import DataAssetRegistry from '../../components/DataAssetRegistry'
 import VisionDetect from '../../components/VisionDetect'
@@ -133,6 +137,7 @@ export default function ModelLab() {
   const [xjtuId, setXjtuId] = useState<string>()
   const [correlation, setCorrelation] = useState<CorrelationMat>()
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     let active = true
@@ -140,12 +145,12 @@ export default function ModelLab() {
       .then((d) => {
         if (active) setClsData(d?.datasets ?? [])
       })
-      .catch(() => {})
+      .catch((e) => { if (active) setError(errorText(e)) })
     getSteamMl()
       .then((d) => {
         if (active) setSteamMl(d)
       })
-      .catch(() => {})
+      .catch((e) => { if (active) setError(errorText(e)) })
       .finally(() => {
         if (active) setLoading(false)
       })
@@ -156,12 +161,12 @@ export default function ModelLab() {
         setXjtuBearings(bs)
         setXjtuId((prev) => prev ?? bs[0]?.id)
       })
-      .catch(() => {})
+      .catch((e) => { if (active) setError(errorText(e)) })
     getSteamAnalysis()
       .then((d) => {
         if (active) setCorrelation(d?.correlation)
       })
-      .catch(() => {})
+      .catch((e) => { if (active) setError(errorText(e)) })
     return () => {
       active = false
     }
@@ -368,7 +373,7 @@ export default function ModelLab() {
 
   // 统一的章节标题
   const SectionTitle = ({ idx, title, sub }: { idx: string; title: string; sub?: string }) => (
-    <div style={{ margin: '28px 0 12px' }}>
+    <div id={`lab-${idx}`} className="lab-section" style={{ margin: '28px 0 12px' }}>
       <div style={{ fontSize: 16, fontWeight: 600, color: '#22d3ee' }}>
         <span
           style={{
@@ -387,51 +392,23 @@ export default function ModelLab() {
         </span>
         {title}
       </div>
-      {sub && <div style={{ fontSize: 12, color: '#78879b', marginTop: 4 }}>{sub}</div>}
+
     </div>
   )
 
   return (
-    <Spin spinning={loading}>
-      {/* ============ 页面定位：本页与主线（三类设备智能会诊）的关系 ============ */}
-      <Card style={{ marginBottom: 8 }} styles={{ body: { padding: 14 } }}>
-        <div style={{ fontSize: 17, fontWeight: 700, color: '#e2e8f0', marginBottom: 8 }}>
-          算法创新实验验证 · 智能会诊的技术底座
-        </div>
-        <div style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.9 }}>
-          系统主线是<strong style={{ color: '#22d3ee' }}>离心泵 / 三相异步电机 / 螺杆空压机</strong>
-          三类设备的<strong style={{ color: '#22d3ee' }}>仿真运行监测 → 异常检测 → 多智能体会诊 → 处置闭环</strong>。
-          本页不堆砌无关数据集，只回答一个问题：
-          <strong style={{ color: '#faad14' }}>会诊页面给出的诊断结论，凭什么可信？</strong>
-        </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
-          {[
-            { t: '故障分类更抗噪', d: '创新点一 · FP-CNN 物理频率先验', c: 'cyan' },
-            { t: '剩余寿命可预测', d: '创新点二 · SDE + 粒子滤波', c: 'cyan' },
-            { t: '多证据可信融合', d: '创新点三 · D-S 证据理论', c: 'cyan' },
-            { t: '实验模型能上现场', d: '创新点四 · 跨域自适应', c: 'cyan' },
-            { t: '结论可持续进化', d: '创新点五 · 双闭环自进化', c: 'cyan' },
-          ].map((x) => (
-            <Tag key={x.t} color={x.c} style={{ margin: 0, padding: '2px 8px' }}>
-              {x.t}
-              <span style={{ color: '#94a3b8', marginLeft: 6, fontSize: 11 }}>{x.d}</span>
-            </Tag>
-          ))}
-        </div>
-        <div style={{ fontSize: 12, color: '#78879b', marginTop: 10 }}>
-          说明：本页所有图表均由 <code>scripts/</code> 下脚本离线预计算后存入{' '}
-          <code>backend/app/data/*.json</code>，页面只做可视化呈现，不含任何随机生成的演示数字。
-        </div>
-      </Card>
-
+    <div className="lab-page"><Spin spinning={loading}>
+      <PageHeading title="算法实验室" meta={<SourceTag source="offline_experiment" />} />
+      {error && <div role="alert" className="surface" style={{ marginBottom: 20 }}>{error}</div>}
+      <nav className="lab-nav" aria-label="实验章节">{[['A','数据资产'],['B','故障分类'],['C','寿命预测'],['D','跨域适应'],['E','信号分析'],['F','视觉检测'],['G','工厂与孪生']].map(([id,label]) => <a key={id} href={`#lab-${id}`}>{label}</a>)}</nav>
       {/* ============ A. 数据底座 ============ */}
-      <SectionTitle idx="A" title="数据底座：数据从哪来" sub="6 个真实公开数据集（训练与验证算法）+ 2 个仿真数据集（系统主线设备运行数据），逐项标注真实/仿真来源" />
+      <SectionTitle idx="A" title="数据资产" sub="6 个真实公开数据集（训练与验证算法）+ 2 个仿真数据集（系统主线设备运行数据），逐项标注真实/仿真来源" />
       <DataAssetRegistry />
 
       {/* ============ B. 创新点一 ============ */}
       <SectionTitle
         idx="B"
-        title="创新点一 · 物理频率先验引导 CNN（FP-CNN）"
+        title="故障分类 · FP-CNN"
         sub="把轴承理论特征频率做成可学习频带嵌入网络内部，实现物理知识与深度学习的特征级融合（而非决策层投票拼接）"
       />
       <FPCnnCompare />
@@ -439,7 +416,7 @@ export default function ModelLab() {
       {/* ============ C. 创新点二 ============ */}
       <SectionTitle
         idx="C"
-        title="创新点二 · 数字孪生 SDE + 粒子滤波的剩余寿命预测"
+        title="寿命预测 · SDE 与粒子滤波"
         sub="把磨损写成「自加速」随机微分方程状态方程，用粒子滤波在线估计退化速率并做首达时间外推"
       />
       <RulSdePf />
@@ -478,7 +455,7 @@ export default function ModelLab() {
       {/* ============ D. 创新点四 ============ */}
       <SectionTitle
         idx="D"
-        title="创新点四 · 跨域自适应（实验室试验台 → 现场三类设备）"
+        title="跨域适应"
         sub="证明「实验室训练的模型能否直接用在本系统三类设备上」，并用无目标域标签的自适应方法把域漂移补回来"
       />
       <DomainAdapt />
@@ -486,7 +463,7 @@ export default function ModelLab() {
       {/* ============ E. 信号层证据 ============ */}
       <SectionTitle
         idx="E"
-        title="信号层证据：振动信号如何诊断轴承故障"
+        title="信号分析"
         sub="时域 → 频域 → 特征空间的完整诊断链路（CWRU 真实公开数据）"
       />
       <CwruSignal />
@@ -516,6 +493,7 @@ export default function ModelLab() {
           检测结果作为第五路证据进入会诊的 D-S 融合（见智能会诊页面上传入口）。
         </div>
       </div>
+      <SectionTitle idx="F" title="部件表面视觉检测" />
       <VisionDetect />
 
       {/* ============ G. 辅助横评（折叠收纳，非主线设备） ============ */}
@@ -699,6 +677,9 @@ export default function ModelLab() {
           ]}
         />
       </div>
-    </Spin>
+      <SectionTitle idx="G" title="工厂数据与预测性维护" />
+      <SmartFactory />
+      <DigitalTwinPhm />
+    </Spin></div>
   )
 }

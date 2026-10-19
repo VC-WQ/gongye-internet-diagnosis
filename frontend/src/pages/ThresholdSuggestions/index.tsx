@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react'
-import { Button, Card, Empty, Space, Tag, message } from 'antd'
+import { useState } from 'react'
+import { Button, Card, Popconfirm, Space, Tag, message } from 'antd'
 import {
   acceptThresholdSuggestion,
   listThresholdSuggestions,
   rejectThresholdSuggestion,
 } from '../../services/api'
-
+import { useResource, errorText } from '../../hooks/useResource'
+import { LoadState } from '../../components/BusinessUI'
 interface Suggestion {
   id: number
   device_id: string
@@ -13,82 +14,86 @@ interface Suggestion {
   new_value: number
   reason: string
   status: string
-  accepted_by: string | null
-  created_at: string | null
-  accepted_at: string | null
 }
-
-const STATUS_LABEL: Record<string, string> = {
-  pending: '待处理',
-  accepted: '已采纳',
-  rejected: '已拒绝',
-}
-const STATUS_COLOR: Record<string, string> = {
-  pending: 'orange',
-  accepted: 'green',
-  rejected: 'default',
-}
-
 export default function ThresholdSuggestions() {
-  const [list, setList] = useState<Suggestion[]>([])
-  const [loading, setLoading] = useState(false)
-
-  useEffect(() => {
-    listThresholdSuggestions().then(setList).catch(console.error)
-  }, [])
-
-  const onAct = async (id: number, type: 'accept' | 'reject') => {
-    setLoading(true)
+  const resource = useResource<Suggestion[]>(
+    'threshold-suggestions',
+    listThresholdSuggestions,
+  )
+  const [acting, setActing] = useState<number>()
+  const act = async (id: number, accept: boolean) => {
+    if (acting != null) return
+    setActing(id)
     try {
-      if (type === 'accept') {
-        await acceptThresholdSuggestion(id, 'operator')
-        message.success('已采纳')
-      } else {
-        await rejectThresholdSuggestion(id, 'operator')
-        message.success('已拒绝')
-      }
-      setList(await listThresholdSuggestions())
-    } catch {
-      message.error('操作失败')
+      const user =
+        JSON.parse(localStorage.getItem('user') ?? '{}').username ?? 'operator'
+      if (accept) await acceptThresholdSuggestion(id, user)
+      else await rejectThresholdSuggestion(id, user)
+      message.success(accept ? '已采纳' : '已拒绝')
+      resource.refresh()
+    } catch (e) {
+      message.error(errorText(e))
     } finally {
-      setLoading(false)
+      setActing(undefined)
     }
   }
-
   return (
-    <Card title="动态阈值建议">
-      <Space direction="vertical" style={{ width: '100%' }} size={12}>
-        {list.length === 0 ? (
-          <Empty description="暂无阈值建议（注入演示数据后可见）" />
-        ) : (
-          list.map((s) => (
-            <Card key={s.id} size="small" type="inner">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
+    <Card title="阈值建议">
+      <LoadState
+        loading={resource.loading}
+        error={resource.error}
+        onRetry={resource.refresh}
+        empty={!resource.data?.length}
+        emptyText="暂无阈值建议"
+      >
+        <Space direction="vertical" size={16} style={{ width: '100%' }}>
+          {resource.data?.map((item) => (
+            <div className="surface" key={item.id}>
+              <div className="section-header">
+                <Space>
+                  <strong>{item.device_id}</strong>
+                  <Tag>
+                    {(
+                      {
+                        pending: '待处理',
+                        accepted: '已采纳',
+                        rejected: '已拒绝',
+                      } as Record<string, string>
+                    )[item.status] ?? item.status}
+                  </Tag>
+                </Space>
+                {item.status === 'pending' && (
                   <Space>
-                    <span style={{ fontWeight: 600 }}>{s.device_id}</span>
-                    <Tag color={STATUS_COLOR[s.status]}>{STATUS_LABEL[s.status] ?? s.status}</Tag>
-                  </Space>
-                  <div style={{ marginTop: 6, fontWeight: 600 }}>
-                    建议：{s.old_value} → {s.new_value}
-                  </div>
-                  <div style={{ color: '#78879b', fontSize: 13, marginTop: 4 }}>{s.reason}</div>
-                </div>
-                {s.status === 'pending' && (
-                  <Space>
-                    <Button type="primary" size="small" loading={loading} onClick={() => onAct(s.id, 'accept')}>
-                      采纳
-                    </Button>
-                    <Button danger size="small" loading={loading} onClick={() => onAct(s.id, 'reject')}>
+                    <Popconfirm
+                      title={`将阈值从 ${item.old_value} 调整为 ${item.new_value}？`}
+                      onConfirm={() => act(item.id, true)}
+                    >
+                      <Button
+                        type="primary"
+                        size="small"
+                        disabled={acting != null}
+                      >
+                        采纳
+                      </Button>
+                    </Popconfirm>
+                    <Button
+                      size="small"
+                      disabled={acting != null}
+                      onClick={() => act(item.id, false)}
+                    >
                       拒绝
                     </Button>
                   </Space>
                 )}
               </div>
-            </Card>
-          ))
-        )}
-      </Space>
+              <p>
+                {item.old_value} → {item.new_value}
+              </p>
+              <p className="page-meta">{item.reason}</p>
+            </div>
+          ))}
+        </Space>
+      </LoadState>
     </Card>
   )
 }

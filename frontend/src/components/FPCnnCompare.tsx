@@ -1,3 +1,5 @@
+import { LoadState } from './BusinessUI'
+import { errorText } from '../hooks/useResource'
 import { useEffect, useMemo, useState } from 'react'
 import { Card, Col, Empty, Row, Space, Spin, Table, Tag } from 'antd'
 import ReactECharts from 'echarts-for-react'
@@ -58,6 +60,7 @@ const BAND_LABEL: Record<string, string> = {
 export default function FPCnnCompare() {
   const [data, setData] = useState<FpCnnData>()
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
 
   useEffect(() => {
     let active = true
@@ -65,7 +68,7 @@ export default function FPCnnCompare() {
       .then((d) => {
         if (active) setData(d)
       })
-      .catch(() => {})
+      .catch((e) => { if (active) setLoadError(errorText(e)) })
       .finally(() => {
         if (active) setLoading(false)
       })
@@ -102,7 +105,7 @@ export default function FPCnnCompare() {
           name: 'FP-CNN（物理先验）',
           type: 'bar',
           data: fs.map((f) => f.fp_acc),
-          itemStyle: { color: '#22d3ee' },
+          itemStyle: { color: '#477d9e' },
           label: { show: true, position: 'top', formatter: (p: { value: number }) => p.value.toFixed(3) },
         },
       ],
@@ -141,8 +144,8 @@ export default function FPCnnCompare() {
           smooth: true,
           symbolSize: 8,
           data: ns.map((n) => n.fp_acc),
-          lineStyle: { color: '#22d3ee' },
-          itemStyle: { color: '#22d3ee' },
+          lineStyle: { color: '#477d9e' },
+          itemStyle: { color: '#477d9e' },
         },
       ],
     }
@@ -170,7 +173,7 @@ export default function FPCnnCompare() {
           name: '网络学到的频带中心',
           type: 'bar',
           data: keys.map((k) => learned[k].learned_hz),
-          itemStyle: { color: '#22d3ee' },
+          itemStyle: { color: '#477d9e' },
         },
       ],
     }
@@ -189,14 +192,14 @@ export default function FPCnnCompare() {
   }, [data])
 
   return (
-    <Spin spinning={loading}>
+    <LoadState loading={loading} error={loadError} onRetry={() => window.location.reload()}><Spin spinning={false}>
       <Row gutter={16}>
         <Col span={24} style={{ marginBottom: 12 }}>
           <Space size={8} wrap>
-            <Tag color="cyan">创新点一</Tag>
-            <span style={{ color: '#94a3b8', fontSize: 13 }}>
+            <Tag color="cyan">FP-CNN</Tag>
+            <span style={{ color: '#6e7d8b', fontSize: 13 }}>
               把轴承理论特征频率（BPFO / BPFI / BSF / FTF）做成可学习高斯频带嵌入 CNN，
-              实现物理知识与深度学习的<strong style={{ color: '#e2e8f0' }}>特征级</strong>融合（而非决策层投票拼接）
+              实现物理知识与深度学习的<strong style={{ color: '#293543' }}>特征级</strong>融合
             </span>
           </Space>
         </Col>
@@ -220,7 +223,7 @@ export default function FPCnnCompare() {
             {data?.few_shot?.length ? (
               <ReactECharts theme="tech-dark" option={fewShotOption} style={{ height: 280 }} />
             ) : (
-              <Empty description="数据准备中" />
+              <Empty description="暂无实验结果" />
             )}
           </Card>
         </Col>
@@ -244,7 +247,7 @@ export default function FPCnnCompare() {
             {data?.noise?.length ? (
               <ReactECharts theme="tech-dark" option={noiseOption} style={{ height: 280 }} />
             ) : (
-              <Empty description="数据准备中" />
+              <Empty description="暂无实验结果" />
             )}
           </Card>
         </Col>
@@ -264,7 +267,7 @@ export default function FPCnnCompare() {
             {data?.bands?.learned ? (
               <ReactECharts theme="tech-dark" option={bandOption} style={{ height: 280 }} />
             ) : (
-              <Empty description="数据准备中" />
+              <Empty description="暂无实验结果" />
             )}
           </Card>
         </Col>
@@ -296,7 +299,7 @@ export default function FPCnnCompare() {
               ]}
             />
             {data?.full && (
-              <div style={{ marginTop: 10, fontSize: 12, color: '#94a3b8' }}>
+              <div style={{ marginTop: 10, fontSize: 12, color: '#6e7d8b' }}>
                 全量数据下：基线 {(data.full.baseline_acc * 100).toFixed(2)}% vs FP-CNN{' '}
                 {(data.full.fp_acc * 100).toFixed(2)}%（Δ {data.full.delta >= 0 ? '+' : ''}
                 {(data.full.delta * 100).toFixed(2)} 个百分点）。
@@ -306,6 +309,6 @@ export default function FPCnnCompare() {
           </Card>
         </Col>
       </Row>
-    </Spin>
+    </Spin></LoadState>
   )
 }

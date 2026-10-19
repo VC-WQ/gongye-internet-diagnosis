@@ -1,3 +1,5 @@
+import { LoadState } from './BusinessUI'
+import { errorText } from '../hooks/useResource'
 import { useEffect, useMemo, useState } from 'react'
 import { Card, Col, Empty, Row, Spin, Statistic } from 'antd'
 import ReactECharts from 'echarts-for-react'
@@ -36,6 +38,7 @@ interface SmartFactoryData {
 export default function SmartFactory() {
   const [data, setData] = useState<SmartFactoryData>()
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
 
   useEffect(() => {
     let active = true
@@ -43,7 +46,7 @@ export default function SmartFactory() {
       .then((d) => {
         if (active) setData(d)
       })
-      .catch(() => {})
+      .catch((e) => { if (active) setLoadError(errorText(e)) })
       .finally(() => {
         if (active) setLoading(false)
       })
@@ -93,19 +96,19 @@ export default function SmartFactory() {
           name: '正常运行',
           type: 'bar',
           data: items.map((d) => d.normal),
-          itemStyle: { color: '#38bdf8' },
+          itemStyle: { color: '#477d9e' },
         },
         {
           name: '故障状态',
           type: 'bar',
           data: items.map((d) => d.fault),
-          itemStyle: { color: '#f5222d' },
+          itemStyle: { color: '#bf5965' },
           label: {
             show: true,
             position: 'top',
             formatter: (p: any) => `${items[p.dataIndex].delta_pct > 0 ? '+' : ''}${items[p.dataIndex].delta_pct}%`,
             fontSize: 10,
-            color: '#f5222d',
+            color: '#bf5965',
           },
         },
       ],
@@ -140,7 +143,7 @@ export default function SmartFactory() {
         {
           type: 'bar',
           data: h.counts,
-          itemStyle: { color: '#22d3ee' },
+          itemStyle: { color: '#477d9e' },
           label: { show: true, position: 'top', fontSize: 10 },
         },
       ],
@@ -150,13 +153,13 @@ export default function SmartFactory() {
   const ov = data?.overview
 
   return (
-    <Spin spinning={loading}>
+    <LoadState loading={loading} error={loadError} onRetry={() => window.location.reload()}><Spin spinning={false}>
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={24} style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 16, fontWeight: 600, color: '#22d3ee' }}>
+          <div style={{ fontSize: 16, fontWeight: 600, color: '#477d9e' }}>
             产线级多机组异常态势（SmartFactory 合成数据集实证）
           </div>
-          <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>
+          <div style={{ fontSize: 12, color: '#6e7d8b', marginTop: 2 }}>
             {ov
               ? `${ov.n_samples.toLocaleString()} 条运行记录 · ${ov.n_machines} 台设备 / ${ov.n_sections} 个工段 · 整体故障率 ${(ov.failure_rate * 100).toFixed(1)}%`
               : ''}
@@ -178,7 +181,7 @@ export default function SmartFactory() {
             {data ? (
               <ReactECharts theme="tech-dark" option={sectionOption} style={{ height: 300 }} />
             ) : (
-              <Empty description="数据准备中" />
+              <Empty description="暂无实验结果" />
             )}
           </Card>
         </Col>
@@ -198,7 +201,7 @@ export default function SmartFactory() {
             {data ? (
               <ReactECharts theme="tech-dark" option={sensorOption} style={{ height: 220 }} />
             ) : (
-              <Empty description="数据准备中" />
+              <Empty description="暂无实验结果" />
             )}
           </Card>
         </Col>
@@ -218,11 +221,11 @@ export default function SmartFactory() {
             {data ? (
               <ReactECharts theme="tech-dark" option={histOption} style={{ height: 300 }} />
             ) : (
-              <Empty description="数据准备中" />
+              <Empty description="暂无实验结果" />
             )}
           </Card>
         </Col>
       </Row>
-    </Spin>
+    </Spin></LoadState>
   )
 }

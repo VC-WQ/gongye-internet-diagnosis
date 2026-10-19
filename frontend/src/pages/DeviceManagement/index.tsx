@@ -1,3 +1,5 @@
+import { useResource } from '../../hooks/useResource'
+import { LoadState, PageHeading, StatusTag } from '../../components/BusinessUI'
 import { useEffect, useState } from 'react'
 import { Button, Card, Form, Input, Modal, Popconfirm, Select, Space, Table, Tag, message } from 'antd'
 import { createDevice, deleteDevice, getDevices, updateDevice, type Device } from '../../services/api'
@@ -5,16 +7,14 @@ import { createDevice, deleteDevice, getDevices, updateDevice, type Device } fro
 const TYPE_LABEL: Record<string, string> = { pump: '泵', motor: '电机', compressor: '空压机' }
 
 export default function DeviceManagement() {
-  const [devices, setDevices] = useState<Device[]>([])
+  const resource = useResource<Device[]>('DeviceManagement', getDevices)
+  const devices = resource.data ?? []
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Device | null>(null)
   const [loading, setLoading] = useState(false)
   const [form] = Form.useForm()
 
-  const load = () => getDevices().then(setDevices).catch(console.error)
-  useEffect(() => {
-    load()
-  }, [])
+  const load = resource.refresh
 
   const openCreate = () => {
     setEditing(null)
@@ -61,7 +61,7 @@ export default function DeviceManagement() {
     { title: '设备ID', dataIndex: 'id' },
     { title: '名称', dataIndex: 'name' },
     { title: '类型', dataIndex: 'device_type', render: (t: string) => TYPE_LABEL[t] ?? t },
-    { title: '状态', dataIndex: 'status', render: (s: string) => <Tag>{s}</Tag> },
+    { title: '状态', dataIndex: 'status', render: (s: string) => <StatusTag status={s} /> },
     {
       title: '健康分',
       dataIndex: 'health_score',

@@ -1,3 +1,5 @@
+import { LoadState } from './BusinessUI'
+import { errorText } from '../hooks/useResource'
 import { useEffect, useMemo, useState } from 'react'
 import { Card, Col, Empty, Row, Space, Spin, Table, Tag } from 'antd'
 import ReactECharts from 'echarts-for-react'
@@ -43,10 +45,10 @@ interface DomainAdaptData {
 
 const VARIANT_COLOR: Record<string, string> = {
   V0: '#64748b',
-  V1: '#38bdf8',
-  V2: '#722ed1',
-  V3: '#22d3ee',
-  V4: '#f5222d',
+  V1: '#477d9e',
+  V2: '#76689a',
+  V3: '#477d9e',
+  V4: '#bf5965',
 }
 
 /**
@@ -61,6 +63,7 @@ const VARIANT_COLOR: Record<string, string> = {
 export default function DomainAdapt() {
   const [data, setData] = useState<DomainAdaptData>()
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
 
   useEffect(() => {
     let active = true
@@ -68,7 +71,7 @@ export default function DomainAdapt() {
       .then((d) => {
         if (active) setData(d)
       })
-      .catch(() => {})
+      .catch((e) => { if (active) setLoadError(errorText(e)) })
       .finally(() => {
         if (active) setLoading(false)
       })
@@ -99,7 +102,7 @@ export default function DomainAdapt() {
         name: r.title,
         type: 'bar',
         data: devIds.map((d) => r.per_device[d]?.accuracy ?? 0),
-        itemStyle: { color: VARIANT_COLOR[r.id] ?? '#94a3b8' },
+        itemStyle: { color: VARIANT_COLOR[r.id] ?? '#6e7d8b' },
       })),
     }
   }, [data, devIds, results])
@@ -120,16 +123,16 @@ export default function DomainAdapt() {
           symbolSize: 8,
           connectNulls: true,
           data: results.map((r) => r.source_test_accuracy),
-          lineStyle: { color: '#f5222d' },
-          itemStyle: { color: '#f5222d' },
+          lineStyle: { color: '#bf5965' },
+          itemStyle: { color: '#bf5965' },
         },
         {
           name: '目标域宏平均准确率',
           type: 'line',
           symbolSize: 8,
           data: results.map((r) => r.target_macro_accuracy),
-          lineStyle: { color: '#22d3ee' },
-          itemStyle: { color: '#22d3ee' },
+          lineStyle: { color: '#477d9e' },
+          itemStyle: { color: '#477d9e' },
         },
       ],
     }
@@ -143,25 +146,25 @@ export default function DomainAdapt() {
   const v4 = results.find((r) => r.id === 'V4')
 
   return (
-    <Spin spinning={loading}>
+    <LoadState loading={loading} error={loadError} onRetry={() => window.location.reload()}><Spin spinning={false}>
       <Row gutter={16}>
         <Col span={24} style={{ marginBottom: 12 }}>
           <Space size={8} wrap>
-            <Tag color="cyan">创新点四</Tag>
-            <span style={{ color: '#94a3b8', fontSize: 13 }}>
+            <Tag color="cyan">CORAL / DANN</Tag>
+            <span style={{ color: '#6e7d8b', fontSize: 13 }}>
               CWRU 试验台训练 → 迁移到离心泵 / 电机 / 空压机三类设备，
-              用 CORAL / DANN 做<strong style={{ color: '#e2e8f0' }}>无目标域标签</strong>的域自适应
+              用 CORAL / DANN 做<strong style={{ color: '#293543' }}>无目标域标签</strong>的域自适应
             </span>
           </Space>
         </Col>
 
         <Col span={24} style={{ marginBottom: 16 }}>
           <Card styles={{ body: cardBodyStyle }}>
-            <div style={{ fontSize: 13, color: '#cbd5e1', marginBottom: 8 }}>
-              <strong style={{ color: '#22d3ee' }}>要解决的问题：</strong>
+            <div style={{ fontSize: 13, color: '#536170', marginBottom: 8 }}>
+              <strong style={{ color: '#477d9e' }}>要解决的问题：</strong>
               {data?.problem ?? '加载中…'}
             </div>
-            <div style={{ fontSize: 12, color: '#94a3b8' }}>
+            <div style={{ fontSize: 12, color: '#6e7d8b' }}>
               智能会诊的故障分类依赖 CWRU 数据集训练的 1D-CNN，但它采集自实验室电机试验台；
               现场三类设备的轴承型号、转速、采样率、结构共振与信噪比全都不同，
               直接迁移会产生分布漂移。本实验量化该漂移，并验证无监督域自适应能否补回。
@@ -188,7 +191,7 @@ export default function DomainAdapt() {
             {devIds.length && results.length ? (
               <ReactECharts theme="tech-dark" option={perDeviceOption} style={{ height: 300 }} />
             ) : (
-              <Empty description="数据准备中" />
+              <Empty description="暂无实验结果" />
             )}
           </Card>
         </Col>
@@ -208,7 +211,7 @@ export default function DomainAdapt() {
             {results.length ? (
               <ReactECharts theme="tech-dark" option={summaryOption} style={{ height: 300 }} />
             ) : (
-              <Empty description="数据准备中" />
+              <Empty description="暂无实验结果" />
             )}
           </Card>
         </Col>
@@ -240,8 +243,8 @@ export default function DomainAdapt() {
               ]}
             />
             {data?.conclusion && (
-              <div style={{ marginTop: 10, fontSize: 12, color: '#94a3b8' }}>
-                <strong style={{ color: '#22d3ee' }}>结论：</strong>
+              <div style={{ marginTop: 10, fontSize: 12, color: '#6e7d8b' }}>
+                <strong style={{ color: '#477d9e' }}>结论：</strong>
                 {data.conclusion}
               </div>
             )}
@@ -286,7 +289,7 @@ export default function DomainAdapt() {
                   title: '域',
                   dataIndex: 'name',
                   key: 'name',
-                  render: (v: string, r: { isSource: boolean }) =>
+                  render: (v: string, r: { isSource: boolean; [key: string]: unknown }) =>
                     r.isSource ? <Tag color="red">{v}（源域）</Tag> : <Tag color="blue">{v}（目标域）</Tag>,
                 },
                 {
@@ -302,8 +305,8 @@ export default function DomainAdapt() {
                 { title: '信噪比 (dB)', dataIndex: 'snr', key: 'snr', render: (v: number) => (v == null ? '—' : v.toFixed(0)) },
               ]}
             />
-            <div style={{ marginTop: 10, fontSize: 12, color: '#94a3b8' }}>
-              每一行都是一种工况：连<strong style={{ color: '#e2e8f0' }}>轴承几何</strong>
+            <div style={{ marginTop: 10, fontSize: 12, color: '#6e7d8b' }}>
+              每一行都是一种工况：连<strong style={{ color: '#293543' }}>轴承几何</strong>
               （滚珠数 / 滚珠直径 / 节径）都不同，因此同一类故障的特征频率在各设备上落在不同位置 ——
               这正是"实验室模型不敢直接上现场"的根因。
             </div>
@@ -313,7 +316,7 @@ export default function DomainAdapt() {
         {data?.methods && (
           <Col span={24} style={{ marginTop: 16 }}>
             <Card title="方法说明" styles={{ body: cardBodyStyle }}>
-              <Space direction="vertical" size={4} style={{ fontSize: 12, color: '#94a3b8' }}>
+              <Space direction="vertical" size={4} style={{ fontSize: 12, color: '#6e7d8b' }}>
                 {Object.entries(data.methods).map(([k, v]) => (
                   <div key={k}>
                     <Tag color={k === 'oracle' ? 'red' : k === 'none' ? 'default' : 'cyan'}>{k}</Tag>
@@ -325,6 +328,6 @@ export default function DomainAdapt() {
           </Col>
         )}
       </Row>
-    </Spin>
+    </Spin></LoadState>
   )
 }
