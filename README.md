@@ -173,22 +173,31 @@ frontend/
 
 | 页面目录 | 路由 | 说明 |
 |---|---|---|
-| `Dashboard/` | `/dashboard` | 设备大屏：KPI + 全厂健康态势 + 实时曲线 + 三大组件 |
-| `DiagnoseWorkbench/` | `/diagnose` | AI 诊断工作台（会诊/时间线/报告 三标签） |
-| `DeviceCenter/` | `/devices` | 设备中心（设备列表 + 故障注入） |
+| `Dashboard/` | `/dashboard` | 工厂总览：设备分组示意、目录状态、传感器窗口与设备联动 |
+| `DiagnoseWorkbench/` | `/diagnose` | 智能诊断：设备上下文、诊断结论与证据、可收起语音助手 |
+| `DeviceCenter/` | `/devices` | 设备监测：搜索、状态筛选、详情与独立仿真测试 |
 | `DeviceDetail/` | `/device/:deviceId` | 设备详情（实时曲线/孪生隐状态/声学频谱/健康历史） |
-| `ModelLab/` | `/lab` | 算法实验室（分类/回归/RUL/相关性等 11 组图表） |
+| `ModelLab/` | `/lab` | 算法实验室（数据资产、分类、寿命、跨域、视觉与工厂研究） |
 | `SystemOps/` | `/ops` | 系统运维（系统自评 + 动态阈值建议） |
 | `SystemEval/` | 子页 | 系统自评（准确率/误报/漏报/延迟） |
 | `ThresholdSuggestions/` | 子页 | 动态阈值建议（采纳/拒绝） |
 | `FaultInjection/` | 子页 | 故障注入面板 |
-| `ChatWindow/` | 子页 | AI 诊断助手（数字人 + 多智能体会诊消息流 + **确认执行/修改建议/拒绝** 三按钮人机闭环） |
-| `Timeline/` | 子页 | 事件时间线（传感器曲线**通道下拉** + 数字孪生隐状态 + 事件标注时间线，三卡均带「说明」浮层） |
-| `ReportCenter/` | 子页 | 诊断报告中心（快报/事件报告） |
+| `ChatWindow/` | 子页 | 诊断业务组件：结果与证据，复用事件操作 |
+| `Timeline/` | 子页 | 事件证据组件：传感器白名单通道、已记录的隐状态与审计时间线 |
+| `EventCenter/` | `/events` | 事件处置：人工确认、修订、拒绝、独立下发指令与时间线 |
+| `ReportCenter/` | `/reports` | 报告与档案：结构化结论、报告文档与设备快报 |
 | `UserManagement/` | `/admin/users` | 用户管理 |
 | `DeviceManagement/` | `/admin/devices` | 设备管理 |
 | `RecordManagement/` | `/admin/records` | 诊断记录管理 |
 | `Login/` | `/login` | 登录页 |
+
+前端 URL 以 `device`、`event`、`tab` 查询参数保持上下文。旧 `/diagnose?tab=timeline` / `trajectory` / `report` 链接兼容跳转到事件或报告。后退、前进对应浏览历史；上一级返回页面层级并恢复设备列表筛选。
+
+实时推送复用 `/api/v1/mqtt-pipeline/ws`，开发代理启用 WebSocket；断线时每 5 秒读取采样窗口。超过 15 秒的采样标记过期，缺少有效时间或数值的窗口不能发起诊断。未返回来源字段时显示“来源未确认”。数字场景是设备目录分组示意，不代表工厂平面或物理连接。算法实验室的数据与实时监测分开。
+
+人工确认与下发指令是两次独立操作。当前后端尚未提供指令回执查询接口，页面不会把下发成功或观察期解释为设备执行成功或故障恢复。
+
+前端检查：在 `frontend/` 运行 `npm run test`、`npm run typecheck`、`npm run build`。采样契约测试使用 Node 内置测试运行器与已有 TypeScript 依赖，不需要额外测试库。
 
 ### 3.3 `simulators/` —— 虚拟设备模拟器
 
