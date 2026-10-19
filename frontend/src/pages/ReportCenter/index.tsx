@@ -1,121 +1,211 @@
-import { useEffect, useState } from 'react'
-import { Button, Card, Col, Empty, List, Row, Space, Tabs, Typography, message } from 'antd'
+import { useEffect, useRef, useState } from 'react'
+import { Button, Select, Space, message } from 'antd'
 import ReactMarkdown from 'react-markdown'
-import { getEventReport, getFlashReport, listEvents, type EventSummary } from '../../services/api'
-
-const { Paragraph } = Typography
+import {
+  getEvent,
+  getEventReport,
+  getFlashReport,
+  listEvents,
+} from '../../services/api'
+import { useResource, errorText } from '../../hooks/useResource'
+import { deviceLink, usePageQuery } from '../../hooks/usePageQuery'
+import { useDeviceCatalog } from '../../services/realtime'
+import {
+  formatTime,
+  LoadState,
+  PageHeading,
+  SourceTag,
+  StatusTag,
+} from '../../components/BusinessUI'
+import DiagnosisSummary from '../../components/DiagnosisSummary'
+import { useNavigate } from 'react-router-dom'
 
 export default function ReportCenter() {
-  const [flashText, setFlashText] = useState('')
-  const [markdown, setMarkdown] = useState('')
-  const [events, setEvents] = useState<EventSummary[]>([])
-  const [activeContent, setActiveContent] = useState<'none' | 'flash' | 'report'>('none')
+  const { params, update } = usePageQuery()
+  const navigate = useNavigate()
+  const catalog = useDeviceCatalog()
+  const device = params.get('device') ?? undefined
+  const eventId = Number(params.get('event')) || undefined
+  const list = useResource(`reports:${device ?? 'all'}`, () =>
+    listEvents({ device_id: device, limit: 50 }),
+  )
+  const selected = useResource(
+    `report-event:${eventId ?? ''}`,
+    () => getEvent(eventId!),
+    0,
+    Boolean(eventId),
+  )
+  const [document, setDocument] = useState<{ key: string; text: string }>()
   const [loading, setLoading] = useState(false)
-
+  const [error, setError] = useState('')
+  const sequence = useRef(0)
+  const key = `${device ?? 'all'}:${eventId ?? 'flash'}`
   useEffect(() => {
-    listEvents({ limit: 20 }).then(setEvents).catch(console.error)
-  }, [])
-
-  const genFlash = async () => {
+    sequence.current += 1
+    setLoading(false)
+    setError('')
+    return () => {
+      sequence.current += 1
+    }
+  }, [key])
+  useEffect(() => {
+    if (selected.data && selected.data.device_id !== device)
+      update({ device: selected.data.device_id }, true)
+  }, [selected.data?.id, selected.data?.device_id, device])
+  const generate = async (flash: boolean) => {
+    const request = ++sequence.current
     setLoading(true)
+    setError('')
     try {
-      const r = await getFlashReport({})
-      setFlashText(r.report)
-      setActiveContent('flash')
-    } catch {
-      message.error('生成快报失败')
+      const response = flash
+        ? await getFlashReport(device ? { device_id: device } : {})
+        : await getEventReport(eventId!)
+      if (request === sequence.current) {
+        if (typeof response.report !== 'string')
+          throw new Error('报告内容不可用')
+        setDocument({ key, text: response.report })
+      }
+    } catch (e) {
+      if (request === sequence.current) setError(errorText(e))
     } finally {
-      setLoading(false)
+      if (request === sequence.current) setLoading(false)
     }
   }
-
-  const viewReport = async (id: number) => {
-    setLoading(true)
+  const text = document?.key === key ? document.text : ''
+  const copy = async () => {
     try {
-      const r = await getEventReport(id)
-      setMarkdown(r.report)
-      setActiveContent('report')
+      await navigator.clipboard.writeText(text)
+      message.success('已复制报告')
     } catch {
-      message.error('生成报告失败')
-    } finally {
-      setLoading(false)
+      message.error('复制失败，请检查浏览器权限')
     }
   }
-
-  const copy = () => {
-    const text = activeContent === 'report' ? markdown : flashText
-    navigator.clipboard?.writeText(text).then(
-      () => message.success('已复制到剪贴板'),
-      () => message.error('复制失败'),
-    )
-  }
-
-  const tabs = [
-    {
-      key: 'flash',
-      label: '快报',
-      children: (
-        <div>
-          <Button type="primary" onClick={genFlash} loading={loading}>
-            生成快报
-          </Button>
-          <Paragraph style={{ marginTop: 12, whiteSpace: 'pre-wrap' }}>{flashText}</Paragraph>
-        </div>
-      ),
-    },
-    {
-      key: 'events',
-      label: '事件报告',
-      children: (
-        <List
-          size="small"
-          dataSource={events}
-          locale={{ emptyText: '暂无事件' }}
-          renderItem={(e) => (
-            <List.Item onClick={() => viewReport(e.id)} style={{ cursor: 'pointer' }}>
-              <List.Item.Meta
-                title={`#${e.id} · ${e.device_id}`}
-                description={e.timestamp ? new Date(e.timestamp).toLocaleString() : ''}
-              />
-            </List.Item>
-          )}
-        />
-      ),
-    },
-  ]
-
   return (
-    <Row gutter={16}>
-      <Col xs={24} md={8}>
-        <Card title="报告列表">
-          <Tabs items={tabs} />
-        </Card>
-      </Col>
-      <Col xs={24} md={16}>
-        <Card
-          title="报告详情"
-          extra={
-            <Space>
-              <Button onClick={copy} disabled={activeContent === 'none'}>
-                复制 Markdown
+    <>
+      <PageHeading
+        title="报告与档案"
+        meta={<SourceTag source="history" />}
+        actions={
+          <Button
+            loading={loading}
+            onClick={() => {
+              update({ event: undefined })
+              if (!eventId) void generate(true)
+            }}
+          >
+            设备快报
+          </Button>
+        }
+      />
+      <div className="filter-bar">
+        <Select
+          aria-label="报告设备筛选"
+          allowClear
+          placeholder="全部设备"
+          value={device}
+          onChange={(value) => update({ device: value, event: undefined })}
+          options={catalog.data?.map((d) => ({ value: d.id, label: d.name }))}
+        />
+        <span className="filter-end">
+          最近 {list.data?.length ?? '—'} 份诊断记录
+        </span>
+      </div>
+      <div className="business-split">
+        <section className="surface">
+          <div className="section-header">
+            <h2>诊断档案</h2>
+          </div>
+          <LoadState
+            loading={list.loading}
+            error={list.error}
+            onRetry={list.refresh}
+            empty={!list.data?.length}
+            emptyText="暂无诊断档案"
+          >
+            <div className="record-list">
+              {list.data?.map((event) => (
+                <button
+                  key={event.id}
+                  className={`record-item ${eventId === event.id ? 'selected' : ''}`}
+                  onClick={() =>
+                    update({ event: String(event.id), device: event.device_id })
+                  }
+                >
+                  <span>
+                    <strong>
+                      #{event.id} ·{' '}
+                      {event.agent_diagnosis?.fault_label ??
+                        event.fault_type ??
+                        '诊断报告'}
+                    </strong>
+                    <small>{event.device_id}</small>
+                    <small>{formatTime(event.timestamp)}</small>
+                  </span>
+                  <StatusTag status={event.status_state} event />
+                </button>
+              ))}
+            </div>
+          </LoadState>
+        </section>
+        <article className="surface">
+          <div className="section-header">
+            <h2>{eventId ? `诊断报告 #${eventId}` : '设备快报'}</h2>
+            <Space wrap>
+              {eventId && (
+                <Button
+                  size="small"
+                  loading={loading}
+                  onClick={() => generate(false)}
+                >
+                  生成文档
+                </Button>
+              )}
+              <Button size="small" disabled={!text} onClick={copy}>
+                复制
               </Button>
-              <Button onClick={() => window.print()} disabled={activeContent === 'none'}>
+              <Button
+                size="small"
+                disabled={!text && !selected.data}
+                onClick={() => window.print()}
+              >
                 打印
               </Button>
             </Space>
-          }
-        >
-          {activeContent === 'none' && <Empty description="生成或选择一份报告" />}
-          {activeContent === 'flash' && (
-            <Paragraph style={{ whiteSpace: 'pre-wrap' }}>{flashText}</Paragraph>
-          )}
-          {activeContent === 'report' && (
-            <div style={{ fontSize: 14, lineHeight: 1.7 }}>
-              <ReactMarkdown>{markdown}</ReactMarkdown>
+          </div>
+          <LoadState
+            loading={loading || (Boolean(eventId) && selected.loading)}
+            error={error || (eventId ? selected.error : undefined)}
+            onRetry={error ? () => generate(!eventId) : selected.refresh}
+          >
+            {text ? (
+              <div className="report-content">
+                <ReactMarkdown>{text}</ReactMarkdown>
+              </div>
+            ) : eventId && selected.data ? (
+              <DiagnosisSummary event={selected.data} />
+            ) : (
+              <div className="chart-empty" style={{ minHeight: 260 }}>
+                <Button loading={loading} onClick={() => generate(true)}>
+                  生成设备快报
+                </Button>
+              </div>
+            )}
+          </LoadState>
+          {selected.data && eventId && (
+            <div className="actions-row">
+              <Button
+                onClick={() =>
+                  navigate(
+                    deviceLink('/events', selected.data!.device_id, eventId),
+                  )
+                }
+              >
+                查看事件与证据
+              </Button>
             </div>
           )}
-        </Card>
-      </Col>
-    </Row>
+        </article>
+      </div>
+    </>
   )
 }

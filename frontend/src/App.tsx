@@ -1,139 +1,448 @@
-import { type ReactNode } from 'react'
-import { Button, Layout, Menu, Space } from 'antd'
-import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import Dashboard from './pages/Dashboard'
-import DeviceDetail from './pages/DeviceDetail'
-import DiagnoseWorkbench from './pages/DiagnoseWorkbench'
-import DeviceCenter from './pages/DeviceCenter'
-import ModelLab from './pages/ModelLab'
-import SystemOps from './pages/SystemOps'
-import Login from './pages/Login'
-import UserManagement from './pages/UserManagement'
-import DeviceManagement from './pages/DeviceManagement'
-import RecordManagement from './pages/RecordManagement'
+import {
+  Component,
+  Suspense,
+  lazy,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
+import {
+  Alert,
+  Button,
+  ConfigProvider,
+  Dropdown,
+  Result,
+  Skeleton,
+  Space,
+  theme,
+} from 'antd'
+import {
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+  useNavigationType,
+} from 'react-router-dom'
+import { RealtimeProvider } from './services/realtime'
+import { getMe, type AuthUser } from './services/api'
+import { useResource } from './hooks/useResource'
+import { deviceLink } from './hooks/usePageQuery'
+import { LoadState } from './components/BusinessUI'
 
-const { Header, Content } = Layout
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const DeviceDetail = lazy(() => import('./pages/DeviceDetail'))
+const DiagnoseWorkbench = lazy(() => import('./pages/DiagnoseWorkbench'))
+const DeviceCenter = lazy(() => import('./pages/DeviceCenter'))
+const EventCenter = lazy(() => import('./pages/EventCenter'))
+const ReportCenter = lazy(() => import('./pages/ReportCenter'))
+const ModelLab = lazy(() => import('./pages/ModelLab'))
+const SystemOps = lazy(() => import('./pages/SystemOps'))
+const Login = lazy(() => import('./pages/Login'))
+const UserManagement = lazy(() => import('./pages/UserManagement'))
+const DeviceManagement = lazy(() => import('./pages/DeviceManagement'))
+const RecordManagement = lazy(() => import('./pages/RecordManagement'))
 
-// 普通用户可见菜单（5 个业务页，智能会诊为首个业务入口）
-const BASE_MENU = [
-  { key: '/diagnose', label: '智能会诊' },
-  { key: '/dashboard', label: '设备大屏' },
-  { key: '/devices', label: '设备中心' },
+const PRIMARY = [
+  { key: '/dashboard', label: '工厂总览' },
+  { key: '/devices', label: '设备监测' },
+  { key: '/diagnose', label: '智能诊断' },
+  { key: '/events', label: '事件处置' },
+  { key: '/reports', label: '报告与档案' },
+]
+const SECONDARY = [
   { key: '/lab', label: '算法实验室' },
   { key: '/ops', label: '系统运维' },
 ]
-
-// 管理员子菜单（挂在「系统管理」父菜单下）
-const ADMIN_MENU = [
+const ADMIN = [
   { key: '/admin/users', label: '用户管理' },
   { key: '/admin/devices', label: '设备管理' },
-  { key: '/admin/records', label: '诊断记录' },
+  { key: '/admin/records', label: '诊断记录管理' },
 ]
-
-interface AuthUser {
-  username: string
-  role: string
+export const productTheme = {
+  token: {
+    colorPrimary: '#c13d46',
+    colorInfo: '#376c95',
+    colorSuccess: '#348875',
+    colorWarning: '#aa751f',
+    colorError: '#c13d46',
+    colorBgLayout: '#f3f4f6',
+    colorBgContainer: '#ffffff',
+    colorText: '#202631',
+    colorTextSecondary: '#697381',
+    colorBorder: '#dce0e6',
+    colorBorderSecondary: '#e9ecf0',
+    borderRadius: 8,
+    controlHeight: 36,
+    fontFamily:
+      "-apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif",
+  },
+  components: {
+    Table: { headerBg: '#f7f8fa', cellPaddingBlock: 15 },
+    Card: { headerFontSize: 15 },
+    Tabs: { horizontalItemGutter: 28 },
+  },
 }
-
-function getAuthUser(): AuthUser | null {
-  try {
-    return JSON.parse(localStorage.getItem('user') ?? 'null')
-  } catch {
-    return null
+class PageBoundary extends Component<
+  { children: ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false }
+  static getDerivedStateFromError() {
+    return { failed: true }
+  }
+  render() {
+    if (this.state.failed)
+      return (
+        <Result
+          status="error"
+          title="页面暂不可用"
+          extra={
+            <Button onClick={() => window.location.reload()}>重新加载</Button>
+          }
+        />
+      )
+    return this.props.children
   }
 }
-
 function RequireAuth({ children }: { children: ReactNode }) {
-  if (!localStorage.getItem('token')) {
-    return <Navigate to="/login" replace />
-  }
+  const location = useLocation()
+  if (!localStorage.getItem('token'))
+    return (
+      <Navigate
+        to="/login"
+        replace
+        state={{ returnTo: location.pathname + location.search }}
+      />
+    )
   return <>{children}</>
 }
-
+function LegacyDiagnosis() {
+  const location = useLocation()
+  const query = new URLSearchParams(location.search)
+  const tab = query.get('tab')
+  if (tab === 'timeline' || tab === 'trajectory' || tab === 'report') {
+    query.delete('tab')
+    return (
+      <Navigate
+        replace
+        to={`${tab === 'report' ? '/reports' : '/events'}?${query}`}
+      />
+    )
+  }
+  return <DiagnoseWorkbench />
+}
 function MainLayout() {
+  const account = useResource('account', getMe)
+  if (!account.data)
+    return (
+      <div className="auth-loading">
+        <LoadState
+          loading={account.loading}
+          error={account.error}
+          onRetry={account.refresh}
+        />
+      </div>
+    )
+  return (
+    <RealtimeProvider>
+      <Workspace user={account.data} />
+    </RealtimeProvider>
+  )
+}
+function Workspace({ user }: { user: AuthUser }) {
   const navigate = useNavigate()
   const location = useLocation()
-  const user = getAuthUser()
-  const isAdmin = user?.role === 'admin'
-  const menuItems = isAdmin
-    ? [...BASE_MENU, { key: '/admin', label: '系统管理', children: ADMIN_MENU }]
-    : BASE_MENU
-
-  // 扁平化所有叶子 key，用于菜单高亮定位
-  const leafKeys = isAdmin
-    ? [...BASE_MENU.map((m) => m.key), ...ADMIN_MENU.map((m) => m.key)]
-    : BASE_MENU.map((m) => m.key)
-
-  const selectedKey = (() => {
-    // 设备详情页归属「设备中心」高亮
-    if (location.pathname.startsWith('/device/')) return '/devices'
-    return leafKeys.find((k) => location.pathname.startsWith(k)) ?? '/diagnose'
-  })()
-
+  const navigationType = useNavigationType()
+  const dashboard = location.pathname === '/dashboard'
+  const [seenDashboard, setSeenDashboard] = useState(dashboard)
+  const maxIndex = useRef(Number(window.history.state?.idx ?? 0))
+  const scroll = useRef<Record<string, number>>({})
+  const idx = Number(window.history.state?.idx ?? 0)
+  const current = location.pathname.startsWith('/device/')
+    ? '/devices'
+    : location.pathname
+  const title =
+    [...PRIMARY, ...SECONDARY, ...ADMIN].find((i) => i.key === current)
+      ?.label ?? '页面未找到'
+  const params = new URLSearchParams(location.search)
+  const device = location.pathname.startsWith('/device/')
+    ? decodeURIComponent(location.pathname.split('/')[2])
+    : (params.get('device') ?? undefined)
+  const parent = location.pathname.startsWith('/device/')
+    ? (() => {
+        const saved = sessionStorage.getItem('workspace:path:/devices')
+        const query = new URLSearchParams(saved?.split('?')[1])
+        if (device) query.set('device', device)
+        return `/devices?${query}`
+      })()
+    : params.has('event')
+      ? deviceLink(current, device)
+      : '/dashboard'
+  useEffect(() => {
+    if (dashboard) setSeenDashboard(true)
+  }, [dashboard])
+  useEffect(() => {
+    if (navigationType === 'PUSH') maxIndex.current = idx
+    else maxIndex.current = Math.max(maxIndex.current, idx)
+    if (device) sessionStorage.setItem('workspace:device', device)
+    sessionStorage.setItem(
+      `workspace:path:${location.pathname}`,
+      location.pathname + location.search,
+    )
+    document.title = `${title} · 工业设备智能诊断平台`
+  }, [location, navigationType, idx, device, title])
+  useLayoutEffect(() => {
+    const key = location.key
+    const storageKey = `workspace:scroll:${location.pathname}${location.search}`
+    const target =
+      scroll.current[key] ?? (Number(sessionStorage.getItem(storageKey)) || 0)
+    let restoring = target > 0
+    const restore = () => {
+      if (!restoring) return
+      if (
+        document.documentElement.scrollHeight - window.innerHeight >=
+        target
+      ) {
+        window.scrollTo(0, target)
+        restoring = false
+        observer.disconnect()
+      }
+    }
+    const observer = new ResizeObserver(restore)
+    const content = document.getElementById('main-content')
+    if (content && restoring) observer.observe(content)
+    const frame = requestAnimationFrame(() => {
+      if (restoring) restore()
+      else window.scrollTo(0, 0)
+    })
+    const save = () => {
+      if (!restoring) scroll.current[key] = window.scrollY
+    }
+    const interrupt = () => {
+      restoring = false
+      observer.disconnect()
+    }
+    window.addEventListener('scroll', save, { passive: true })
+    window.addEventListener('wheel', interrupt, { passive: true })
+    window.addEventListener('touchstart', interrupt, { passive: true })
+    return () => {
+      cancelAnimationFrame(frame)
+      observer.disconnect()
+      window.removeEventListener('scroll', save)
+      window.removeEventListener('wheel', interrupt)
+      window.removeEventListener('touchstart', interrupt)
+    }
+  }, [location.key])
+  const go = (path: string) => {
+    const stored = sessionStorage.getItem(`workspace:path:${path}`)
+    const chosen =
+      device ?? sessionStorage.getItem('workspace:device') ?? undefined
+    const query = new URLSearchParams(stored?.split('?')[1])
+    if (chosen && query.get('device') !== chosen) {
+      query.set('device', chosen)
+      query.delete('event')
+    }
+    navigate(`${path}${query.size ? `?${query}` : ''}`, {
+      state: { returnTo: location.pathname + location.search },
+    })
+  }
   const logout = () => {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
-    navigate('/login')
+    Object.keys(sessionStorage)
+      .filter((k) => k.startsWith('workspace:') || k.startsWith('factory:'))
+      .forEach((k) => sessionStorage.removeItem(k))
+    navigate('/login', { replace: true })
   }
-
+  const adminPage = (node: ReactNode) =>
+    user.role === 'admin' ? node : <Result status="403" title="没有管理权限" />
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <Header style={{ display: 'flex', alignItems: 'center' }}>
-        <div className="app-title">
-          <span className="logo-dot" />
-          工业设备智能诊断系统
-        </div>
-        <Menu
-          theme="dark"
-          mode="horizontal"
-          selectedKeys={[selectedKey]}
-          items={menuItems}
-          onClick={(e) => navigate(e.key)}
-          style={{ flex: 1, minWidth: 0 }}
-        />
-        <Space>
-          <span style={{ color: '#fff' }}>
-            {user?.username ?? ''}
-            {isAdmin ? '（管理员）' : ''}
+    <div className={`workspace ${dashboard ? 'workspace-overview' : ''}`}>
+      <a href="#main-content" className="skip-link">
+        跳到主要内容
+      </a>
+      <header className="workspace-header">
+        <button
+          className="brand"
+          onClick={() => go('/dashboard')}
+          aria-label="工业设备智能诊断平台，工厂总览"
+        >
+          <span className="brand-mark">
+            <i />
+            <i />
+            <i />
           </span>
-          <Button size="small" onClick={logout}>
-            退出登录
+          <span>
+            工业设备<span className="brand-sub">智能诊断平台</span>
+          </span>
+        </button>
+        <nav className="primary-nav" aria-label="主导航">
+          {PRIMARY.map((item) => (
+            <button
+              key={item.key}
+              aria-current={current === item.key ? 'page' : undefined}
+              className={current === item.key ? 'active' : ''}
+              onClick={() => go(item.key)}
+            >
+              {item.label}
+            </button>
+          ))}
+        </nav>
+        <Dropdown
+          trigger={['click']}
+          menu={{
+            items: [
+              ...SECONDARY,
+              ...(user.role === 'admin'
+                ? [{ type: 'divider' as const }, ...ADMIN]
+                : []),
+            ],
+            onClick: ({ key }) => go(key),
+          }}
+        >
+          <Button type="text" className="more-button">
+            更多 <span aria-hidden>⌄</span>
           </Button>
-        </Space>
-      </Header>
-      <Content style={{ padding: 24 }}>
-        <Routes>
-          <Route path="/" element={<Navigate to="/diagnose" replace />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/diagnose" element={<DiagnoseWorkbench />} />
-          <Route path="/devices" element={<DeviceCenter />} />
-          <Route path="/device/:deviceId" element={<DeviceDetail />} />
-          <Route path="/lab" element={<ModelLab />} />
-          <Route path="/ops" element={<SystemOps />} />
-          <Route path="/admin/users" element={<UserManagement />} />
-          <Route path="/admin/devices" element={<DeviceManagement />} />
-          <Route path="/admin/records" element={<RecordManagement />} />
-          <Route path="*" element={<Navigate to="/diagnose" replace />} />
-        </Routes>
-      </Content>
-    </Layout>
+        </Dropdown>
+        <div className="account">
+          <span className="account-avatar">
+            {user.username.slice(0, 1).toUpperCase()}
+          </span>
+          <span>{user.username}</span>
+          <Button type="text" onClick={logout}>
+            退出
+          </Button>
+        </div>
+      </header>
+      <div className="workspace-toolbar">
+        <div className="history-actions">
+          <Button
+            aria-label="后退"
+            title="后退"
+            disabled={idx === 0}
+            onClick={() => navigate(-1)}
+          >
+            ‹
+          </Button>
+          <Button
+            aria-label="前进"
+            title="前进"
+            disabled={idx >= maxIndex.current}
+            onClick={() => navigate(1)}
+          >
+            ›
+          </Button>
+        </div>
+        <span className="toolbar-divider" />
+        <span className="breadcrumb">
+          工作空间 <span>/</span> {title}
+          {location.pathname.startsWith('/device/') && (
+            <>
+              <span>/</span> 设备详情
+            </>
+          )}
+        </span>
+        {(location.pathname.startsWith('/device/') || params.has('event')) && (
+          <Button
+            type="text"
+            className="parent-button"
+            onClick={() => navigate(parent)}
+          >
+            上一级
+          </Button>
+        )}
+        <span className="toolbar-end">
+          {dashboard ? '运行监控' : '设备运维工作台'}
+        </span>
+      </div>
+      <main
+        id="main-content"
+        className={dashboard ? 'overview-content' : 'business-content'}
+        tabIndex={-1}
+      >
+        <PageBoundary>
+          <Suspense
+            fallback={
+              <div className="loading-state">
+                <Skeleton active paragraph={{ rows: 5 }} />
+              </div>
+            }
+          >
+            {(seenDashboard || dashboard) && (
+              <div hidden={!dashboard} aria-hidden={!dashboard}>
+                <Dashboard active={dashboard} />
+              </div>
+            )}
+            {!dashboard && (
+              <PageBoundary key={location.pathname}>
+                <Routes>
+                  <Route
+                    path="/"
+                    element={<Navigate to="/dashboard" replace />}
+                  />
+                  <Route path="/diagnose" element={<LegacyDiagnosis />} />
+                  <Route path="/devices" element={<DeviceCenter />} />
+                  <Route path="/device/:deviceId" element={<DeviceDetail />} />
+                  <Route path="/events" element={<EventCenter />} />
+                  <Route path="/reports" element={<ReportCenter />} />
+                  <Route path="/lab" element={<ModelLab />} />
+                  <Route path="/ops" element={<SystemOps />} />
+                  <Route
+                    path="/admin/users"
+                    element={adminPage(<UserManagement />)}
+                  />
+                  <Route
+                    path="/admin/devices"
+                    element={adminPage(<DeviceManagement />)}
+                  />
+                  <Route
+                    path="/admin/records"
+                    element={adminPage(<RecordManagement />)}
+                  />
+                  <Route
+                    path="*"
+                    element={
+                      <Result
+                        status="404"
+                        title="未找到页面"
+                        extra={
+                          <Button onClick={() => go('/dashboard')}>
+                            工厂总览
+                          </Button>
+                        }
+                      />
+                    }
+                  />
+                </Routes>
+              </PageBoundary>
+            )}
+          </Suspense>
+        </PageBoundary>
+      </main>
+    </div>
   )
 }
-
-function App() {
+export default function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route
-        path="*"
-        element={
-          <RequireAuth>
-            <MainLayout />
-          </RequireAuth>
-        }
-      />
-    </Routes>
+    <ConfigProvider
+      theme={{ ...productTheme, algorithm: theme.defaultAlgorithm }}
+    >
+      <Suspense fallback={<Skeleton active />}>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route
+            path="*"
+            element={
+              <RequireAuth>
+                <MainLayout />
+              </RequireAuth>
+            }
+          />
+        </Routes>
+      </Suspense>
+    </ConfigProvider>
   )
 }
-
-export default App

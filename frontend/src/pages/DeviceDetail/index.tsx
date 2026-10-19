@@ -1,295 +1,429 @@
-import { useEffect, useState } from 'react'
-import { Button, Card, Descriptions, Empty, Space, Spin, Tabs, Tag } from 'antd'
-import { useNavigate, useParams } from 'react-router-dom'
+import '../../theme/echarts'
+import { Button, Card, Empty, Select, Space, Tabs } from 'antd'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import ReactECharts from 'echarts-for-react'
 import {
   getAcousticFusion,
   getAcousticSpectrum,
   getDevice,
-  getDeviceWindow,
   getHealthHistory,
   getTimelineDevice,
   getTimelineEvent,
-  type Device,
+  listEvents,
 } from '../../services/api'
-
-const TYPE_LABEL: Record<string, string> = { pump: '泵', motor: '电机', compressor: '空压机' }
-const STATUS_LABEL: Record<string, string> = {
-  healthy: '正常',
-  degraded: '退化',
-  fault: '告警',
-  offline: '离线',
-}
-const STATUS_COLOR: Record<string, string> = {
-  healthy: 'green',
-  degraded: 'orange',
-  fault: 'red',
-  offline: 'default',
-}
-
-function healthColor(score: number): string {
-  if (score > 85) return '#52c41a'
-  if (score >= 60) return '#faad14'
-  return '#f5222d'
-}
-
-const LATENT_CHANNELS: Array<{ key: string; name: string; color: string }> = [
-  { key: 'latent_wear', name: '磨损', color: '#f5222d' },
-  { key: 'latent_heat', name: '热积累', color: '#fa8c16' },
-  { key: 'latent_efficiency', name: '效率', color: '#52c41a' },
-]
-
-// 实时传感器通道 -> 中文名 + 物理单位
-const CHANNEL_LABEL: Record<string, string> = {
-  vibration: '振动 (g)',
-  temperature: '温度 (℃)',
-  current: '电流 (A)',
-  pressure: '压力 (bar)',
-  speed: '转速 (rpm)',
-  acoustic: '声压 (dB)',
-}
+import { useResource } from '../../hooks/useResource'
+import { deviceLink, usePageQuery } from '../../hooks/usePageQuery'
+import { CHANNELS, useDeviceTelemetry } from '../../services/realtime'
+import {
+  formatTime,
+  LoadState,
+  numberText,
+  PageHeading,
+  SourceTag,
+  StatusTag,
+  TYPE_LABEL,
+} from '../../components/BusinessUI'
+import SensorChart from '../../components/SensorChart'
+import DigitalTwinPhm from '../../components/DigitalTwinPhm'
 
 export default function DeviceDetail() {
-  const { deviceId } = useParams<{ deviceId: string }>()
+  const { deviceId = '' } = useParams()
   const navigate = useNavigate()
-  const [device, setDevice] = useState<Device>()
-  const [windowData, setWindowData] = useState<Array<Record<string, number>>>([])
-  const [latent, setLatent] = useState<Record<string, number[]>>()
-  const [acoustic, setAcoustic] =
-    useState<{ freq: number[]; time: number[]; spectrum: number[][]; coherence: number }>()
-  const [fusion, setFusion] = useState<{ cross_modal_agreement: number; anomaly_score: number }>()
-  const [healthHistory, setHealthHistory] = useState<Array<{ timestamp: string; health_score: number }>>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    if (!deviceId) return
-    getDevice(deviceId).then(setDevice).catch(console.error).finally(() => setLoading(false))
-    const load = () =>
-      getDeviceWindow(deviceId)
-        .then((w) => {
-          if (Array.isArray(w)) setWindowData(w)
-        })
-        .catch(console.error)
-    load()
-    const timer = setInterval(load, 3000) // 每 3 秒轮询实时曲线
-    return () => clearInterval(timer)
-  }, [deviceId])
-
-  useEffect(() => {
-    if (!deviceId) return
-    getTimelineDevice(deviceId)
-      .then((d) => {
-        const first = d.events?.[0]
-        if (first) return getTimelineEvent(first.event_id, { simulate_latent: true })
-      })
-      .then((td) => td && setLatent(td.latent?.series))
-      .catch(console.error)
-  }, [deviceId])
-
-  useEffect(() => {
-    if (!deviceId) return
-    getAcousticSpectrum(deviceId).then(setAcoustic).catch(console.error)
-    getAcousticFusion(deviceId).then(setFusion).catch(console.error)
-  }, [deviceId])
-
-  useEffect(() => {
-    if (!deviceId) return
-    getHealthHistory(deviceId).then(setHealthHistory).catch(console.error)
-  }, [deviceId])
-
-  // 实时曲线：展示窗口内所有可用观测通道
-  const channels = windowData.length > 0 ? Object.keys(windowData[0]) : []
-  const rtOption = {
+  const location = useLocation()
+  const { params, update } = usePageQuery()
+  const tab = params.get('tab') ?? 'realtime'
+  const channel =
+    params.get('channel') && CHANNELS[params.get('channel')!]
+      ? params.get('channel')!
+      : 'vibration'
+  const device = useResource(
+    `device:${deviceId}`,
+    () => getDevice(deviceId),
+    10000,
+  )
+  const telemetry = useDeviceTelemetry(deviceId)
+  const history = useResource(
+    `health:${deviceId}`,
+    () => getHealthHistory(deviceId),
+    0,
+    tab === 'history',
+  )
+  const latent = useResource(
+    `latent:${deviceId}`,
+    async () => {
+      const d = await getTimelineDevice(deviceId)
+      const first = d.events?.[0]
+      return first ? getTimelineEvent(first.event_id) : undefined
+    },
+    0,
+    tab === 'latent',
+  )
+  const acoustic = useResource(
+    `acoustic:${deviceId}`,
+    async () => {
+      const [spectrum, fusion] = await Promise.all([
+        getAcousticSpectrum(deviceId),
+        getAcousticFusion(deviceId),
+      ])
+      return { spectrum, fusion }
+    },
+    0,
+    tab === 'acoustic',
+  )
+  const events = useResource(
+    `device-events:${deviceId}`,
+    () => listEvents({ device_id: deviceId, limit: 20 }),
+    0,
+    tab === 'events',
+  )
+  const go = (path: string) =>
+    navigate(path, { state: { returnTo: location.pathname + location.search } })
+  const latentSeries = latent.data?.latent?.series ?? {}
+  const acousticData = acoustic.data?.spectrum
+  const chartBase = {
+    animation: false,
     tooltip: { trigger: 'axis' },
-    legend: { top: 0 },
-    grid: { left: 50, right: 20, top: 40, bottom: 40 },
-    xAxis: { type: 'value', name: '采样点' },
-    yAxis: { type: 'value', name: '读数' },
-    series: channels.map((ch) => ({
-      name: CHANNEL_LABEL[ch] ?? ch,
-      type: 'line',
-      showSymbol: false,
-      smooth: true,
-      data: windowData.map((rec, i) => [i, rec[ch]]),
-    })),
+    grid: { left: 55, right: 28, top: 42, bottom: 42 },
   }
-
-  const latentChannels = latent ? Object.keys(latent) : []
-  const latentOption = {
-    tooltip: { trigger: 'axis' },
-    legend: { top: 0 },
-    grid: { left: 50, right: 20, top: 40, bottom: 40 },
-    xAxis: { type: 'value', name: '采样点' },
-    yAxis: { type: 'value', name: '归一化隐状态值' },
-    series: LATENT_CHANNELS.filter((c) => latent?.[c.key]?.length).map((c) => ({
-      name: c.name,
-      type: 'line',
-      showSymbol: false,
-      smooth: true,
-      lineStyle: { color: c.color },
-      data: (latent![c.key] as number[]).map((v, i) => [i, v]),
-    })),
-  }
-
-  const acousticOption = acoustic
-    ? {
-        tooltip: { position: 'top' },
-        grid: { left: 70, right: 20, top: 20, bottom: 70 },
-        xAxis: { type: 'category', data: acoustic.time, name: '时间帧' },
-        yAxis: { type: 'category', data: acoustic.freq, name: '频率(Hz)' },
-        visualMap: {
-          min: 0,
-          max: 1,
-          calculable: true,
-          orient: 'horizontal',
-          left: 'center',
-          bottom: 0,
-        },
-        series: [
-          {
-            type: 'heatmap',
-            data: acoustic.spectrum.flatMap((row, t) => row.map((v, f) => [t, f, v])),
-            label: { show: false },
-          },
-        ],
-      }
-    : {}
-
-  const historyOption = {
-    tooltip: { trigger: 'axis' },
-    grid: { left: 60, right: 20, top: 30, bottom: 60 },
-    xAxis: { type: 'category', data: healthHistory.map((h) => h.timestamp?.slice(5, 16) ?? '') },
-    yAxis: { type: 'value', name: '健康评分 (0–100)', min: 0, max: 100 },
-    series: [
-      {
-        name: '健康分',
-        type: 'line',
-        showSymbol: true,
-        smooth: true,
-        data: healthHistory.map((h) => h.health_score),
-        lineStyle: { color: '#38bdf8' },
-        markLine: {
-          data: [{ yAxis: 60, name: '告警线' }],
-          lineStyle: { color: '#f5222d', type: 'dashed' },
-        },
-      },
-    ],
-  }
-
-  const tabs = [
-    {
-      key: 'realtime',
-      label: '实时曲线',
-      children: windowData.length > 0 ? (
-        <ReactECharts theme="tech-dark" option={rtOption} style={{ height: 300 }} />
-      ) : (
-        <Empty description="暂无实时数据（请启动虚拟设备）" />
-      ),
-    },
-    {
-      key: 'latent',
-      label: '数字孪生隐状态',
-      children: latentChannels.length > 0 ? (
-        <ReactECharts theme="tech-dark" option={latentOption} style={{ height: 280 }} />
-      ) : (
-        <Empty description="暂无隐状态数据" />
-      ),
-    },
-    {
-      key: 'acoustic',
-      label: '声学频谱',
-      children: acoustic ? (
-        <div>
-          <div style={{ marginBottom: 8, color: '#78879b' }}>
-            声学特征与振动特征吻合度 {(acoustic.coherence * 100).toFixed(0)}%
-          </div>
-          <ReactECharts theme="tech-dark" option={acousticOption} style={{ height: 280 }} />
-          <div
-            style={{
-              marginTop: 14,
-              padding: '12px 14px',
-              borderRadius: 8,
-              background: 'rgba(34, 211, 238, 0.06)',
-              border: '1px solid rgba(34, 211, 238, 0.22)',
-            }}
-          >
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#e6edf7', marginBottom: 6 }}>
-              多模态融合（振动 + 声学）
-            </div>
-            {fusion ? (
-              <div style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.9 }}>
-                跨模态一致性：
-                <b
-                  style={{
-                    color: fusion.cross_modal_agreement >= 0.8 ? '#52c41a' : '#faad14',
-                    fontSize: 15,
-                  }}
-                >
-                  {(fusion.cross_modal_agreement * 100).toFixed(1)}%
-                </b>
-                <span>（越接近 100%，振动与声学两路信号越彼此印证）</span>
-                <br />
-                诊断可信度：
-                <b style={{ color: '#22d3ee' }}>
-                  {fusion.cross_modal_agreement >= 0.9
-                    ? '高（两路信号高度吻合）'
-                    : fusion.cross_modal_agreement >= 0.8
-                      ? '中（信号基本吻合）'
-                      : '待复核（信号存在分歧）'}
-                </b>
-              </div>
-            ) : (
-              <div style={{ fontSize: 12, color: '#94a3b8' }}>融合数据计算中…</div>
-            )}
-          </div>
-        </div>
-      ) : (
-        <Empty description="暂无声学频谱数据" />
-      ),
-    },
-    {
-      key: 'history',
-      label: '健康历史',
-      children: healthHistory.length > 0 ? (
-        <ReactECharts theme="tech-dark" option={historyOption} style={{ height: 300 }} />
-      ) : (
-        <Empty description="暂无健康历史（产生诊断事件后可见）" />
-      ),
-    },
-  ]
-
   return (
-    <Spin spinning={loading}>
-      {device && (
-        <Card style={{ marginBottom: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <>
+      <PageHeading
+        title={device.data?.name ?? '设备详情'}
+        meta={
+          <>
+            <span>{deviceId}</span>
+            <span>
+              {device.data
+                ? (TYPE_LABEL[device.data.device_type] ??
+                  device.data.device_type)
+                : ''}
+            </span>
+            <StatusTag status={device.data?.status} />
+            <SourceTag source={telemetry.source} />
+          </>
+        }
+        actions={
+          <>
+            <Button onClick={() => go(deviceLink('/events', deviceId))}>
+              相关事件
+            </Button>
+            <Button
+              type="primary"
+              onClick={() => go(deviceLink('/diagnose', deviceId))}
+            >
+              智能诊断
+            </Button>
+          </>
+        }
+      />
+      <LoadState
+        loading={device.loading && !device.data}
+        error={device.error}
+        onRetry={device.refresh}
+      >
+        {device.data && (
+          <div className="metric-strip">
             <div>
-              <Space>
-                <span style={{ fontSize: 20, fontWeight: 600 }}>{device.name}</span>
-                <Tag>{TYPE_LABEL[device.device_type] ?? device.device_type}</Tag>
-                <Tag color={STATUS_COLOR[device.status] ?? 'default'}>
-                  {STATUS_LABEL[device.status] ?? device.status}
-                </Tag>
-              </Space>
-              <div style={{ fontSize: 44, fontWeight: 700, color: healthColor(device.health_score) }}>
-                {Math.round(device.health_score)}
-                <span style={{ fontSize: 14, color: '#94a3b8' }}>/100</span>
-              </div>
+              <span>目录健康评分</span>
+              <strong>{numberText(device.data.health_score, 0)}</strong>
+              <small>/ 100</small>
             </div>
-            <Button onClick={() => navigate('/diagnose?tab=timeline')}>查看设备时间线</Button>
+            <div>
+              <span>边缘异常分数</span>
+              <strong>
+                {numberText(
+                  typeof device.data.edge_anomaly_score === 'number'
+                    ? device.data.edge_anomaly_score * 100
+                    : undefined,
+                )}
+              </strong>
+              <small>%</small>
+            </div>
+            <div>
+              <span>振动阈值</span>
+              <strong>{numberText(device.data.threshold_vibration)}</strong>
+              <small>g</small>
+            </div>
+            <div>
+              <span>最近有效采样</span>
+              <strong style={{ fontSize: 14 }}>
+                {telemetry.last
+                  ? formatTime(telemetry.last.timestamp)
+                  : '暂无采样'}
+              </strong>
+              {telemetry.stale && <small>已过期</small>}
+            </div>
           </div>
-          <Descriptions column={3} style={{ marginTop: 16 }}>
-            <Descriptions.Item label="设备ID">{device.id}</Descriptions.Item>
-            <Descriptions.Item label="边缘自检">
-              {(device.edge_anomaly_score * 100).toFixed(1)}%
-            </Descriptions.Item>
-            <Descriptions.Item label="振动阈值">{device.threshold_vibration ?? '—'}</Descriptions.Item>
-          </Descriptions>
-        </Card>
-      )}
+        )}
+      </LoadState>
       <Card>
-        <Tabs items={tabs} />
+        <Tabs
+          activeKey={
+            [
+              'realtime',
+              'history',
+              'latent',
+              'acoustic',
+              'phm',
+              'events',
+            ].includes(tab)
+              ? tab
+              : 'realtime'
+          }
+          onChange={(value) => update({ tab: value })}
+          items={[
+            {
+              key: 'realtime',
+              label: '实时监测',
+              children: (
+                <>
+                  <div className="section-header">
+                    <h2>采样窗口</h2>
+                    <Select
+                      aria-label="实时传感器通道"
+                      value={channel}
+                      onChange={(value) => update({ channel: value }, true)}
+                      options={Object.entries(CHANNELS).map(
+                        ([value, meta]) => ({
+                          value,
+                          label: `${meta.name} · ${meta.unit}`,
+                        }),
+                      )}
+                    />
+                  </div>
+                  <LoadState
+                    error={telemetry.error}
+                    onRetry={telemetry.refresh}
+                  >
+                    <SensorChart
+                      samples={telemetry.samples}
+                      channel={channel}
+                      height={330}
+                    />
+                  </LoadState>
+                  <div className="chart-source">
+                    <SourceTag source={telemetry.source} />
+                    <span>
+                      {telemetry.stale
+                        ? '数据已过期'
+                        : telemetry.last
+                          ? `采样时间 ${formatTime(telemetry.last.timestamp)}`
+                          : '暂无有效采样'}{' '}
+                      · {telemetry.samples.length} 点
+                    </span>
+                  </div>
+                </>
+              ),
+            },
+            {
+              key: 'history',
+              label: '健康历史',
+              children: (
+                <LoadState
+                  loading={history.loading}
+                  error={history.error}
+                  onRetry={history.refresh}
+                  empty={!history.data?.length}
+                  emptyText="暂无健康历史"
+                >
+                  <SourceTag source="history" />
+                  <ReactECharts
+                    theme="tech-dark"
+                    style={{ height: 330 }}
+                    option={{
+                      ...chartBase,
+                      xAxis: {
+                        type: 'category',
+                        data: history.data?.map((h: { timestamp: string }) =>
+                          formatTime(h.timestamp),
+                        ),
+                      },
+                      yAxis: {
+                        type: 'value',
+                        name: '健康评分',
+                        min: 0,
+                        max: 100,
+                      },
+                      series: [
+                        {
+                          name: '健康评分',
+                          type: 'line',
+                          showSymbol: false,
+                          data: history.data?.map(
+                            (h: { health_score: number }) => h.health_score,
+                          ),
+                          connectNulls: false,
+                        },
+                      ],
+                    }}
+                  />
+                </LoadState>
+              ),
+            },
+            {
+              key: 'latent',
+              label: '孪生隐状态',
+              children: (
+                <LoadState
+                  loading={latent.loading}
+                  error={latent.error}
+                  onRetry={latent.refresh}
+                  empty={
+                    !Object.values(latentSeries).some(
+                      (s) => Array.isArray(s) && s.length,
+                    )
+                  }
+                  emptyText="暂无孪生隐状态"
+                >
+                  <SourceTag source="history" />
+                  <ReactECharts
+                    theme="tech-dark"
+                    style={{ height: 330 }}
+                    option={{
+                      ...chartBase,
+                      legend: { top: 0 },
+                      xAxis: { type: 'value', name: '采样点' },
+                      yAxis: {
+                        type: 'value',
+                        name: '归一化值',
+                        min: 0,
+                        max: 1,
+                      },
+                      series: Object.entries(latentSeries)
+                        .filter(([, s]) => Array.isArray(s))
+                        .map(([key, values]) => ({
+                          name:
+                            (
+                              {
+                                latent_wear: '磨损',
+                                latent_heat: '热积累',
+                                latent_efficiency: '效率',
+                              } as Record<string, string>
+                            )[key] ?? key,
+                          type: 'line',
+                          showSymbol: false,
+                          data: (values as number[]).map((v, i) => [i, v]),
+                        })),
+                    }}
+                  />
+                </LoadState>
+              ),
+            },
+            {
+              key: 'acoustic',
+              label: '声学频谱',
+              children: (
+                <LoadState
+                  loading={acoustic.loading}
+                  error={acoustic.error}
+                  onRetry={acoustic.refresh}
+                  empty={!acousticData?.spectrum?.length}
+                  emptyText="暂无声学频谱"
+                >
+                  <div className="chart-source">
+                    <SourceTag
+                      source={acousticData?._meta?.source ?? 'unknown'}
+                    />
+                    <span>
+                      跨模态一致性{' '}
+                      {numberText(
+                        typeof acoustic.data?.fusion?.cross_modal_agreement ===
+                          'number'
+                          ? acoustic.data.fusion.cross_modal_agreement * 100
+                          : undefined,
+                      )}
+                      %
+                    </span>
+                  </div>
+                  <ReactECharts
+                    theme="tech-dark"
+                    style={{ height: 330 }}
+                    option={{
+                      tooltip: { position: 'top' },
+                      grid: { left: 65, right: 20, top: 30, bottom: 70 },
+                      xAxis: {
+                        type: 'category',
+                        data: acousticData?.time,
+                        name: '时间帧',
+                      },
+                      yAxis: {
+                        type: 'category',
+                        data: acousticData?.freq,
+                        name: 'Hz',
+                      },
+                      visualMap: {
+                        min: 0,
+                        max: 1,
+                        orient: 'horizontal',
+                        left: 'center',
+                        bottom: 0,
+                      },
+                      series: [
+                        {
+                          type: 'heatmap',
+                          data: acousticData?.spectrum?.flatMap(
+                            (row: number[], t: number) =>
+                              row.map((v, f) => [t, f, v]),
+                          ),
+                        },
+                      ],
+                    }}
+                  />
+                </LoadState>
+              ),
+            },
+            {
+              key: 'phm',
+              label: '孪生研究',
+              children: (
+                <>
+                  <div className="chart-source">
+                    <SourceTag source="offline_experiment" />
+                    <span>离线预测性维护研究</span>
+                  </div>
+                  <DigitalTwinPhm />
+                </>
+              ),
+            },
+            {
+              key: 'events',
+              label: '历史事件',
+              children: (
+                <LoadState
+                  loading={events.loading}
+                  error={events.error}
+                  onRetry={events.refresh}
+                  empty={!events.data?.length}
+                  emptyText="暂无设备事件"
+                >
+                  <div className="record-list">
+                    {events.data?.map((event) => (
+                      <button
+                        className="record-item"
+                        key={event.id}
+                        onClick={() =>
+                          go(deviceLink('/events', deviceId, event.id))
+                        }
+                      >
+                        <span>
+                          <strong>
+                            #{event.id} ·{' '}
+                            {event.agent_diagnosis?.fault_label ??
+                              event.fault_type ??
+                              '诊断事件'}
+                          </strong>
+                          <small>{formatTime(event.timestamp)}</small>
+                        </span>
+                        <StatusTag status={event.status_state} event />
+                      </button>
+                    ))}
+                  </div>
+                </LoadState>
+              ),
+            },
+          ]}
+        />
       </Card>
-    </Spin>
+    </>
   )
 }
