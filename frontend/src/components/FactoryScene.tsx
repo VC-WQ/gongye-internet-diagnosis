@@ -1,18 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button, Empty, Space } from 'antd'
+import { boundCamera, zoomAt, type Camera } from '../services/sceneCamera'
 import type { Device } from '../services/api'
 import { STATUS_META } from './BusinessUI'
 
-type Camera = { x: number; y: number; zoom: number }
-function initialCamera(): Camera {
-  try {
-    const v = JSON.parse(sessionStorage.getItem('factory:camera') ?? 'null')
-    if ([v?.x, v?.y, v?.zoom].every(Number.isFinite)) return v
-  } catch {
-    /* Use initial view. */
-  }
-  return { x: 0, y: 0, zoom: 1 }
-}
 function Machine({ type }: { type: string }) {
   return (
     <g className="machine-shape">
@@ -102,49 +93,109 @@ export default function FactoryScene({
   selected?: string
   onSelect: (id: string) => void
 }) {
-  const [camera, setCamera] = useState(initialCamera)
-  const drag = useRef<{
-    x: number
-    y: number
-    startX: number
-    startY: number
-  }>()
+  const [camera, setCamera] = useState<Camera>({ x: 0, y: 0, zoom: 1 })
+  const current = useRef(camera)
+  const target = useRef(camera)
+  const velocity = useRef({ x: 0, y: 0, zoom: 0 })
+  const frame = useRef(0)
+  const lastTime = useRef(0)
+  const reduced = useRef(false)
   const svg = useRef<SVGSVGElement>(null)
+  const pointers = useRef(new Map<number, { x: number; y: number }>())
+  const moved = useRef(false)
+  const dragDistance = useRef(0)
   const [page, setPage] = useState(0)
   const pages = Math.max(1, Math.ceil(devices.length / 6))
   const visiblePage = Math.min(page, pages - 1)
-  useEffect(() => {
-    const index = devices.findIndex((device) => device.id === selected)
-    if (index >= 0) setPage(Math.floor(index / 6))
-  }, [selected, devices.map((d) => d.id).join('|')])
   const visible = devices.slice(visiblePage * 6, visiblePage * 6 + 6)
   const columns = Math.max(2, Math.min(3, visible.length))
   const slots = visible.map((device, index) => ({
-    device,
-    x: 180 + (index % columns) * 255,
+    device, x: 180 + (index % columns) * 255,
     y: 210 + Math.floor(index / columns) * 280,
   }))
-  const move = (value: Camera) => {
-    setCamera(value)
-    sessionStorage.setItem('factory:camera', JSON.stringify(value))
+  const animate = (time: number) => {
+    const dt = Math.min((time - (lastTime.current || time - 16)) / 1000, .032)
+    lastTime.current = time
+    const next = { ...current.current }
+    let moving = false
+    for (const key of ['x', 'y', 'zoom'] as const) {
+      velocity.current[key] += ((target.current[key] - next[key]) * 190 - velocity.current[key] * 27) * dt
+      next[key] += velocity.current[key] * dt
+      if (Math.abs(target.current[key] - next[key]) > (key === 'zoom' ? .0004 : .08) || Math.abs(velocity.current[key]) > .02) moving = true
+    }
+    current.current = moving ? next : { ...target.current }
+    setCamera(current.current)
+    frame.current = moving ? requestAnimationFrame(animate) : 0
+    if (!moving) lastTime.current = 0
   }
-  const zoom = (delta: number) =>
-    move({ ...camera, zoom: Math.max(0.6, Math.min(1.8, camera.zoom + delta)) })
-  const focus = () => {
-    const index = devices.findIndex((device) => device.id === selected)
-    if (index < 0) return
-    setPage(Math.floor(index / 6))
-    const slot = index % 6
-    const x = 180 + (slot % 3) * 255
-    const y = 210 + Math.floor(slot / 3) * 280
-    move({ x: (435 - x) * 1.25, y: (310 - y) * 1.25, zoom: 1.25 })
+  const move = (value: Camera, immediate = false) => {
+    target.current = boundCamera(value)
+    if (immediate || reduced.current) {
+      cancelAnimationFrame(frame.current)
+      frame.current = 0
+      lastTime.current = 0
+      velocity.current = { x: 0, y: 0, zoom: 0 }
+      current.current = target.current
+      setCamera(target.current)
+    } else if (!frame.current) frame.current = requestAnimationFrame(animate)
   }
+  const reset = () => move({ x: 0, y: 0, zoom: 1 })
+  const localPoint = (x: number, y: number) => {
+    const matrix = svg.current?.getScreenCTM()
+    if (!matrix) return { x: 450, y: 330 }
+    const point = new DOMPoint(x, y).matrixTransform(matrix.inverse())
+    return { x: point.x, y: point.y }
+  }
+  const zoom = (factor: number, point = { x: 450, y: 330 }) => move(zoomAt(target.current, factor, point))
+  const focus = (slot: typeof slots[number]) => {
+    move({ x: (450 - slot.x) * 1.3, y: (330 - slot.y) * 1.3, zoom: 1.3 })
+    onSelect(slot.device.id)
+  }
+  useEffect(() => {
+    const index = devices.findIndex((d) => d.id === selected)
+    if (index >= 0) setPage(Math.floor(index / 6))
+  }, [selected, devices.map((d) => d.id).join('|')])
+  useEffect(() => {
+    const media = matchMedia('(prefers-reduced-motion: reduce)')
+    const changed = () => { reduced.current = media.matches }
+    changed()
+    media.addEventListener('change', changed)
+    return () => { media.removeEventListener('change', changed); cancelAnimationFrame(frame.current) }
+  }, [])
+  useEffect(() => {
+    const el = svg.current
+    if (!el) return
+    const wheel = (e: WheelEvent) => {
+      e.preventDefault()
+      const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? el.clientHeight : 1
+      if (e.ctrlKey || e.metaKey) zoom(Math.exp(-e.deltaY * unit * .008), localPoint(e.clientX, e.clientY))
+      else {
+        const p = localPoint(e.clientX, e.clientY)
+        const q = localPoint(e.clientX - e.deltaX * unit, e.clientY - e.deltaY * unit)
+        move({ ...target.current, x: target.current.x + q.x - p.x, y: target.current.y + q.y - p.y })
+      }
+    }
+    let gestureScale = 1
+    const gesture = (event: Event) => {
+      event.preventDefault()
+      const e = event as Event & { scale: number; clientX: number; clientY: number }
+      if (event.type === 'gesturestart') gestureScale = e.scale || 1
+      else { zoom(e.scale / gestureScale, localPoint(e.clientX, e.clientY)); gestureScale = e.scale }
+    }
+    el.addEventListener('wheel', wheel, { passive: false })
+    el.addEventListener('gesturestart', gesture, { passive: false })
+    el.addEventListener('gesturechange', gesture, { passive: false })
+    return () => {
+      el.removeEventListener('wheel', wheel)
+      el.removeEventListener('gesturestart', gesture)
+      el.removeEventListener('gesturechange', gesture)
+    }
+  }, [devices.length > 0])
 
   return (
     <div className="factory-scene">
       <div className="scene-caption">
-        <span>设备分组示意</span>
-        <span>按目录排列 · 非工厂平面</span>
+        <span>设备</span>
       </div>
       {!devices.length ? (
         <Empty description="暂无设备" />
@@ -153,32 +204,45 @@ export default function FactoryScene({
           ref={svg}
           viewBox="0 0 900 660"
           className="factory-svg"
-          aria-label="设备分组交互场景，可拖动视角"
-          onPointerDown={(event) => {
-            if ((event.target as Element).closest('[data-device]')) return
-            drag.current = {
-              x: event.clientX,
-              y: event.clientY,
-              startX: camera.x,
-              startY: camera.y,
+          aria-label="设备交互场景，可双指平移、捏合缩放，方向键平移，Home 复位"
+          tabIndex={0}
+          data-camera={`${camera.x.toFixed(2)},${camera.y.toFixed(2)},${camera.zoom.toFixed(3)}`}
+          onKeyDown={(e) => {
+            if ((e.target as Element).closest('[data-device]')) return
+            const steps: Record<string, [number, number]> = { ArrowLeft: [45, 0], ArrowRight: [-45, 0], ArrowUp: [0, 45], ArrowDown: [0, -45] }
+            if (steps[e.key]) { e.preventDefault(); const [x, y] = steps[e.key]; move({ ...target.current, x: target.current.x + x, y: target.current.y + y }) }
+            if (e.key === 'Home' || e.key === 'Escape') { e.preventDefault(); reset() }
+            if (e.key === '+' || e.key === '=') { e.preventDefault(); zoom(1.15) }
+            if (e.key === '-') { e.preventDefault(); zoom(1 / 1.15) }
+          }}
+          onPointerDown={(e) => {
+            if (e.button !== 0 || (e.target as Element).closest('[data-device]')) return
+            if (pointers.current.size === 0) { moved.current = false; dragDistance.current = 0 }
+            pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+            e.currentTarget.setPointerCapture(e.pointerId)
+          }}
+          onPointerMove={(e) => {
+            const old = pointers.current.get(e.pointerId)
+            if (!old) return
+            const next = { x: e.clientX, y: e.clientY }
+            const other = [...pointers.current.entries()].find(([id]) => id !== e.pointerId)?.[1]
+            if (other) {
+              const oldDistance = Math.hypot(old.x - other.x, old.y - other.y)
+              const distance = Math.hypot(next.x - other.x, next.y - other.y)
+              if (oldDistance > 1) zoom(distance / oldDistance, localPoint((next.x + other.x) / 2, (next.y + other.y) / 2))
             }
-            event.currentTarget.setPointerCapture(event.pointerId)
+            const p = localPoint(old.x, old.y), q = localPoint(next.x, next.y)
+            dragDistance.current += Math.hypot(next.x - old.x, next.y - old.y)
+            if (dragDistance.current > 3) moved.current = true
+            move({ ...target.current, x: target.current.x + q.x - p.x, y: target.current.y + q.y - p.y }, true)
+            pointers.current.set(e.pointerId, next)
           }}
-          onPointerMove={(event) => {
-            if (!drag.current) return
-            const ratio = 900 / (svg.current?.clientWidth || 900)
-            move({
-              ...camera,
-              x: drag.current.startX + (event.clientX - drag.current.x) * ratio,
-              y: drag.current.startY + (event.clientY - drag.current.y) * ratio,
-            })
+          onPointerUp={(e) => {
+            if (!pointers.current.has(e.pointerId)) return
+            pointers.current.delete(e.pointerId)
+            if (!moved.current && pointers.current.size === 0) reset()
           }}
-          onPointerUp={() => {
-            drag.current = undefined
-          }}
-          onPointerCancel={() => {
-            drag.current = undefined
-          }}
+          onPointerCancel={(e) => { pointers.current.delete(e.pointerId); moved.current = true }}
         >
           <defs>
             <pattern
@@ -233,11 +297,11 @@ export default function FactoryScene({
                   aria-label={`${device.name}，${STATUS_META[device.status]?.label ?? device.status}`}
                   aria-pressed={chosen}
                   className={`factory-node ${chosen ? 'is-selected' : ''}`}
-                  onClick={() => onSelect(device.id)}
+                  onClick={() => focus({ device, x, y })}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault()
-                      onSelect(device.id)
+                      focus({ device, x, y })
                     }
                   }}
                 >
@@ -314,7 +378,7 @@ export default function FactoryScene({
               size="small"
               aria-label="上一组设备"
               disabled={visiblePage === 0}
-              onClick={() => setPage(visiblePage - 1)}
+              onClick={() => { setPage(visiblePage - 1); reset() }}
             >
               ‹
             </Button>
@@ -325,31 +389,28 @@ export default function FactoryScene({
               size="small"
               aria-label="下一组设备"
               disabled={visiblePage === pages - 1}
-              onClick={() => setPage(visiblePage + 1)}
+              onClick={() => { setPage(visiblePage + 1); reset() }}
             >
               ›
             </Button>
           </Space>
         ) : (
-          <span>拖动场景调整视角</span>
+          <span className="scene-hint">双指平移 · 捏合缩放</span>
         )}
         <Space.Compact>
-          <Button aria-label="缩小场景" onClick={() => zoom(-0.15)}>
+          <Button aria-label="缩小场景" onClick={() => zoom(1 / 1.15)}>
             −
           </Button>
           <Button
             aria-label="重置视角"
-            onClick={() => move({ x: 0, y: 0, zoom: 1 })}
+            onClick={reset}
           >
             {Math.round(camera.zoom * 100)}%
           </Button>
-          <Button aria-label="放大场景" onClick={() => zoom(0.15)}>
+          <Button aria-label="放大场景" onClick={() => zoom(1.15)}>
             ＋
           </Button>
         </Space.Compact>
-        <Button disabled={!selected} onClick={focus}>
-          聚焦设备
-        </Button>
       </div>
     </div>
   )

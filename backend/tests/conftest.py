@@ -2,17 +2,17 @@
 from __future__ import annotations
 
 import os
+import tempfile
 from pathlib import Path
 
-TEST_DB = Path(__file__).resolve().parent / "test_pico.db"
-if TEST_DB.exists():
-    TEST_DB.unlink()
+TEST_DIR = Path(tempfile.mkdtemp(prefix="ict-v21-pytest-"))
+TEST_DB = TEST_DIR / "suite.db"
 
 os.environ["DATABASE_URL"] = f"sqlite:///{TEST_DB}"
 os.environ["DEEPSEEK_MOCK"] = "true"
 os.environ["DEEPSEEK_API_KEY"] = ""
 os.environ["MQTT_HOST"] = "localhost"
-os.environ["MQTT_PORT"] = "1883"
+os.environ["MQTT_PORT"] = "18991"
 
 
 def pytest_sessionfinish(session, exitstatus) -> None:  # noqa: ANN001
@@ -21,3 +21,4 @@ def pytest_sessionfinish(session, exitstatus) -> None:  # noqa: ANN001
         path = Path(str(TEST_DB) + suffix)
         if path.exists():
             path.unlink()
+    TEST_DIR.rmdir()

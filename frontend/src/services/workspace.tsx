@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-import { modeFromPath, type WorkspaceMode } from './workspaceMode'
+import { modeFromPath, workspaceLink, type WorkspaceMode } from './workspaceMode'
 
 export type { WorkspaceMode } from './workspaceMode'
 
@@ -48,7 +48,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
 
-  const mode = modeFromPath(location.pathname)
+  const mode = modeFromPath(location.pathname, location.search)
   const routeDevice = location.pathname.startsWith('/device/')
     ? decodeURIComponent(location.pathname.split('/')[2] ?? '')
     : undefined
@@ -115,10 +115,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       path: string,
       opts?: { device?: string; event?: number; replace?: boolean },
     ) => {
-      const query = new URLSearchParams()
-      if (opts?.device) query.set('device', opts.device)
-      if (opts?.event != null) query.set('event', String(opts.event))
-      navigate(`${path}${query.size ? `?${query}` : ''}`, {
+      navigate(workspaceLink(path, opts?.device, opts?.event), {
         replace: opts?.replace ?? false,
       })
     },
@@ -126,7 +123,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   )
 
   // 上下文指纹变化或业务写入后递增，供 Pico/列表判断“旧响应是否已过期”
-  const fingerprint = `${location.pathname}|${selectedDeviceId ?? ''}|${
+  const fingerprint = `${location.pathname}|${mode}|${selectedDeviceId ?? ''}|${
     selectedEventId ?? ''
   }|${activePanel ?? ''}|${params.get('q') ?? ''}|${
     params.get('status') ?? ''

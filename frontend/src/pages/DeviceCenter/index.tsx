@@ -132,7 +132,7 @@ export default function DeviceCenter() {
                               type="link"
                               style={{ padding: 0 }}
                               onClick={() =>
-                                go(`/device/${encodeURIComponent(d.id)}`)
+                                go(deviceLink('/device/' + encodeURIComponent(d.id)))
                               }
                             >
                               {name}
@@ -187,7 +187,7 @@ export default function DeviceCenter() {
                               <Button
                                 size="small"
                                 onClick={() =>
-                                  go(`/device/${encodeURIComponent(d.id)}`)
+                                  go(deviceLink('/device/' + encodeURIComponent(d.id)))
                                 }
                               >
                                 详情

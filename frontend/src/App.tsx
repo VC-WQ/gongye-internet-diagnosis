@@ -15,7 +15,6 @@ import {
   Dropdown,
   Result,
   Skeleton,
-  Space,
   theme as antdTheme,
 } from 'antd'
 import {
@@ -32,7 +31,8 @@ import { PicoProvider } from './features/pico/core/PicoProvider'
 import PicoDock from './features/pico/ui/PicoDock'
 import { getMe, type AuthUser } from './services/api'
 import { useResource } from './hooks/useResource'
-import { deviceLink } from './hooks/usePageQuery'
+import { canonicalWorkspacePath, viewFromLocation, VIEW_LABELS, WORKSPACE_VIEWS, workspaceLink, transitionWorkspacePath, type WorkspaceView } from './services/workspaceMode'
+import { useDeviceCatalog } from './services/realtime'
 import { LoadState } from './components/BusinessUI'
 
 const Dashboard = lazy(() => import('./pages/Dashboard'))
@@ -48,17 +48,6 @@ const UserManagement = lazy(() => import('./pages/UserManagement'))
 const DeviceManagement = lazy(() => import('./pages/DeviceManagement'))
 const RecordManagement = lazy(() => import('./pages/RecordManagement'))
 
-const PRIMARY = [
-  { key: '/dashboard', label: '工厂总览' },
-  { key: '/devices', label: '设备监测' },
-  { key: '/diagnose', label: '智能诊断' },
-  { key: '/events', label: '事件处置' },
-  { key: '/reports', label: '报告与档案' },
-]
-const SECONDARY = [
-  { key: '/lab', label: '算法实验室' },
-  { key: '/ops', label: '系统运维' },
-]
 const ADMIN = [
   { key: '/admin/users', label: '用户管理' },
   { key: '/admin/devices', label: '设备管理' },
@@ -158,21 +147,6 @@ function RequireAuth({ children }: { children: ReactNode }) {
     )
   return <>{children}</>
 }
-function LegacyDiagnosis() {
-  const location = useLocation()
-  const query = new URLSearchParams(location.search)
-  const tab = query.get('tab')
-  if (tab === 'timeline' || tab === 'trajectory' || tab === 'report') {
-    query.delete('tab')
-    return (
-      <Navigate
-        replace
-        to={`${tab === 'report' ? '/reports' : '/events'}?${query}`}
-      />
-    )
-  }
-  return <DiagnoseWorkbench />
-}
 function MainLayout({
   uiTheme,
   onToggleTheme,
@@ -217,90 +191,34 @@ function Workspace({
   const navigate = useNavigate()
   const location = useLocation()
   const navigationType = useNavigationType()
-  const normalizedPath = location.pathname.replace(/\/+$/, '') || '/'
-  const dashboard = normalizedPath === '/dashboard'
-  const [seenDashboard, setSeenDashboard] = useState(dashboard)
-  const maxIndex = useRef(
-    Number(
-      window.history.state?.workspaceMax ?? window.history.state?.idx ?? 0,
-    ),
-  )
+  const workspace = useWorkspace()
+  const catalog = useDeviceCatalog()
+  const view = viewFromLocation(location.pathname, location.search)
+  const dashboard = view === 'scene'
+  const canonical = canonicalWorkspacePath(location.pathname, location.search)
+  const device = workspace.selectedDeviceId
+  const event = workspace.selectedEventId
+  const chosen = catalog.data?.find((item) => item.id === device)
+  const title = view ? VIEW_LABELS[view] : location.pathname === '/lab' ? '算法实验室'
+    : location.pathname === '/ops' ? '系统运维'
+    : ADMIN.find((item) => item.key === location.pathname)?.label ?? '页面未找到'
+  const maxIndex = useRef(Number(window.history.state?.workspaceMax ?? window.history.state?.idx ?? 0))
   const scroll = useRef<Record<string, number>>({})
   const idx = Number(window.history.state?.idx ?? 0)
-  const current = normalizedPath.startsWith('/device/')
-    ? '/devices'
-    : normalizedPath
-  const title =
-    [...PRIMARY, ...SECONDARY, ...ADMIN].find((i) => i.key === current)
-      ?.label ?? '页面未找到'
-  const navRef = useRef<HTMLElement | null>(null)
-  const [indicator, setIndicator] = useState({
-    left: 0,
-    width: 0,
-    visible: false,
-  })
-  useLayoutEffect(() => {
-    const nav = navRef.current
-    if (!nav) return
-    const update = () => {
-      const active = nav.querySelector<HTMLElement>('button.active')
-      if (!active) {
-        setIndicator((value) => ({ ...value, visible: false }))
-        return
-      }
-      const navRect = nav.getBoundingClientRect()
-      const rect = active.getBoundingClientRect()
-      setIndicator({
-        left: rect.left - navRect.left,
-        width: rect.width,
-        visible: true,
-      })
-    }
-    update()
-    const observer = new ResizeObserver(update)
-    observer.observe(nav)
-    window.addEventListener('resize', update)
-    return () => {
-      observer.disconnect()
-      window.removeEventListener('resize', update)
-    }
-  }, [current, uiTheme])
-  const params = new URLSearchParams(location.search)
-  const workspace = useWorkspace()
-  const device = workspace.selectedDeviceId
-  const parent = location.pathname.startsWith('/device/')
-    ? (() => {
-        const saved = sessionStorage.getItem('workspace:path:/devices')
-        const query = new URLSearchParams(saved?.split('?')[1])
-        if (device) query.set('device', device)
-        return `/devices?${query}`
-      })()
-    : params.has('event')
-      ? deviceLink(current, device)
-      : '/dashboard'
-  useEffect(() => {
-    if (dashboard) setSeenDashboard(true)
-  }, [dashboard])
   useEffect(() => {
     if (navigationType === 'PUSH') maxIndex.current = idx
     else maxIndex.current = Math.max(maxIndex.current, idx)
-    window.history.replaceState(
-      { ...window.history.state, workspaceMax: maxIndex.current },
-      '',
-    )
+    window.history.replaceState({ ...window.history.state, workspaceMax: maxIndex.current }, '')
     if (device) sessionStorage.setItem('workspace:device', device)
     else sessionStorage.removeItem('workspace:device')
-    sessionStorage.setItem(
-      `workspace:path:${location.pathname}`,
-      location.pathname + location.search,
-    )
+    const key = view ? `workspace:view:${view}` : `workspace:path:${location.pathname}`
+    sessionStorage.setItem(key, location.pathname + location.search)
     document.title = `${title} · 工业设备智能诊断平台`
-  }, [location, navigationType, idx, device, title])
+  }, [location, navigationType, idx, device, title, view])
   useLayoutEffect(() => {
     const key = location.key
     const storageKey = `workspace:scroll:${location.pathname}${location.search}`
-    const target =
-      scroll.current[key] ?? (Number(sessionStorage.getItem(storageKey)) || 0)
+    const target = scroll.current[key] ?? (Number(sessionStorage.getItem(storageKey)) || 0)
     let restoring = target > 0
     let unlock: ReturnType<typeof setTimeout> | undefined
     let observer: ResizeObserver | undefined
@@ -311,10 +229,7 @@ function Workspace({
     }
     const restore = () => {
       if (!restoring) return
-      if (
-        document.documentElement.scrollHeight - window.innerHeight >=
-        target
-      ) {
+      if (document.documentElement.scrollHeight - window.innerHeight >= target) {
         window.scrollTo(0, target)
         stopRestoring()
       }
@@ -322,17 +237,11 @@ function Workspace({
     observer = new ResizeObserver(restore)
     const content = document.getElementById('main-content')
     if (content && restoring) observer.observe(content)
-    if (restoring) {
-      // 内容高度迟迟达不到目标时解锁，避免滚动保存被永久锁住
-      unlock = setTimeout(() => {
-        restoring = false
-        observer?.disconnect()
-        window.scrollTo(
-          0,
-          Math.min(target, document.documentElement.scrollHeight),
-        )
-      }, 1500)
-    }
+    if (restoring) unlock = setTimeout(() => {
+      restoring = false
+      observer?.disconnect()
+      window.scrollTo(0, Math.min(target, document.documentElement.scrollHeight))
+    }, 1500)
     const frame = requestAnimationFrame(() => {
       if (restoring) restore()
       else window.scrollTo(0, 0)
@@ -343,218 +252,107 @@ function Workspace({
         sessionStorage.setItem(storageKey, String(window.scrollY))
       }
     }
-    const interrupt = () => stopRestoring()
     window.addEventListener('scroll', save, { passive: true })
-    window.addEventListener('wheel', interrupt, { passive: true })
-    window.addEventListener('touchstart', interrupt, { passive: true })
+    window.addEventListener('wheel', stopRestoring, { passive: true })
+    window.addEventListener('touchstart', stopRestoring, { passive: true })
     return () => {
       cancelAnimationFrame(frame)
       observer?.disconnect()
       if (unlock) clearTimeout(unlock)
       window.removeEventListener('scroll', save)
-      window.removeEventListener('wheel', interrupt)
-      window.removeEventListener('touchstart', interrupt)
+      window.removeEventListener('wheel', stopRestoring)
+      window.removeEventListener('touchstart', stopRestoring)
     }
   }, [location.key])
-  const go = (path: string) => {
-    const stored = sessionStorage.getItem(`workspace:path:${path}`)
-    const chosen =
-      device ?? sessionStorage.getItem('workspace:device') ?? undefined
-    const query = new URLSearchParams(stored?.split('?')[1])
-    if (chosen && query.get('device') !== chosen) {
-      query.set('device', chosen)
-      query.delete('event')
-    }
-    navigate(`${path}${query.size ? `?${query}` : ''}`, {
+  const goView = (next: WorkspaceView) => {
+    // 筛选/分页/子面板只属于自己的模式；设备和事件是跨模式共享身份。
+    const saved = sessionStorage.getItem(`workspace:view:${next}`)
+    navigate(transitionWorkspacePath(next, location.search, saved?.split('?')[1]), {
       state: { returnTo: location.pathname + location.search },
     })
   }
+  const goTool = (path: string) => navigate(workspaceLink(path, device, event), {
+    state: { returnTo: location.pathname + location.search },
+  })
   const logout = () => {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
     Object.keys(sessionStorage)
-      .filter((k) => k.startsWith('workspace:') || k.startsWith('factory:'))
-      .forEach((k) => sessionStorage.removeItem(k))
+      .filter((key) => key.startsWith('workspace:') || key.startsWith('factory:'))
+      .forEach((key) => sessionStorage.removeItem(key))
     navigate('/login', { replace: true })
   }
-  const adminPage = (node: ReactNode) =>
-    user.role === 'admin' ? node : <Result status="403" title="没有管理权限" />
+  const adminPage = (node: ReactNode) => user.role === 'admin' ? node : <Result status="403" title="没有管理权限" />
+  const content = view === 'scene' ? <Dashboard />
+    : view === 'devices' ? <DeviceCenter />
+    : view === 'device' ? device ? <DeviceDetail /> : <Result title="先选择一台设备" extra={<Button onClick={() => goView('devices')}>浏览设备</Button>} />
+    : view === 'diagnose' ? <DiagnoseWorkbench />
+    : view === 'events' ? <EventCenter />
+    : view === 'reports' ? <ReportCenter /> : undefined
+  if (canonical && canonical !== location.pathname + location.search)
+    return <Navigate to={canonical} replace state={location.state} />
   return (
     <div className={`workspace ${dashboard ? 'workspace-overview' : ''}`}>
-      <a href="#main-content" className="skip-link">
-        跳到主要内容
-      </a>
+      <a href="#main-content" className="skip-link">跳到主要内容</a>
       <header className="workspace-header">
-        <button
-          className="brand"
-          onClick={() => go('/dashboard')}
-          aria-label="工业设备智能诊断平台，工厂总览"
-        >
-          <span className="brand-mark">
-            <i />
-            <i />
-            <i />
-          </span>
-          <span>
-            工业设备<span className="brand-sub">智能诊断平台</span>
-          </span>
+        <button className="brand" onClick={() => goView('scene')} aria-label="工业设备智能诊断平台，工作空间">
+          <span className="brand-mark"><i /><i /><i /></span>
+          <span>工业设备<span className="brand-sub">智能诊断平台</span></span>
         </button>
-        <nav className="primary-nav" aria-label="主导航" ref={navRef}>
-          {PRIMARY.map((item) => (
-            <button
-              key={item.key}
-              aria-current={current === item.key ? 'page' : undefined}
-              className={current === item.key ? 'active' : ''}
-              onClick={() => go(item.key)}
-            >
-              {item.label}
-            </button>
-          ))}
-          <span
-            className="nav-indicator"
-            aria-hidden
-            style={{
-              transform: `translateX(${indicator.left}px)`,
-              width: indicator.width,
-              opacity: indicator.visible ? 1 : 0,
-            }}
-          />
+        <div className="history-actions">
+          <Button aria-label="后退" title="后退" disabled={idx === 0} onClick={() => navigate(-1)}>‹</Button>
+          <Button aria-label="前进" title="前进" disabled={navigationType === 'PUSH' || idx >= maxIndex.current} onClick={() => navigate(1)}>›</Button>
+        </div>
+        <div className="workspace-location">
+          <Dropdown trigger={['click']} menu={{
+            selectedKeys: view ? [view] : [],
+            items: WORKSPACE_VIEWS.map((key) => ({ key, label: VIEW_LABELS[key] })),
+            onClick: ({ key }) => goView(key as WorkspaceView),
+          }}>
+            <Button type="text" className="workspace-mode-button" aria-label="工作空间模式" aria-haspopup="menu">
+              <span className="workspace-location-root">工作空间 / </span>{title} <span aria-hidden>⌄</span>
+            </Button>
+          </Dropdown>
+          {device && <span className="workspace-device-context" title={device}>{chosen?.name ?? device}</span>}
+        </div>
+        <nav className="workspace-tools" aria-label="工具与管理">
+          <Dropdown trigger={['click']} menu={{ items: [
+            { type: 'group', label: '研究与验证', children: [
+              { key: '/lab', label: '算法实验室' },
+              ...(user.role === 'admin' ? [{ key: '/dashboard?view=devices&tab=inject', label: '仿真测试' }] : []),
+            ] },
+            { type: 'group', label: '运行维护', children: [
+              { key: '/ops?tab=evolution', label: '运行闭环' },
+              { key: '/ops?tab=eval', label: '系统自评' },
+              { key: '/ops?tab=threshold', label: '阈值管理' },
+            ] },
+          ], onClick: ({ key }) => goTool(key) }}>
+            <Button type="text" aria-label="研究与运维工具">工具 <span aria-hidden>⌄</span></Button>
+          </Dropdown>
+          {user.role === 'admin' && <Dropdown trigger={['click']} menu={{ items: ADMIN, onClick: ({ key }) => goTool(key) }}>
+            <Button type="text" aria-label="管理功能">管理 <span aria-hidden>⌄</span></Button>
+          </Dropdown>}
         </nav>
-        <Dropdown
-          trigger={['click']}
-          menu={{
-            items: [
-              ...SECONDARY,
-              ...(user.role === 'admin'
-                ? [{ type: 'divider' as const }, ...ADMIN]
-                : []),
-            ],
-            onClick: ({ key }) => go(key),
-          }}
-        >
-          <Button type="text" className="more-button">
-            更多 <span aria-hidden>⌄</span>
-          </Button>
-        </Dropdown>
         <div className="account">
-          <span className="account-avatar">
-            {user.username.slice(0, 1).toUpperCase()}
-          </span>
-          <span>{user.username}</span>
-          <Button type="text" onClick={onToggleTheme} aria-label="切换深浅主题">
-            {uiTheme === 'dark' ? '浅色' : '深色'}
-          </Button>
-          <Button type="text" onClick={logout}>
-            退出
-          </Button>
+          <span className="account-avatar" title={user.username}>{user.username.slice(0, 1).toUpperCase()}</span>
+          <Button type="text" onClick={onToggleTheme} aria-label="切换深浅主题">{uiTheme === 'dark' ? '浅色' : '深色'}</Button>
+          <Dropdown trigger={['click']} menu={{ items: [{ key: 'logout', label: '退出登录' }], onClick: logout }}>
+            <Button type="text" aria-label={`账户 ${user.username}`}>账户</Button>
+          </Dropdown>
         </div>
       </header>
-      <div className="workspace-toolbar">
-        <div className="history-actions">
-          <Button
-            aria-label="后退"
-            title="后退"
-            disabled={idx === 0}
-            onClick={() => navigate(-1)}
-          >
-            ‹
-          </Button>
-          <Button
-            aria-label="前进"
-            title="前进"
-            disabled={idx >= maxIndex.current}
-            onClick={() => navigate(1)}
-          >
-            ›
-          </Button>
-        </div>
-        <span className="toolbar-divider" />
-        <span className="breadcrumb">
-          工作空间 <span>/</span> {title}
-          {location.pathname.startsWith('/device/') && (
-            <>
-              <span>/</span> 设备详情
-            </>
-          )}
-        </span>
-        {(location.pathname.startsWith('/device/') || params.has('event')) && (
-          <Button
-            type="text"
-            className="parent-button"
-            onClick={() => navigate(parent)}
-          >
-            上一级
-          </Button>
-        )}
-        <span className="toolbar-end">
-          {dashboard ? '运行监控' : '设备运维工作台'}
-        </span>
-      </div>
-      <main
-        id="main-content"
-        className={dashboard ? 'overview-content' : 'business-content'}
-        tabIndex={-1}
-      >
-        <PageBoundary>
-          <Suspense
-            fallback={
-              <div className="loading-state">
-                <Skeleton active paragraph={{ rows: 5 }} />
-              </div>
-            }
-          >
-            {(seenDashboard || dashboard) && (
-              <div hidden={!dashboard} aria-hidden={!dashboard}>
-                <Dashboard active={dashboard} />
-              </div>
-            )}
-            {!dashboard && (
-              <PageBoundary key={location.pathname}>
-                <Routes>
-                  <Route
-                    path="/"
-                    element={<Navigate to="/dashboard" replace />}
-                  />
-                  <Route path="/diagnose" element={<LegacyDiagnosis />} />
-                  <Route path="/devices" element={<DeviceCenter />} />
-                  <Route path="/device/:deviceId" element={<DeviceDetail />} />
-                  <Route path="/events" element={<EventCenter />} />
-                  <Route path="/reports" element={<ReportCenter />} />
-                  <Route path="/lab" element={<ModelLab />} />
-                  <Route path="/ops" element={<SystemOps />} />
-                  <Route
-                    path="/admin"
-                    element={<Navigate to="/admin/users" replace />}
-                  />
-                  <Route
-                    path="/admin/users"
-                    element={adminPage(<UserManagement />)}
-                  />
-                  <Route
-                    path="/admin/devices"
-                    element={adminPage(<DeviceManagement />)}
-                  />
-                  <Route
-                    path="/admin/records"
-                    element={adminPage(<RecordManagement />)}
-                  />
-                  <Route
-                    path="*"
-                    element={
-                      <Result
-                        status="404"
-                        title="未找到页面"
-                        extra={
-                          <Button onClick={() => go('/dashboard')}>
-                            工厂总览
-                          </Button>
-                        }
-                      />
-                    }
-                  />
-                </Routes>
-              </PageBoundary>
-            )}
+      <main id="main-content" className={dashboard ? 'overview-content' : 'business-content'} tabIndex={-1}>
+        <PageBoundary key={view ?? location.pathname}>
+          <Suspense fallback={<div className="loading-state"><Skeleton active paragraph={{ rows: 5 }} /></div>}>
+            {view ? <div className="workspace-mode-content" data-workspace-view={view}>{content}</div> : <Routes>
+              <Route path="/lab" element={<ModelLab />} />
+              <Route path="/ops" element={<SystemOps />} />
+              <Route path="/admin" element={<Navigate to="/admin/users" replace />} />
+              <Route path="/admin/users" element={adminPage(<UserManagement />)} />
+              <Route path="/admin/devices" element={adminPage(<DeviceManagement />)} />
+              <Route path="/admin/records" element={adminPage(<RecordManagement />)} />
+              <Route path="*" element={<Result status="404" title="未找到页面" extra={<Button onClick={() => goView('scene')}>工作空间</Button>} />} />
+            </Routes>}
           </Suspense>
         </PageBoundary>
       </main>

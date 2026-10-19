@@ -4,7 +4,6 @@ import {
   Button,
   Collapse,
   Empty,
-  Select,
   Space,
   Upload,
   message,
@@ -42,7 +41,7 @@ export default function ChatWindow() {
   const location = useLocation()
   const { params, update } = usePageQuery()
   const catalog = useDeviceCatalog()
-  const deviceId = params.get('device') ?? catalog.data?.[0]?.id
+  const deviceId = params.get('device') ?? undefined
   const eventId = Number(params.get('event')) || undefined
   const chosen = catalog.data?.find((d) => d.id === deviceId)
   const telemetry = useDeviceTelemetry(chosen?.id)
@@ -64,9 +63,6 @@ export default function ChatWindow() {
   currentDevice.current = deviceId
   const currentLocation = useRef(location.key)
   currentLocation.current = location.key
-  useEffect(() => {
-    if (!params.get('device') && deviceId) update({ device: deviceId }, true)
-  }, [deviceId])
   useEffect(() => {
     generation.current += 1
     setVision(undefined)
@@ -204,7 +200,7 @@ export default function ChatWindow() {
                   type="link"
                   size="small"
                   onClick={() =>
-                    navigate(`/device/${encodeURIComponent(chosen.id)}`, {
+                    navigate(deviceLink('/device/' + encodeURIComponent(chosen.id)), {
                       state: { returnTo: location.pathname + location.search },
                     })
                   }
@@ -215,18 +211,11 @@ export default function ChatWindow() {
             </div>
             <LoadState error={catalog.error} onRetry={catalog.refresh}>
               <Space wrap>
-                <Select
-                  aria-label="诊断设备"
-                  style={{ width: 260 }}
-                  placeholder="选择设备"
-                  value={deviceId}
-                  disabled={loading || visionLoading}
-                  onChange={(device) => update({ device, event: undefined })}
-                  options={catalog.data?.map((d) => ({
-                    value: d.id,
-                    label: `${d.name} · ${d.id}`,
-                  }))}
-                />
+                {chosen ? (
+                  <strong>{chosen.name} <small>{chosen.id}</small></strong>
+                ) : (
+                  <Button onClick={() => navigate(deviceLink('/devices'))}>从设备浏览选择诊断对象</Button>
+                )}
                 {activeEvent ? (
                   <Button
                     type="primary"

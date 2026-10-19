@@ -1,6 +1,6 @@
 import '../../theme/echarts'
 import { Button, Card, Empty, Select, Space, Tabs } from 'antd'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import ReactECharts from 'echarts-for-react'
 import {
   getAcousticFusion,
@@ -27,10 +27,11 @@ import SensorChart from '../../components/SensorChart'
 import DigitalTwinPhm from '../../components/DigitalTwinPhm'
 
 export default function DeviceDetail() {
-  const { deviceId = '' } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
   const { params, update } = usePageQuery()
+  const deviceId = params.get('device') ?? ''
+  const selectedEventId = Number(params.get('event')) || undefined
   const tab = params.get('tab') ?? 'realtime'
   const channel =
     params.get('channel') && CHANNELS[params.get('channel')!]
@@ -104,12 +105,12 @@ export default function DeviceDetail() {
         }
         actions={
           <>
-            <Button onClick={() => go(deviceLink('/events', deviceId))}>
+            <Button onClick={() => go(deviceLink('/events', deviceId, selectedEventId))}>
               相关事件
             </Button>
             <Button
               type="primary"
-              onClick={() => go(deviceLink('/diagnose', deviceId))}
+              onClick={() => go(deviceLink('/diagnose', deviceId, selectedEventId))}
             >
               智能诊断
             </Button>

@@ -237,6 +237,8 @@ class CommandLoopService:
         AI 建议的采纳率与偏差，同时作为后续阈值/知识库优化的依据。
         """
         event = self._get_or_raise(db, event_id)
+        if event.status_state != EventState.PENDING.value:
+            raise StateTransitionError("只有待确认事件可以修改诊断建议，请刷新事件状态")
 
         diag = dict(event.agent_diagnosis or {})
         report = dict(diag.get("report") or {})

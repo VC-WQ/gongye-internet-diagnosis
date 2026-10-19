@@ -135,6 +135,9 @@ class MQTTPipelineService:
 
         return {
             "device_id": device_id,
+            # Preserve declared provenance; an absent label is never promoted to real data.
+            "source": payload.get("source") if isinstance(payload.get("source"), str) else "unknown",
+            "acoustic": self._first(payload, ("acoustic", "sound_level"), default=None),
             "timestamp": self._first(
                 payload, ("timestamp", "ts"), default=time.time()
             ),

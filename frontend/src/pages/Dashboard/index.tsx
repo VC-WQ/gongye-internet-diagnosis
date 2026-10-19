@@ -50,6 +50,7 @@ export default function Dashboard({ active = true }: { active?: boolean }) {
   const savedId = sessionStorage.getItem('workspace:device')
   const queryId = active ? params.get('device') : savedId
   const selectedId = queryId ?? devices[0]?.id
+  const selectedEventId = Number(params.get('event')) || undefined
   const selected = devices.find((d) => d.id === selectedId)
   const telemetry = useDeviceTelemetry(selected?.id, active)
   const events = useResource(
@@ -277,14 +278,14 @@ export default function Dashboard({ active = true }: { active?: boolean }) {
                   <div className="selected-actions">
                     <Button
                       onClick={() =>
-                        go(`/device/${encodeURIComponent(selected.id)}`)
+                        go(deviceLink('/device/' + encodeURIComponent(selected.id), selected.id, selectedEventId))
                       }
                     >
                       设备详情
                     </Button>
                     <Button
                       type="primary"
-                      onClick={() => go(deviceLink('/diagnose', selected.id))}
+                      onClick={() => go(deviceLink('/diagnose', selected.id, selectedEventId))}
                     >
                       智能诊断
                     </Button>
@@ -332,7 +333,7 @@ export default function Dashboard({ active = true }: { active?: boolean }) {
                 <Button
                   type="text"
                   size="small"
-                  onClick={() => go(deviceLink('/events', selectedId))}
+                  onClick={() => go(deviceLink('/events', selectedId, selectedEventId))}
                 >
                   查看 ›
                 </Button>

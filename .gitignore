@@ -1,5 +1,6 @@
 __pycache__/
 .venv/
+node_modules
 node_modules/
 datasets/
 models/*.pt
@@ -10,6 +11,8 @@ tmp/
 
 # 环境变量与密钥（严禁提交）
 .env
+.env.local
+.env.*.local
 backend/requirements_check.txt
 
 # 包管理器缓存

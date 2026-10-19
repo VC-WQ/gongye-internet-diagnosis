@@ -1,22 +1,23 @@
 """模块6 指令闭环路由：事件创建/查询、人工确认/拒绝、指令执行、时间线。
 
-6 个端点均由 pydantic body 传入 operator（操作人），用于审计日志留痕。
+所有端点要求登录，操作人由服务端身份确定；兼容接收旧 operator 字段但不信任它。
 """
 from __future__ import annotations
 
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, FiniteFloat
 from sqlalchemy.orm import Session
 
-from app.models import get_db
+from app.models import User, get_db
+from app.modules.auth.deps import get_current_user
 
 from .service import EventNotFoundError, StateTransitionError, command_loop_service
 from .feedback_loop import feedback_loop_service
 from .mqtt_publisher import CommandPublishError
 
-router = APIRouter(prefix="/command-loop", tags=["指令闭环"])
+router = APIRouter(prefix="/command-loop", tags=["指令闭环"], dependencies=[Depends(get_current_user)])
 
 
 # ---------------------------------------------------------------------------
@@ -64,7 +65,7 @@ class ExecuteBody(BaseModel):
 class ObserveBody(BaseModel):
     """观察期反馈评估（观察中 -> 已恢复 / 复发）。"""
 
-    actual_curve: list[float]   # 观察期实际健康分采样序列
+    actual_curve: list[FiniteFloat] = Field(min_length=3)   # 观察期实际健康分采样序列
     operator: str = "system"
 
 
@@ -94,10 +95,12 @@ def list_events(
 
 
 @router.post("/events")
-def create_event(body: CreateEventBody, db: Session = Depends(get_db)) -> dict:
+def create_event(body: CreateEventBody, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)) -> dict:
     """创建诊断事件：会诊 -> 判定初始状态 -> 告警自动进入会诊/待确认。"""
+    if body.force and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="强制创建诊断需要管理员权限")
     return command_loop_service.create_event(
-        db, body.device_id, body.window, body.operator, body.vision, body.force
+        db, body.device_id, body.window, current_user.username, body.vision, body.force
     )
 
 
@@ -111,54 +114,54 @@ def get_event(event_id: int, db: Session = Depends(get_db)) -> dict:
 
 
 @router.post("/events/{event_id}/confirm")
-def confirm(event_id: int, body: ConfirmBody, db: Session = Depends(get_db)) -> dict:
+def confirm(event_id: int, body: ConfirmBody, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)) -> dict:
     """人工确认执行（pending -> handling）。"""
     try:
-        return command_loop_service.confirm(db, event_id, body.operator)
+        return command_loop_service.confirm(db, event_id, current_user.username)
     except (EventNotFoundError, StateTransitionError) as e:
         raise _http_exc(e)
 
 
 @router.post("/events/{event_id}/reject")
-def reject(event_id: int, body: RejectBody, db: Session = Depends(get_db)) -> dict:
+def reject(event_id: int, body: RejectBody, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)) -> dict:
     """人工拒绝（pending -> alarm，重新评估）。"""
     try:
-        return command_loop_service.reject(db, event_id, body.operator, body.reason)
+        return command_loop_service.reject(db, event_id, current_user.username, body.reason)
     except (EventNotFoundError, StateTransitionError) as e:
         raise _http_exc(e)
 
 
 @router.post("/events/{event_id}/revise")
-def revise(event_id: int, body: ReviseBody, db: Session = Depends(get_db)) -> dict:
+def revise(event_id: int, body: ReviseBody, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)) -> dict:
     """人工修改诊断建议（维护建议 / 故障结论），状态不变，仅改写报告并留痕。"""
     try:
         return command_loop_service.revise(
-            db, event_id, body.operator, body.recommendation, body.fault_label, body.note
+            db, event_id, current_user.username, body.recommendation, body.fault_label, body.note
         )
-    except EventNotFoundError as e:
+    except (EventNotFoundError, StateTransitionError) as e:
         raise _http_exc(e)
 
 
 @router.post("/events/{event_id}/execute")
-def execute(event_id: int, body: ExecuteBody, db: Session = Depends(get_db)) -> dict:
+def execute(event_id: int, body: ExecuteBody, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)) -> dict:
     """执行指令并进入观察期（handling -> observing）。"""
     try:
-        return command_loop_service.execute(db, event_id, body.operator, body.command)
+        return command_loop_service.execute(db, event_id, current_user.username, body.command)
     except (EventNotFoundError, StateTransitionError, CommandPublishError) as e:
         raise _http_exc(e)
 
 
 @router.post("/events/{event_id}/observe")
-def observe(event_id: int, body: ObserveBody, db: Session = Depends(get_db)) -> dict:
+def observe(event_id: int, body: ObserveBody, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)) -> dict:
     """观察期反馈评估（observing -> recovered / relapsed -> consulting -> pending）。"""
     try:
         return feedback_loop_service.observe_and_evaluate(
-            db, event_id, body.actual_curve, body.operator
+            db, event_id, body.actual_curve, current_user.username
         )
     except (EventNotFoundError, StateTransitionError) as e:
         raise _http_exc(e)
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404 if "不存在" in str(e) else 400, detail=str(e))
 
 
 @router.get("/events/{event_id}/timeline")
