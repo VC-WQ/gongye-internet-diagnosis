@@ -24,6 +24,7 @@ from app.modules.edge_inference.router import router as edge_router
 from app.modules.feedback.router import router as feedback_router
 from app.modules.mqtt_pipeline.router import router as mqtt_router
 from app.modules.multi_agent.router import router as agent_router
+from app.modules.pico.router import router as pico_router
 from app.modules.report.router import router as report_router
 from app.modules.records.router import router as records_router
 from app.modules.threshold.router import router as threshold_router
@@ -113,6 +114,7 @@ for router in (
     edge_router,
     anomaly_router,
     agent_router,
+    pico_router,
     command_router,
     feedback_router,
     report_router,

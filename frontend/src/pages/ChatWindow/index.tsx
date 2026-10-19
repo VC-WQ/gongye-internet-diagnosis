@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   Alert,
   Button,
@@ -11,8 +11,6 @@ import {
 } from 'antd'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { speakChinese, stopChineseSpeech } from '../../services/speech'
-import type { DigitalMood } from '../../components/DigitalHuman3D'
-const DigitalHuman3D = lazy(() => import('../../components/DigitalHuman3D'))
 import DiagnosisSummary from '../../components/DiagnosisSummary'
 import { LoadState, PageHeading, SourceTag } from '../../components/BusinessUI'
 import {
@@ -58,7 +56,6 @@ export default function ChatWindow() {
   const [error, setError] = useState('')
   const [vision, setVision] = useState<VisionEvidence>()
   const [visionLoading, setVisionLoading] = useState(false)
-  const [assistant, setAssistant] = useState(false)
   const [speaking, setSpeaking] = useState(false)
   const generation = useRef(0)
   // 同步锁：同一事件循环内的双击也必须只发一次请求
@@ -165,14 +162,6 @@ export default function ChatWindow() {
     const text = `设备 ${deviceId}。${validEvent.report?.summary ?? ''}。维护建议：${validEvent.report?.recommendation ?? '暂无'}`
     setSpeaking(speakChinese(text, () => setSpeaking(false)))
   }
-  const mood: DigitalMood =
-    validEvent?.agent_diagnosis?.health_level === 'abnormal'
-      ? 'fault'
-      : validEvent?.agent_diagnosis?.health_level === 'warning'
-        ? 'degraded'
-        : validEvent?.agent_diagnosis?.health_level === 'healthy'
-          ? 'healthy'
-          : 'idle'
   return (
     <>
       <PageHeading
@@ -191,19 +180,21 @@ export default function ChatWindow() {
         }
         actions={
           <Button
-            onClick={() => {
-              setAssistant(!assistant)
-              if (assistant) {
-                stopChineseSpeech()
-                setSpeaking(false)
-              }
-            }}
+            disabled={!validEvent}
+            onClick={
+              speaking
+                ? () => {
+                    stopChineseSpeech()
+                    setSpeaking(false)
+                  }
+                : speak
+            }
           >
-            {assistant ? '收起助手' : '语音助手'}
+            {speaking ? '停止播报' : '播报结论'}
           </Button>
         }
       />
-      <div className={`diagnosis-layout ${assistant ? '' : 'is-collapsed'}`}>
+      <div className="diagnosis-layout">
         <div>
           <section className="surface">
             <div className="section-header">
@@ -378,46 +369,6 @@ export default function ChatWindow() {
             </LoadState>
           </section>
         </div>
-        {assistant && (
-          <aside className="surface assistant-container">
-            <div className="section-header">
-              <h2>语音助手</h2>
-              <Button
-                type="text"
-                size="small"
-                onClick={() => {
-                  setAssistant(false)
-                  stopChineseSpeech()
-                  setSpeaking(false)
-                }}
-              >
-                收起
-              </Button>
-            </div>
-            <Suspense
-              fallback={<div className="assistant-caption">加载语音助手</div>}
-            >
-              <DigitalHuman3D mood={mood} speaking={speaking} size={230} />
-            </Suspense>
-            <div className="assistant-caption">
-              {speaking ? '正在播报' : validEvent ? '诊断完成' : '待机'}
-            </div>
-            <Space>
-              <Button disabled={!validEvent} onClick={speak}>
-                播报结论
-              </Button>
-              <Button
-                disabled={!speaking}
-                onClick={() => {
-                  stopChineseSpeech()
-                  setSpeaking(false)
-                }}
-              >
-                停止
-              </Button>
-            </Space>
-          </aside>
-        )}
       </div>
     </>
   )

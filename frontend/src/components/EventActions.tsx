@@ -8,6 +8,7 @@ import {
   type EventSummary,
 } from '../services/api'
 import { errorText } from '../hooks/useResource'
+import { usePicoOptional } from '../features/pico/core/PicoProvider'
 
 export default function EventActions({
   event,
@@ -36,6 +37,7 @@ export default function EventActions({
   const [fault, setFault] = useState('')
   const [sent, setSent] = useState<string>()
   const [failure, setFailure] = useState('')
+  const pico = usePicoOptional()
   const alive = useRef(true)
   useEffect(() => {
     alive.current = true
@@ -103,6 +105,16 @@ export default function EventActions({
         setAwaitingRefresh(true)
         setMode(undefined)
         onChanged()
+        pico?.notify({
+          title: `事件 #${event.id}`,
+          text:
+            mode === 'execute'
+              ? '维护指令已下发，等待设备回执。'
+              : '人工操作已保存，事件状态已更新。',
+          severity: mode === 'reject' ? 'warning' : 'info',
+          eventId: event.id,
+          deviceId: event.device_id,
+        })
       }
     } catch (error) {
       if (alive.current) setFailure(errorText(error))

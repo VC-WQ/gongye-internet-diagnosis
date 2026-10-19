@@ -28,6 +28,8 @@ import {
 } from 'react-router-dom'
 import { RealtimeProvider } from './services/realtime'
 import { WorkspaceProvider, useWorkspace } from './services/workspace'
+import { PicoProvider } from './features/pico/core/PicoProvider'
+import PicoDock from './features/pico/ui/PicoDock'
 import { getMe, type AuthUser } from './services/api'
 import { useResource } from './hooks/useResource'
 import { deviceLink } from './hooks/usePageQuery'
@@ -150,7 +152,9 @@ function MainLayout() {
   return (
     <RealtimeProvider>
       <WorkspaceProvider>
-        <Workspace user={account.data} />
+        <PicoProvider>
+          <Workspace user={account.data} />
+        </PicoProvider>
       </WorkspaceProvider>
     </RealtimeProvider>
   )
@@ -456,6 +460,7 @@ function Workspace({ user }: { user: AuthUser }) {
           </Suspense>
         </PageBoundary>
       </main>
+      <PicoDock />
     </div>
   )
 }
