@@ -120,6 +120,7 @@
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 0;
+  transition: border-color var(--motion-fast) var(--ease);
 }
 .research-home-card:hover {
   border-color: var(--brand);

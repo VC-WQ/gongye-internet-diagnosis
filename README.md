@@ -38,7 +38,7 @@
 
 - **模拟器**：用耦合随机微分方程（SDE）对 6 台异构设备的退化过程建模，产出振动/温度/电流/压力/转速/声压等观测值，可选通过 MQTT 上报。
 - **后端**：FastAPI，18 个功能模块路由，负责诊断、孪生、多智能体会诊、报告、阈值、可视化数据等。
-- **前端**：React 单页应用，7 个可视化组件 + 16 个页面，ECharts 绘图、Three.js 数字人。
+- **前端**：React 单页应用，V2.2 四域工作空间（工厂 / 工具 / 管理 / 关于），ECharts 绘图、Three.js 数字人 Pico；工厂与 Pico 使用统一的设备/事件上下文。
 - **大模型**：DeepSeek（OpenAI 兼容接口），仅用于会诊报告的「解读」环节，可用 Mock 模式离线运行。
 
 ---
@@ -171,29 +171,26 @@ frontend/
 
 **`src/pages/` 页面（对应路由）：**
 
-| 页面目录 | 路由 | 说明 |
+| 目录 | 路由 | 说明 |
 |---|---|---|
-| `Dashboard/` | `/dashboard` | 工厂总览：设备分组示意、目录状态、传感器窗口与设备联动 |
-| `DiagnoseWorkbench/` | `/diagnose` | 智能诊断：设备上下文、诊断结论与证据、可收起语音助手 |
-| `DeviceCenter/` | `/devices` | 设备监测：搜索、状态筛选、详情与独立仿真测试 |
-| `DeviceDetail/` | `/device/:deviceId` | 设备详情（实时曲线/孪生隐状态/声学频谱/健康历史） |
-| `ModelLab/` | `/lab` | 算法实验室（数据资产、分类、寿命、跨域、视觉与工厂研究） |
-| `SystemOps/` | `/ops` | 系统运维（系统自评 + 动态阈值建议） |
-| `SystemEval/` | 子页 | 系统自评（准确率/误报/漏报/延迟） |
-| `ThresholdSuggestions/` | 子页 | 动态阈值建议（采纳/拒绝） |
-| `FaultInjection/` | 子页 | 故障注入面板 |
-| `ChatWindow/` | 子页 | 诊断业务组件：结果与证据，复用事件操作 |
-| `Timeline/` | 子页 | 事件证据组件：传感器白名单通道、已记录的隐状态与审计时间线 |
-| `EventCenter/` | `/events` | 事件处置：人工确认、修订、拒绝、独立下发指令与时间线 |
-| `ReportCenter/` | `/reports` | 报告与档案：结构化结论、报告文档与设备快报 |
-| `UserManagement/` | `/admin/users` | 用户管理 |
-| `DeviceManagement/` | `/admin/devices` | 设备管理 |
-| `RecordManagement/` | `/admin/records` | 诊断记录管理 |
-| `Login/` | `/login` | 登录页 |
+| `features/factory/` | `/dashboard` | 工厂工作台：可点击状态筛选、设备导航、中心场景、实时监测、当前设备、事件与报告、原位展开层 |
+| `features/factory/panels/` | `/dashboard?panel=...` | 设备分析（7 Tab）、诊断、事件处置、报告；共用真实 event/device 数据 |
+| `features/tools/` | `/tools`、`/tools/{simulation,vision,pico,evaluation,settings}` | 仿真、缺陷检测、数字伴侣、系统自评、界面偏好 |
+| `features/about/` | `/about`、`/about/research/:topic/:point` | 研究目录与真实数据文章（数据/信号、诊断、健康、机理、成果） |
+| `features/admin/` | `/admin/users`、`/admin/devices`、`/admin/records` | 权限受控的后台管理 |
+| `features/pico/` | 全局 Dock + `/tools/pico` | 单一 Provider 的只读助手、连续形变、自动朗读、3D 表情 |
+| `motion/` | 全局 | 运动令牌、登录 A/B 时间线、FlipValue、内容过渡 |
+| `pages/Login/` | `/login` | 登录；A 红色揭幕、B 面板缩圆与纸层跟随 |
+| `pages/Timeline/` | 嵌入事件工作区 | 事件传感器/审计时间线组件 |
+| `pages/SystemEval/` | `/tools/evaluation` | 系统自评组件 |
+| `pages/ThresholdSuggestions/` | 设备分析“阈值建议”Tab | 按设备阈值建议（管理员审批） |
+| `pages/FaultInjection/` | `/tools/simulation` | 管理员仿真状态工具 |
 
-前端 URL 以 `device`、`event`、`tab` 查询参数保持上下文。旧 `/diagnose?tab=timeline` / `trajectory` / `report` 链接兼容跳转到事件或报告。后退、前进对应浏览历史；上一级返回页面层级并恢复设备列表筛选。
+V2.2 保留旧地址兼容：`/devices`、`/device/:id`、`/diagnose`、`/events`、`/reports`、`/dashboard?view=*`、`/lab`、`/ops?tab=*` 均单向迁移到新工厂/工具/关于地址；`/dashboard` 的设备、事件、状态筛选、面板、详情 Tab、分页与通道仍是同一看板的内部状态。
 
-实时推送复用 `/api/v1/mqtt-pipeline/ws`，开发代理启用 WebSocket；断线时每 5 秒读取采样窗口。超过 15 秒的采样标记过期，缺少有效时间或数值的窗口不能发起诊断。未返回来源字段时显示“来源未确认”。数字场景是设备目录分组示意，不代表工厂平面或物理连接。算法实验室的数据与实时监测分开。
+工厂使用 `/dashboard?device=...&event=...&status=...&panel=...&detail=...` 的单一状态；后退/前进走浏览器历史，“上一级”按信息层级返回（工厂展开层 → 工厂，工具子页 → 工具，研究文章 → 研究方向 → 研究目录）。旧 `/diagnose?tab=timeline` / `trajectory` / `report` 链接兼容迁移到事件或报告面板。
+
+实时推送复用 `/api/v1/mqtt-pipeline/ws`，开发代理启用 WebSocket；断线时每 5 秒读取采样窗口。超过 15 秒的采样标记过期，缺少有效时间或数值的窗口不能发起诊断。数据来源、时效与回答方式保留在必要的详情/消息“详情”中，主界面不重复堆叠来源标签。数字场景是设备目录分组示意，不代表工厂平面或物理连接。研究图表与实时监测分开，且只渲染后端已提供的数据。
 
 人工确认与下发指令是两次独立操作。当前后端尚未提供指令回执查询接口，页面不会把下发成功或观察期解释为设备执行成功或故障恢复。
 
@@ -454,7 +451,7 @@ SECRET_KEY=industrial-diagnosis-2026-secret-key-7f3a
 9. **人机闭环的三条分支语义不同**（详见第 7 节）：`confirm+execute` 推进状态机并下发指令；`revise` **只改写报告内容、刻意不推进状态机**（避免"改个错别字就把事件推进下一步"），另写一条 `EventTimeline` 留痕；`reject` 必填理由后退回告警态。改动这三处逻辑时请保持该语义。
 10. **新增图表必须带说明**：统一复用 `components/ChartNote.tsx` 的 `desc / dataSource / insight` 三字段；ECharts 的 `xAxis/yAxis` 要显式写 `axisLabel / axisLine / axisTick / splitLine`，`grid.bottom` 留 60+ 像素给轴名，否则坐标轴会被挤掉不出显示（参考 `pages/Timeline/index.tsx` 的 `axisCommon()`）。
 11. **本机启动优先用 `start-local.bat`**：它会依次拉起 MySQL → 后端 → 前端并自动开浏览器；换机器只需改脚本顶部三个路径变量（Python / Node / MySQL）。脚本已针对 `npm.cmd` 路径含空格、项目根路径含中文两处做了兼容性修复（`start /d` 避免引号嵌套、Vite 加 `host: '0.0.0.0'` 同时监听 IPv4/IPv6）。
-12. **会诊接口走 `/command-loop/events` 而非 `/multi-agent/consult`**：前端 `ChatWindow` 页面是先 `createEvent` 建事件再由后端 command_loop 内部调 consult 并推进状态机；直接调 `/multi-agent/consult` 只跑会诊不走状态机。
+12. **会诊接口走 `/command-loop/events` 而非 `/multi-agent/consult`**：前端工厂原位诊断面板（`features/factory/panels/DiagnosisPanel.tsx`）先 `createEvent` 建事件，再由后端 command_loop 内部调 consult 并推进状态机；直接调 `/multi-agent/consult` 只跑会诊不走状态机。
 
 ---
 
@@ -466,11 +463,12 @@ SECRET_KEY=industrial-diagnosis-2026-secret-key-7f3a
 - [ ] 「AI 诊断」能发起一次会诊并出报告（Mock 或真实 Key 均可）
 - [ ] 会诊报告的「确认执行 / 修改建议 / 拒绝」三个按钮都能走通，状态机能推进到「观察期」并回显指令编号
 - [ ] 「事件时间线」传感器曲线横轴刻度可见，通道下拉可切换，三张卡的「说明」能点开
-- [ ] 算法实验室图表正常渲染
+- [ ] 关于研究目录与真实数据图表正常渲染
+- [ ] 工厂中心场景、原位诊断/事件/报告与 Pico 连续形变正常
 - [ ] （如需实时）MQTT broker 与模拟器已启动
 
 ---
 
 *本 README 内容全部核对自项目源码（`backend/app/main.py`、`config.py`、`docker-compose.yml`、`frontend/src/App.tsx`、`services/api.ts`、各页面与组件）与运行配置，力求与代码一致。如与运行环境不符，以实际代码为准。*
 
-**文档最后更新：2026-10-15**（目录结构与本仓库实际内容对齐，移除不存在的文档引用）。
+**文档最后更新：2026-10-20**（V2.2 四域工作空间、Pico 连续交互与登录 A/B 动效已落地；目录结构与实际代码对齐）。

@@ -42,10 +42,13 @@ import {
 } from './services/workspaceMode'
 import { useDeviceCatalog } from './services/realtime'
 import { LoadState } from './components/BusinessUI'
+import PrimaryNav from './components/PrimaryNav'
 import {
   UiPreferencesProvider,
   useUiPreferences,
 } from './services/uiPrefs'
+import { LoginTransitionProvider } from './motion/LoginTransition'
+import RouteReady from './motion/RouteReady'
 
 const FactoryWorkspace = lazy(() => import('./features/factory/FactoryWorkspace'))
 const ToolsHome = lazy(() => import('./features/tools/ToolsHome'))
@@ -423,19 +426,11 @@ function Workspace({ user }: { user: AuthUser }) {
             ↑
           </Button>
         </div>
-        <nav className="primary-nav" aria-label="主导航">
-          {navItems.map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              className={`primary-nav__item ${area === item.key ? 'is-active' : ''}`}
-              aria-current={area === item.key ? 'page' : undefined}
-              onClick={() => navigate(withContext(item.path))}
-            >
-              {item.label}
-            </button>
-          ))}
-        </nav>
+        <PrimaryNav
+          items={navItems}
+          active={area}
+          onNavigate={(item) => navigate(withContext(item.path))}
+        />
         {selected && area === 'factory' && (
           <span className="workspace-device-context" title={selected.name}>
             {selected.name}
@@ -455,7 +450,9 @@ function Workspace({ user }: { user: AuthUser }) {
       </header>
       <main
         id="main-content"
-        className={area === 'factory' ? 'factory-content' : 'business-content'}
+        className={`workspace-route-content ${
+          area === 'factory' ? 'factory-content' : 'business-content'
+        }`}
         tabIndex={-1}
       >
         <PageBoundary key={location.pathname}>
@@ -515,6 +512,7 @@ function Workspace({ user }: { user: AuthUser }) {
               />
               <Route path="*" element={<LegacyOrNotFound />} />
             </Routes>
+            <RouteReady />
           </Suspense>
         </PageBoundary>
       </main>
@@ -547,19 +545,21 @@ function ThemedApp() {
   }, [selectedTheme])
   return (
     <ConfigProvider theme={selectedTheme}>
-      <Suspense fallback={<Skeleton active />}>
-        <Routes>
-          <Route path="/login" element={<LoginRoute />} />
-          <Route
-            path="*"
-            element={
-              <RequireAuth>
-                <MainLayout />
-              </RequireAuth>
-            }
-          />
-        </Routes>
-      </Suspense>
+      <LoginTransitionProvider>
+        <Suspense fallback={<Skeleton active />}>
+          <Routes>
+            <Route path="/login" element={<LoginRoute />} />
+            <Route
+              path="*"
+              element={
+                <RequireAuth>
+                  <MainLayout />
+                </RequireAuth>
+              }
+            />
+          </Routes>
+        </Suspense>
+      </LoginTransitionProvider>
     </ConfigProvider>
   )
 }

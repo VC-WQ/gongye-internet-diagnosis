@@ -12,6 +12,10 @@
   padding: 22px;
   background: var(--surface);
   border: 1px solid var(--line);
+  transition: border-color var(--motion-fast) var(--ease);
+}
+.tool-card:hover {
+  border-color: var(--brand);
 }
 .tool-card__body h2 {
   font-size: 17px;

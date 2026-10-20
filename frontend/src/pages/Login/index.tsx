@@ -1,17 +1,28 @@
-import { useSpatialNavigate } from '../../hooks/useSpatialNavigate'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button, Form, Input, Tabs, message } from 'antd'
 import { useLocation } from 'react-router-dom'
 import { login, register } from '../../services/api'
 import { errorText } from '../../hooks/useResource'
+import { useLoginTransition } from '../../motion/LoginTransition'
+
 export default function Login() {
-  const navigate = useSpatialNavigate()
   const location = useLocation()
+  const transition = useLoginTransition()
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    transition.resetForLogin()
+    const frame = requestAnimationFrame(() => transition.playIntro())
+    return () => cancelAnimationFrame(frame)
+    // 只在登录页挂载时启动一次；StrictMode 下第二次挂载会重新调度。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const submit = async (
     values: { username: string; password: string },
     isRegister: boolean,
   ) => {
+    if (loading || !transition.introDone) return
     setLoading(true)
     try {
       const data = await (isRegister ? register : login)(
@@ -25,20 +36,19 @@ export default function Login() {
         sessionStorage.getItem('auth:returnTo') ??
         '/dashboard'
       sessionStorage.removeItem('auth:returnTo')
-      navigate(
+      const safe =
         target.startsWith('/') &&
-          !target.startsWith('//') &&
-          !target.startsWith('/login')
+        !target.startsWith('//') &&
+        !target.startsWith('/login')
           ? target
-          : '/dashboard',
-        { replace: true },
-      )
+          : '/dashboard'
+      transition.beginSuccess(safe)
     } catch (error) {
       message.error(errorText(error))
-    } finally {
       setLoading(false)
     }
   }
+
   const form = (isRegister: boolean) => (
     <Form layout="vertical" onFinish={(values) => submit(values, isRegister)}>
       <Form.Item
@@ -58,32 +68,46 @@ export default function Login() {
           placeholder="请输入密码"
         />
       </Form.Item>
-      <Button type="primary" htmlType="submit" block loading={loading}>
+      <Button
+        type="primary"
+        htmlType="submit"
+        block
+        loading={loading}
+        disabled={!transition.introDone}
+      >
         {isRegister ? '注册并登录' : '登录'}
       </Button>
     </Form>
   )
+
   return (
-    <main className="login-page">
+    <main
+      className={`login-page ${transition.introDone ? 'is-ready' : 'is-intro'}`}
+      data-login-phase={transition.phase}
+      data-intro={transition.introDone ? 'done' : 'running'}
+    >
+      <div className="login-red-cover" aria-hidden />
       <section className="login-brand">
-        <div className="brand-mark" aria-hidden>
-          <i />
-          <i />
-          <i />
-        </div>
-        <div>
-          <h1>
-            设备状态，
-            <br />
-            清晰可见。
-          </h1>
-          <div className="login-graphic" aria-hidden>
+        <div className="login-brand__content">
+          <div className="brand-mark" aria-hidden>
             <i />
             <i />
             <i />
           </div>
+          <div>
+            <h1>
+              设备状态，
+              <br />
+              清晰可见。
+            </h1>
+            <div className="login-graphic" aria-hidden>
+              <i />
+              <i />
+              <i />
+            </div>
+          </div>
+          <small>工业设备智能诊断平台</small>
         </div>
-        <small>工业设备智能诊断平台</small>
       </section>
       <section className="login-form">
         <div className="login-form-inner">

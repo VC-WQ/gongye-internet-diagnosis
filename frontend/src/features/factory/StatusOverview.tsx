@@ -5,6 +5,7 @@ import {
   type StatusFilter,
 } from '../../services/workspaceMode'
 import { STATUS_META } from '../../components/BusinessUI'
+import FlipValue from '../../motion/FlipValue'
 
 export default function StatusOverview({
   counts,
@@ -44,7 +45,12 @@ export default function StatusOverview({
               aria-hidden
             />
             <span>{STATUS_LABELS[status]}</span>
-            <strong>{counts[status].toString().padStart(2, '0')}</strong>
+            <strong>
+              <FlipValue
+                value={counts[status].toString().padStart(2, '0')}
+                label={`${STATUS_LABELS[status]} ${counts[status]} 台`}
+              />
+            </strong>
           </button>
         ))}
       </div>

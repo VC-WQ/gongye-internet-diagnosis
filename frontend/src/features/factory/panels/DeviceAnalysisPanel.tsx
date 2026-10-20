@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import { Empty, Select, Tabs, Tag } from 'antd'
 import ThemedChart from '../../../components/ThemedChart'
 import SensorChart from '../../../components/SensorChart'
@@ -22,6 +23,8 @@ import {
 } from '../../../services/api'
 import { useResource } from '../../../hooks/useResource'
 import { CHANNELS, type useDeviceTelemetry } from '../../../services/realtime'
+import FlipValue from '../../../motion/FlipValue'
+import { useContentTransition } from '../../../motion/useContentTransition'
 import {
   DETAIL_TABS,
   DETAIL_LABELS,
@@ -68,6 +71,8 @@ export default function DeviceAnalysisPanel({
   onSelectEvent: (id: number) => void
 }) {
   const deviceId = device?.id ?? ''
+  const summaryRef = useRef<HTMLDivElement>(null)
+  useContentTransition(deviceId, summaryRef)
   const activeChannel = CHANNELS[channel] ? channel : 'vibration'
   const history = useResource(
     `health:${deviceId}`,
@@ -107,7 +112,7 @@ export default function DeviceAnalysisPanel({
   return (
     <div className="analysis-panel">
       {device && (
-        <>
+        <div className="analysis-summary" ref={summaryRef}>
           <div className="analysis-head">
             <div>
               <h3>{device.name}</h3>
@@ -125,24 +130,31 @@ export default function DeviceAnalysisPanel({
             <div>
               <span>目录健康评分</span>
               <strong style={{ color: STATUS_META[device.status]?.hex }}>
-                {numberText(device.health_score, 0)}
+                <FlipValue
+                  value={numberText(device.health_score, 0)}
+                  label={`健康评分 ${numberText(device.health_score, 0)} / 100`}
+                />
               </strong>
               <small>/ 100</small>
             </div>
             <div>
               <span>边缘异常分数</span>
               <strong>
-                {numberText(
-                  typeof device.edge_anomaly_score === 'number'
-                    ? device.edge_anomaly_score * 100
-                    : undefined,
-                )}
+                <FlipValue
+                  value={numberText(
+                    typeof device.edge_anomaly_score === 'number'
+                      ? device.edge_anomaly_score * 100
+                      : undefined,
+                  )}
+                />
               </strong>
               <small>%</small>
             </div>
             <div>
               <span>振动阈值</span>
-              <strong>{numberText(device.threshold_vibration)}</strong>
+              <strong>
+                <FlipValue value={numberText(device.threshold_vibration)} />
+              </strong>
               <small>g</small>
             </div>
             <div>
@@ -153,7 +165,7 @@ export default function DeviceAnalysisPanel({
               {telemetry.stale && <small>已过期</small>}
             </div>
           </div>
-        </>
+        </div>
       )}
       {!device ? (
         <Empty description="选择一台设备" />
