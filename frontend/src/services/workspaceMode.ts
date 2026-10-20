@@ -1,12 +1,12 @@
 /**
- * V2.2 工作空间 URL 契约。
+ * V2.3 工作空间 URL 契约。
  *
- * 四个业务域：工厂 / 工具 / 管理 / 关于。
- * 工厂只使用 /dashboard 一个地址；设备、事件、面板、筛选全部是看板内部状态，
- * 不再存在六个平级视图。旧地址只做一次单向迁移，不参与渲染。
+ * 四个业务域：工厂 / 工具 / 管理 / 研究。
+ * 工厂只保留设备选择与总览筛选；共享详情和业务任务各有唯一地址。
+ * 旧地址只做一次单向迁移，不再渲染工厂侧边业务面板。
  */
 
-export const AREAS = ['factory', 'tools', 'admin', 'about'] as const
+export const AREAS = ['factory', 'tools', 'admin', 'research'] as const
 export type Area = (typeof AREAS)[number]
 
 export const FACTORY_PANELS = [
@@ -40,6 +40,8 @@ export const DETAIL_TABS = [
 export type DetailTab = (typeof DETAIL_TABS)[number]
 
 export const TOOLS = [
+  'diagnosis',
+  'events',
   'simulation',
   'vision',
   'pico',
@@ -85,6 +87,8 @@ export const STATUS_LABELS: Record<StatusFilter, string> = {
 }
 
 export const TOOL_LABELS: Record<ToolKey, string> = {
+  diagnosis: '智能诊断',
+  events: '事件与报告',
   simulation: '仿真测试',
   vision: '缺陷检测',
   pico: '数字伴侣',
@@ -122,10 +126,10 @@ const LEGACY_PATHS: Record<string, (search: URLSearchParams) => string> = {
   '/events': (source) => {
     const query = new URLSearchParams(source)
     query.delete('view')
-    return factoryPathFrom(query, { panel: 'events' })
+    return migrateFactoryPanel(query, 'events')
   },
-  '/reports': (source) => factoryPathFrom(source, { panel: 'report' }),
-  '/lab': () => '/about/research/signal',
+  '/reports': (source) => migrateFactoryPanel(source, 'report'),
+  '/lab': () => '/research/signal',
   '/ops': (source) => legacyOpsPath(source),
 }
 
@@ -210,20 +214,76 @@ function factoryPathFrom(
 
 function legacyDiagnosePath(source: URLSearchParams): string {
   const tab = source.get('tab')
-  if (tab === 'report') return factoryPathFrom(source, { panel: 'report' })
+  if (tab === 'report') return migrateFactoryPanel(source, 'report')
   if (tab === 'timeline' || tab === 'trajectory') {
     const query = new URLSearchParams(source)
     query.set('tab', 'timeline')
-    return factoryPathFrom(query, { panel: 'events' })
+    return migrateFactoryPanel(query, 'events')
   }
-  return factoryPathFrom(source, { panel: 'diagnosis' })
+  return migrateFactoryPanel(source, 'diagnosis')
 }
 
 function legacyOpsPath(source: URLSearchParams): string {
   const tab = source.get('tab')
   if (tab === 'eval') return '/tools/evaluation'
   if (tab === 'threshold') return '/tools/settings'
-  return '/about/research/mechanism'
+  return '/research/mechanism'
+}
+
+/** Shared read pages and task pages each have one owner, including old factory panels. */
+export function deviceDetailPath(device?: string, search = ''): string {
+  const query = new URLSearchParams(search)
+  query.delete('device')
+  query.delete('panel')
+  query.delete('view')
+  if (query.has('tab') && !query.has('detail')) query.set('detail', normalizeDetail(query.get('tab')))
+  query.delete('tab')
+  const path = device ? `/manage/devices/${encodeURIComponent(device)}` : '/manage/devices'
+  return path + (query.size ? `?${query}` : '')
+}
+
+export function recordDetailPath(event: number): string { return `/manage/records/${event}` }
+
+/** 列表的旧身份 query 会触发兼容重定向，向上导航必须退出详情身份。 */
+export function navigationContextPath(path: string, device?: string, event?: number): string {
+  if (!/^\/(dashboard|tools|manage)([/?]|$)/.test(path)) return path
+  const [pathname, search] = path.split('?')
+  const query = new URLSearchParams(search)
+  if (device && !query.has('device')) query.set('device', device)
+  if (event && !query.has('event')) query.set('event', String(event))
+  if (pathname.replace(/\/$/, '') === '/manage/records') {
+    query.delete('event')
+    query.delete('record')
+  }
+  if (pathname.replace(/\/$/, '') === '/manage/devices') {
+    query.delete('device')
+    query.delete('event')
+    query.delete('record')
+  }
+  return pathname + (query.size ? `?${query}` : '')
+}
+
+export function toolPath(tool: ToolKey, device?: string, event?: number, section?: 'report'): string {
+  const query = new URLSearchParams()
+  if (device) query.set('device', device)
+  if (event) query.set('event', String(event))
+  if (section) query.set('section', section)
+  return `/tools/${tool}${query.size ? `?${query}` : ''}`
+}
+
+function migrateFactoryPanel(source: URLSearchParams, panel: FactoryPanel): string {
+  const canonical = factoryPathFrom(source, { panel })
+  const query = new URLSearchParams(canonical.split('?')[1])
+  query.delete('panel')
+  if (panel === 'device' || panel === 'monitor') return deviceDetailPath(query.get('device') ?? undefined, query.toString())
+  if (panel === 'diagnosis' || panel === 'events' || panel === 'report') {
+    query.delete('detail')
+    if (panel === 'report') { query.set('section', 'report'); query.delete('tab') }
+    return `/tools/${panel === 'diagnosis' ? 'diagnosis' : 'events'}${query.size ? `?${query}` : ''}`
+  }
+  query.delete('detail')
+  query.delete('tab')
+  return `/dashboard${query.size ? `?${query}` : ''}`
 }
 
 /** 旧 /dashboard?view=... 与旧平级地址的单向迁移。 */
@@ -247,9 +307,7 @@ export function legacyRedirect(
       const query = new URLSearchParams(source)
       query.delete('view')
       query.set('panel', LEGACY_VIEW_PANEL[view])
-      return factoryPathFrom(query, {
-        panel: LEGACY_VIEW_PANEL[view],
-      })
+      return migrateFactoryPanel(query, LEGACY_VIEW_PANEL[view])
     }
     if (view) {
       const query = new URLSearchParams(source)
@@ -258,7 +316,7 @@ export function legacyRedirect(
       return factoryPathFrom(query, { panel: 'none' })
     }
     // 已经是 canonical 形态时不重定向，避免循环。
-    const canonical = factoryPathFrom(source)
+    const canonical = migrateFactoryPanel(source, normalizePanel(source.get('panel')))
     const current = `/dashboard${search ? `?${new URLSearchParams(search)}` : ''}`
     return canonical === current ? undefined : canonical
   }
@@ -268,25 +326,25 @@ export function legacyRedirect(
     const query = new URLSearchParams(source)
     if (id) query.set('device', id)
     else query.delete('device')
-    return factoryPathFrom(query, { panel: 'device' })
+    return migrateFactoryPanel(query, 'device')
   }
 
   const map = LEGACY_PATHS[path]
   if (map) return map(source)
 
-  if (path === '/tools') return '/tools'
+  if (path === '/tools') return undefined
   if (path.startsWith('/tools/')) {
     const tool = normalizeTool(path.split('/')[2])
-    return tool ? `/tools/${tool}` : '/tools'
+    return tool ? undefined : '/tools'
   }
-  if (path === '/about') return '/about'
-  if (path.startsWith('/about/')) return path
+  if (path === '/about' || path.startsWith('/about/')) {
+    const rest = path.replace(/^\/about(?:\/research)?/, '')
+    return `/research${rest}${source.size ? `?${source}` : ''}`
+  }
   if (path === '/admin') return '/admin/users'
   if (path.startsWith('/admin/')) {
     const page = path.split('/')[2]
-    return ['users', 'devices', 'records'].includes(page)
-      ? `/admin/${page}`
-      : '/admin/users'
+    return ['users', 'devices', 'records'].includes(page) ? undefined : '/admin/users'
   }
   return undefined
 }
@@ -295,8 +353,8 @@ export function areaFromPath(pathname: string): Area {
   const path = pathname.replace(/\/+$/, '') || '/'
   if (path === '/dashboard') return 'factory'
   if (path === '/tools' || path.startsWith('/tools/')) return 'tools'
-  if (path === '/admin' || path.startsWith('/admin/')) return 'admin'
-  if (path === '/about' || path.startsWith('/about/')) return 'about'
+  if (/^\/(admin|manage)(\/|$)/.test(path)) return 'admin'
+  if (/^\/(research|about)(\/|$)/.test(path)) return 'research'
   return 'factory'
 }
 
@@ -341,7 +399,7 @@ export function factoryPath(options: {
   if (options.page && options.page > 1) search.set('page', String(options.page))
   if (options.channel) search.set('channel', options.channel)
   if (options.evidence) search.set('evidence', options.evidence)
-  return `/dashboard${search.size ? `?${search}` : ''}`
+  return migrateFactoryPanel(search, options.panel ?? 'none')
 }
 
 /** 上一级按信息层级，不按历史条数。返回 null 表示已在顶层。 */
@@ -360,11 +418,15 @@ export function upperLevelPath(pathname: string, search = ''): string | null {
     })
   }
   if (path.startsWith('/tools')) return path === '/tools' ? '/dashboard' : '/tools'
-  if (path.startsWith('/about')) {
-    if (path === '/about') return '/dashboard'
+  if (path.startsWith('/research')) {
+    if (path === '/research') return '/dashboard'
     const segments = path.split('/').filter(Boolean)
-    if (segments.length >= 4) return `/${segments.slice(0, 3).join('/')}`
-    return '/about'
+    if (segments.length >= 3) return `/${segments.slice(0, 2).join('/')}`
+    return '/research'
+  }
+  if (path.startsWith('/manage')) {
+    const segments = path.split('/').filter(Boolean)
+    return segments.length > 2 ? `/manage/${segments[1]}` : '/dashboard'
   }
   if (path.startsWith('/admin')) {
     return path === '/admin/users' ? '/dashboard' : '/admin/users'
@@ -393,11 +455,13 @@ export function isSafeInternalPath(path: string): boolean {
   if (!path.startsWith('/') || path.startsWith('//') || /[\\\u0000-\u0020]/.test(path))
     return false
   try {
-    if (/[\\\u0000-\u0020]/.test(decodeURIComponent(path))) return false
+    const decoded = decodeURIComponent(path)
+    if (/[\\\u0000-\u0020]/.test(decoded)) return false
+    if (decoded.split(/[?#]/, 1)[0].split('/').some(segment => segment === '.' || segment === '..')) return false
   } catch {
     return false
   }
-  return /^\/(dashboard|tools|about)([/?#]|$)/.test(path) || path === '/'
+  return /^\/(dashboard|tools|research|manage|about)([/?#]|$)/.test(path) || path === '/'
 }
 
 export function isFactoryQueryKey(key: string): boolean {

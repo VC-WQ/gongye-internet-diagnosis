@@ -34,6 +34,7 @@ import { useResource } from './hooks/useResource'
 import {
   areaFromPath,
   legacyRedirect,
+  navigationContextPath,
   normalizeTool,
   PANEL_LABELS,
   TOOL_LABELS,
@@ -59,6 +60,9 @@ const Login = lazy(() => import('./pages/Login'))
 const UserManagement = lazy(() => import('./pages/UserManagement'))
 const DeviceManagement = lazy(() => import('./pages/DeviceManagement'))
 const RecordManagement = lazy(() => import('./pages/RecordManagement'))
+const SharedDeviceDetail = lazy(() => import('./features/management/SharedDeviceDetail'))
+const SharedRecords = lazy(() => import('./features/management/SharedRecords'))
+const SharedRecordDetail = lazy(() => import('./features/management/SharedRecordDetail'))
 
 export const productTheme = {
   token: {
@@ -120,12 +124,15 @@ const darkThemeOverrides = {
 }
 
 class PageBoundary extends Component<
-  { children: ReactNode },
+  { children: ReactNode; resetKey: string },
   { failed: boolean }
 > {
   state = { failed: false }
   static getDerivedStateFromError() {
     return { failed: true }
+  }
+  componentDidUpdate(previous: { resetKey: string }) {
+    if (previous.resetKey !== this.props.resetKey && this.state.failed) this.setState({ failed: false })
   }
   render() {
     if (this.state.failed)
@@ -175,8 +182,10 @@ function routeTitle(pathname: string, panel: string, area: Area): string {
     const tool = normalizeTool(parts[1])
     return tool ? TOOL_LABELS[tool] : '工具'
   }
-  if (area === 'about') return '关于'
+  if (area === 'research') return '研究'
   if (area === 'admin') {
+    if (pathname.startsWith('/manage/devices')) return '设备详情'
+    if (pathname.startsWith('/manage/records')) return '诊断记录'
     const page = pathname.split('/')[2]
     return ADMIN_PAGES.find((item) => item.key === page)?.label ?? '管理'
   }
@@ -232,6 +241,36 @@ function ToolRoute({ user }: { user: AuthUser }) {
 
 function LoginRoute() {
   return <Login />
+}
+
+/** Research APIs are already public; operational data and writes remain protected. */
+function PublicResearchLayout() {
+  const location = useLocation()
+  const navigate = useSpatialNavigate()
+  const { theme, toggleTheme } = useUiPreferences()
+  useEffect(() => { document.title = '研究中心 · 工业设备智能诊断平台' }, [])
+  return <div className="workspace workspace-area-research" data-area="research">
+    <a href="#main-content" className="skip-link">跳到主要内容</a>
+    <header className="workspace-header">
+      <button className="brand" onClick={() => navigate('/login')} aria-label="工业设备智能诊断平台，登录">
+        <span className="brand-mark" aria-hidden><i /><i /><i /></span><span>工业设备<span className="brand-sub">智能诊断平台</span></span>
+      </button>
+      <PrimaryNav items={[{ key: 'research', label: '研究', path: '/research' }]} active="research" onNavigate={item => navigate(item.path)} />
+      <div className="account"><Button type="text" aria-label="切换深浅主题" onClick={toggleTheme}>{theme === 'dark' ? '浅色' : '深色'}</Button><Button type="text" onClick={() => navigate('/login')}>登录工作空间</Button></div>
+    </header>
+    <main id="main-content" className="workspace-route-content business-content" tabIndex={-1}>
+      <PageBoundary resetKey={location.pathname}><Suspense fallback={loading()}><Routes>
+        <Route path="/research/:topicId?/:pointId?" element={<AboutPage />} />
+        <Route path="*" element={<LegacyOrNotFound />} />
+      </Routes></Suspense></PageBoundary>
+    </main>
+  </div>
+}
+
+function AppEntry() {
+  const location = useLocation()
+  if (!localStorage.getItem('token') && /^\/(research|about)(\/|$)/.test(location.pathname)) return <PublicResearchLayout />
+  return <RequireAuth><MainLayout /></RequireAuth>
 }
 
 function MainLayout() {
@@ -298,6 +337,8 @@ function Workspace({ user }: { user: AuthUser }) {
   ])
 
   useLayoutEffect(() => {
+    // The research shell owns article scroll; keep the tree and its position stable.
+    if (area === 'research') return
     const key = location.key
     const storageKey = `workspace:scroll:${location.pathname}${location.search}`
     const target =
@@ -352,13 +393,7 @@ function Workspace({ user }: { user: AuthUser }) {
     }
   }, [location.key])
 
-  const withContext = (path: string) => {
-    if (!path.startsWith('/dashboard') && !path.startsWith('/tools')) return path
-    const query = new URLSearchParams()
-    if (workspace.selectedDeviceId) query.set('device', workspace.selectedDeviceId)
-    if (workspace.selectedEventId) query.set('event', String(workspace.selectedEventId))
-    return `${path}${query.size ? `?${query}` : ''}`
-  }
+  const withContext = (path: string) => navigationContextPath(path, workspace.selectedDeviceId, workspace.selectedEventId)
 
   const logout = () => {
     localStorage.removeItem('token')
@@ -374,10 +409,8 @@ function Workspace({ user }: { user: AuthUser }) {
   const navItems = [
     { key: 'factory', label: '工厂', path: '/dashboard' },
     { key: 'tools', label: '工具', path: '/tools' },
-    ...(user.role === 'admin'
-      ? [{ key: 'admin', label: '管理', path: '/admin/users' }]
-      : []),
-    { key: 'about', label: '关于', path: '/about' },
+    { key: 'admin', label: '管理', path: user.role === 'admin' ? '/admin/devices' : '/manage/records' },
+    { key: 'research', label: '研究', path: '/research' },
   ]
 
   return (
@@ -455,7 +488,7 @@ function Workspace({ user }: { user: AuthUser }) {
         }`}
         tabIndex={-1}
       >
-        <PageBoundary key={location.pathname}>
+        <PageBoundary resetKey={location.pathname}>
           <Suspense fallback={loading()}>
             <Routes>
               <Route path="/dashboard" element={<FactoryRoute />} />
@@ -464,15 +497,10 @@ function Workspace({ user }: { user: AuthUser }) {
                 path="/tools/:tool"
                 element={<ToolRoute user={user} />}
               />
-              <Route path="/about" element={<AboutPage />} />
-              <Route
-                path="/about/research/:topicId"
-                element={<AboutPage />}
-              />
-              <Route
-                path="/about/research/:topicId/:pointId"
-                element={<AboutPage />}
-              />
+              <Route path="/research/:topicId?/:pointId?" element={<AboutPage />} />
+              <Route path="/manage/devices/:deviceId?" element={<SharedDeviceDetail />} />
+              <Route path="/manage/records" element={<SharedRecords />} />
+              <Route path="/manage/records/:eventId" element={<SharedRecordDetail />} />
               <Route path="/admin" element={<Navigate to="/admin/users" replace />} />
               <Route
                 path="/admin/users"
@@ -551,11 +579,7 @@ function ThemedApp() {
             <Route path="/login" element={<LoginRoute />} />
             <Route
               path="*"
-              element={
-                <RequireAuth>
-                  <MainLayout />
-                </RequireAuth>
-              }
+              element={<AppEntry />}
             />
           </Routes>
         </Suspense>

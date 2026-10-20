@@ -1,119 +1,85 @@
+import { useEffect, useMemo, useState } from 'react'
+import { Button, Card, Input, Select, Space, Table, message } from 'antd'
 import { useResource } from '../../hooks/useResource'
-import { LoadState, PageHeading, StatusTag } from '../../components/BusinessUI'
-import { useEffect, useState } from 'react'
-import { Button, Card, Form, Input, Modal, Popconfirm, Select, Space, Table, Tag, message } from 'antd'
-import { createDevice, deleteDevice, getDevices, updateDevice, type Device } from '../../services/api'
-
-const TYPE_LABEL: Record<string, string> = { pump: '泵', motor: '电机', compressor: '空压机' }
+import { usePageQuery } from '../../hooks/usePageQuery'
+import { useSpatialNavigate } from '../../hooks/useSpatialNavigate'
+import { LoadState, StatusTag, TYPE_LABEL, numberText } from '../../components/BusinessUI'
+import { deleteDevice, getDevices, type Device } from '../../services/api'
+import DeviceEditor from '../../features/management/DeviceEditor'
+import { BatchControls, BatchResult, type DeleteFailure } from '../../features/management/BatchControls'
+import { deleteSelected } from '../../features/management/batchDelete'
 
 export default function DeviceManagement() {
-  const resource = useResource<Device[]>('DeviceManagement', getDevices)
-  const devices = resource.data ?? []
-  const [open, setOpen] = useState(false)
-  const [editing, setEditing] = useState<Device | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [form] = Form.useForm()
-
-  const load = resource.refresh
-
-  const openCreate = () => {
-    setEditing(null)
-    form.resetFields()
-    setOpen(true)
-  }
-  const openEdit = (d: Device) => {
-    setEditing(d)
-    form.setFieldsValue({ name: d.name, device_type: d.device_type, status: d.status, health_score: d.health_score })
-    setOpen(true)
-  }
-
-  const submit = async (values: { id?: string; name: string; device_type: string; status?: string; health_score?: number }) => {
-    setLoading(true)
+  const resource = useResource<Device[]>('admin-devices', getDevices)
+  const navigate = useSpatialNavigate()
+  const { params, update } = usePageQuery()
+  const keyword = params.get('q') ?? ''
+  const status = params.get('status') ?? 'all'
+  const page = Math.max(1, Number(params.get('page')) || 1)
+  const [creating, setCreating] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [selected, setSelected] = useState<string[]>([])
+  const [busy, setBusy] = useState(false)
+  const [result, setResult] = useState<{ deleted: number; failed: DeleteFailure[] }>({ deleted: 0, failed: [] })
+  const devices = useMemo(() => (resource.data ?? []).filter((device) =>
+    `${device.name} ${device.id}`.toLowerCase().includes(keyword.trim().toLowerCase()) &&
+    (status === 'all' || device.status === status),
+  ), [keyword, resource.data, status])
+  useEffect(() => {
+    const lastPage = Math.max(1, Math.ceil(devices.length / 10))
+    if (resource.data && !resource.loading && page > lastPage)
+      update({ page: lastPage > 1 ? String(lastPage) : undefined }, true)
+  }, [devices.length, page, resource.data, resource.loading])
+  const open = (device: Device) => navigate(`/manage/devices/${encodeURIComponent(device.id)}`)
+  const remove = async () => {
+    setBusy(true)
     try {
-      if (editing) {
-        await updateDevice(editing.id, values)
-      } else {
-        await createDevice({ id: values.id!, name: values.name, device_type: values.device_type })
-      }
-      message.success('保存成功')
-      setOpen(false)
-      load()
-    } catch (e: unknown) {
-      const err = e as { response?: { data?: { detail?: string } } }
-      message.error(err?.response?.data?.detail ?? '保存失败')
-    } finally {
-      setLoading(false)
-    }
+      const value = await deleteSelected(selected, deleteDevice)
+      setSelected(value.failed.map(({ id }) => id))
+      setResult({ deleted: value.deleted.length, failed: value.failed })
+      if (!value.failed.length) message.success(`已删除 ${value.deleted.length} 台设备`)
+      resource.refresh()
+    } finally { setBusy(false) }
   }
-
-  const onDelete = async (id: string) => {
-    try {
-      await deleteDevice(id)
-      message.success('已删除')
-      load()
-    } catch (e: unknown) {
-      const err = e as { response?: { data?: { detail?: string } } }
-      message.error(err?.response?.data?.detail ?? '删除失败')
-    }
-  }
-
-  const columns = [
-    { title: '设备ID', dataIndex: 'id' },
-    { title: '名称', dataIndex: 'name' },
-    { title: '类型', dataIndex: 'device_type', render: (t: string) => TYPE_LABEL[t] ?? t },
-    { title: '状态', dataIndex: 'status', render: (s: string) => <StatusTag status={s} /> },
-    {
-      title: '健康分',
-      dataIndex: 'health_score',
-      render: (v: number) => <span style={{ fontWeight: 700, color: v > 85 ? "var(--status-ok)" : v >= 60 ? "var(--status-warn)" : "var(--status-danger)" }}>{Math.round(v)}</span>,
-    },
-    {
-      title: '操作',
-      render: (_: unknown, d: Device) => (
-        <Space>
-          <Button size="small" onClick={() => openEdit(d)}>
-            编辑
-          </Button>
-          <Popconfirm title="确认删除该设备？" onConfirm={() => onDelete(d.id)}>
-            <Button size="small" danger>
-              删除
-            </Button>
-          </Popconfirm>
-        </Space>
-      ),
-    },
-  ]
-
+  const cancel = () => { setEditing(false); setSelected([]); setResult({ deleted: 0, failed: [] }) }
   return (
-    <Card title="设备管理" extra={<Button type="primary" onClick={openCreate}>新增设备</Button>}>
-      <Table rowKey="id" dataSource={devices} columns={columns} pagination={false} />
-      <Modal
-        title={editing ? '编辑设备' : '新增设备'}
-        open={open}
-        onCancel={() => setOpen(false)}
-        onOk={() => form.submit()}
-        confirmLoading={loading}
-      >
-        <Form form={form} layout="vertical" onFinish={submit}>
-          {!editing && (
-            <Form.Item name="id" label="设备ID" rules={[{ required: true, message: '如 pump-003' }]}>
-              <Input />
-            </Form.Item>
-          )}
-          <Form.Item name="name" label="设备名称" rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item name="device_type" label="设备类型" rules={[{ required: true }]}>
-            <Select
-              options={[
-                { value: 'pump', label: '泵' },
-                { value: 'motor', label: '电机' },
-                { value: 'compressor', label: '空压机' },
-              ]}
-            />
-          </Form.Item>
-        </Form>
-      </Modal>
+    <Card className="management-list">
+      <div className="management-toolbar">
+        <Space wrap>
+          <Input.Search value={keyword} allowClear aria-label="搜索管理设备" placeholder="搜索名称或编号" onChange={(event) => update({ q: event.target.value || undefined, page: undefined }, true)} />
+          <Select aria-label="设备状态筛选" value={status} onChange={(value) => update({ status: value === 'all' ? undefined : value, page: undefined })} options={[
+            { value: 'all', label: '全部状态' }, { value: 'healthy', label: '正常' }, { value: 'degraded', label: '退化' }, { value: 'fault', label: '告警' }, { value: 'offline', label: '离线' },
+          ]} />
+        </Space>
+        <Space wrap>
+          <BatchControls editing={editing} count={selected.length} busy={busy} onEdit={() => setEditing(true)} onCancel={cancel} onDelete={remove} />
+          {!editing && <Button type="primary" onClick={() => setCreating(true)}>新增设备</Button>}
+        </Space>
+      </div>
+      <p className="management-hint">{editing ? '选择设备后集中删除；取消编辑可恢复详情浏览。' : '点击设备行查看完整分析，单台编辑在设备详情中完成。'}</p>
+      <BatchResult {...result} />
+      <LoadState loading={resource.loading && !resource.data} error={resource.error} onRetry={resource.refresh}>
+        <Table<Device>
+          rowKey="id" dataSource={devices} scroll={{ x: 660 }} loading={busy}
+          rowSelection={editing ? { selectedRowKeys: selected, onChange: (keys) => setSelected(keys.map(String)), preserveSelectedRowKeys: true } : undefined}
+          onRow={(device) => ({
+            tabIndex: editing ? undefined : 0,
+            className: editing ? '' : 'management-row-link',
+            onClick: () => { if (!editing) open(device) },
+            onKeyDown: (event) => { if (!editing && event.target === event.currentTarget && ['Enter', ' '].includes(event.key)) { event.preventDefault(); open(device) } },
+            'aria-label': editing ? undefined : `查看设备 ${device.name}`,
+          })}
+          pagination={{ current: page, pageSize: 10, total: devices.length, showSizeChanger: false, onChange: (value) => update({ page: value > 1 ? String(value) : undefined }) }}
+          columns={[
+            { title: '设备编号', dataIndex: 'id' },
+            { title: '名称', dataIndex: 'name' },
+            { title: '类型', dataIndex: 'device_type', render: (value) => TYPE_LABEL[value] ?? value },
+            { title: '状态', dataIndex: 'status', render: (value) => <StatusTag status={value} /> },
+            { title: '健康评分', dataIndex: 'health_score', render: (value) => `${numberText(value, 0)} / 100` },
+          ]}
+        />
+      </LoadState>
+      <DeviceEditor open={creating} onClose={() => setCreating(false)} onSaved={resource.refresh} />
     </Card>
   )
 }

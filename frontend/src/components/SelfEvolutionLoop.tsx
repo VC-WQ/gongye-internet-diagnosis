@@ -1,7 +1,6 @@
 import { LoadState } from './BusinessUI'
-import { errorText } from '../hooks/useResource'
-import { useEffect, useState } from 'react'
-import { Card, Col, Empty, Row, Space, Spin, Statistic, Table, Tag } from 'antd'
+import { useResource } from '../hooks/useResource'
+import { Card, Col, Empty, Row, Space, Spin, Statistic, Tag } from 'antd'
 import { getSelfEvalLoops } from '../services/api'
 import ChartNote from './ChartNote'
 
@@ -96,7 +95,7 @@ function NodeChain({ nodes }: { nodes: Array<{ t: string; d: string; c: string }
 /**
  * 创新点五：双闭环自进化。
  *
- * 内闭环（事件级，分钟级，无需人工介入）：
+ * 内闭环（事件级，包含人工确认）：
  *     异常 → 会诊 → 处置 → 观察期恢复曲线评估 → 恢复则记入准确率；
  *     复发则**自动再诊断**并**自动生成阈值建议**。
  * 外闭环（系统级，天/周级，人工把关）：
@@ -106,37 +105,21 @@ function NodeChain({ nodes }: { nodes: Array<{ t: string; d: string; c: string }
  * 关键点：内闭环让系统"自己发现问题"，外闭环让"人的判断沉淀成系统能力"。
  */
 export default function SelfEvolutionLoop() {
-  const [data, setData] = useState<LoopData>()
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState('')
-
-  useEffect(() => {
-    let active = true
-    getSelfEvalLoops()
-      .then((d) => {
-        if (active) setData(d)
-      })
-      .catch((e) => { if (active) setLoadError(errorText(e)) })
-      .finally(() => {
-        if (active) setLoading(false)
-      })
-    return () => {
-      active = false
-    }
-  }, [])
+  const resource = useResource('research-self-evolution-loops', getSelfEvalLoops)
+  const data: LoopData | undefined = resource.data
 
   const inner = data?.inner_loop
   const outer = data?.outer_loop
   const m = data?.metrics
 
   return (
-    <LoadState loading={loading} error={loadError} onRetry={() => window.location.reload()}><Spin spinning={false}>
+    <LoadState loading={resource.loading} error={resource.error} onRetry={resource.refresh}><Spin spinning={false}>
       <Row gutter={16}>
         <Col span={24} style={{ marginBottom: 12 }}>
           <Space size={8} wrap>
 
             <span style={{ color: "var(--muted)", fontSize: 13 }}>
-              事件反馈与阈值调整
+              机制说明与当前数据库运行统计{data?.days != null ? ` · 近 ${data.days} 天` : ''}
             </span>
           </Space>
         </Col>
@@ -144,20 +127,20 @@ export default function SelfEvolutionLoop() {
         {/* ---------- 内闭环 ---------- */}
         <Col span={24} style={{ marginBottom: 16 }}>
           <Card
-            title="内闭环 · 事件级在线闭环（分钟级，无需人工介入）"
+            title="内闭环 · 事件级流程（包含人工确认）"
             styles={{ body: cardBodyStyle }}
             extra={
               <ChartNote
                 desc="单个事件从告警到回流判定的完整链路：观察期恢复曲线评估为「复发」时，系统自动重新会诊并自动生成阈值调整建议。"
-                dataSource="运行态真实数据：事件状态机 + 观察期反馈评估 + 诊断记录表（近 30 天滚动窗口）。"
-                insight="这条闭环的价值在于「系统会自己发现自己错了」——复发不再需要人工回头看。"
+                dataSource="当前数据库：事件状态机 + 观察期反馈评估 + 诊断记录表。可包含导入或仿真记录，不代表生产设备验证。"
+                insight="节点图说明机制；统计展示当前库中已发生的流程，不单独证明诊断或恢复有效。"
               />
             }
           >
             <NodeChain nodes={INNER_NODES} />
             <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', marginTop: 16 }}>
               <Statistic
-                title="近 30 天事件总数"
+                title="当前窗口事件总数"
                 value={inner?.total_events ?? '—'}
                 valueStyle={{ color: "var(--status-info)" }}
               />
@@ -188,7 +171,7 @@ export default function SelfEvolutionLoop() {
             {inner?.by_state && Object.keys(inner.by_state).length > 0 && (
               <div style={{ marginTop: 12 }}>
                 <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 6 }}>
-                  事件状态分布（近 30 天）
+                  事件状态分布（当前统计窗口）
                 </div>
                 <Space size={6} wrap>
                   {Object.entries(inner.by_state).map(([k, v]) => (
@@ -210,7 +193,7 @@ export default function SelfEvolutionLoop() {
             extra={
               <ChartNote
                 desc="阈值建议由复发事件自动触发，工程师采纳后写入动态阈值，直接改变下一轮异常检测的判定边界。"
-                dataSource="运行态真实数据：阈值建议表 + 阈值效果跟踪表（近 30 天滚动窗口）。"
+                dataSource="当前数据库：阈值建议表 + 阈值效果跟踪表。数值只描述该库运行记录。"
                 insight="采纳率是衡量「AI 建议是否值得信」的直接指标；被拒绝的建议同样留痕，用于复盘边界。"
               />
             }
@@ -227,8 +210,8 @@ export default function SelfEvolutionLoop() {
               <Statistic title="待决策" value={outer?.pending ?? '—'} valueStyle={{ color: "var(--status-warn)" }} />
               <Statistic
                 title="人工采纳率"
-                value={(outer?.adoption_rate == null ? '—' : (outer.adoption_rate * 100).toFixed(1))}
-                suffix="%"
+                value={!outer?.suggestions_total || outer.adoption_rate == null ? '—' : (outer.adoption_rate * 100).toFixed(1)}
+                suffix={outer?.suggestions_total ? '%' : undefined}
                 valueStyle={{ color: '#a86382' }}
               />
               <Statistic
@@ -246,17 +229,17 @@ export default function SelfEvolutionLoop() {
         {/* ---------- 闭环效果：系统自评指标 ---------- */}
         <Col span={24}>
           <Card
-            title="闭环效果：系统自评指标（近 30 天滚动）"
+            title="系统自评指标（当前统计窗口）"
             styles={{ body: cardBodyStyle }}
             extra={
               <ChartNote
                 desc="双闭环持续运行的产出：诊断准确率、误报率、漏报率、平均延迟与阈值标定次数。"
-                dataSource="诊断记录表（人工注入根因后判定是否正确）+ 阈值建议表，运行态真实数据。"
-                insight="准确率随闭环运行逐步上升、误报率逐步下降，是「系统自己在变好」的量化证据。"
+                dataSource="当前数据库诊断记录（人工注入根因后判定是否正确）+ 阈值建议表，不等同于独立现场验证集。"
+                insight="仅统计已注入根因的可评估记录；当前单一窗口数值不能证明指标随时间改善。"
               />
             }
           >
-            {m ? (
+            {m && m.total > 0 ? (
               <Row gutter={16}>
                 <Col xs={12} lg={6}>
                   <Statistic
@@ -300,7 +283,7 @@ export default function SelfEvolutionLoop() {
                 </Col>
               </Row>
             ) : (
-              <Empty description="暂无人工确认的诊断记录" />
+              <Empty description="暂无已注入根因的可评估诊断样本，准确率、误报率与漏报率暂不计算" />
             )}
           </Card>
         </Col>

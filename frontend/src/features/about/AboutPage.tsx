@@ -1,5 +1,6 @@
-import { useSpatialNavigate } from '../../hooks/useSpatialNavigate'
-import { Navigate, useParams } from 'react-router-dom'
+import { useRef } from 'react'
+import { Alert, Button } from 'antd'
+import { Link, Navigate, useLocation, useParams } from 'react-router-dom'
 import DataAssetRegistry from '../../components/DataAssetRegistry'
 import CwruSignal from '../../components/CwruSignal'
 import FPCnnCompare from '../../components/FPCnnCompare'
@@ -12,181 +13,78 @@ import XjtuRul from './figures/XjtuRul'
 import ClassificationResearch from './figures/ClassificationResearch'
 import SteamResearch from './figures/SteamResearch'
 import VisionResearch from './figures/VisionResearch'
-import { PageHeading } from '../../components/BusinessUI'
+import { PageHeading, SourceTag } from '../../components/BusinessUI'
+import { useContentTransition } from '../../motion/useContentTransition'
 import ResearchTree from './ResearchTree'
-import {
-  findPoint,
-  findTopic,
-  RESEARCH_TOPICS,
-  type ResearchFigure,
-} from './research'
+import ResearchOverview, { EvidenceBadge } from './ResearchOverview'
+import { useResearchData } from './useResearchData'
+import { findPoint, findTopic, PROVENANCE, RESEARCH_TOPICS, type ResearchFigure } from './research'
+import { figureEvidence, type EvidenceMap } from './dataContract'
 import './about.css'
 
 const FIGURES: Record<ResearchFigure, () => JSX.Element> = {
-  'dataset-registry': DataAssetRegistry,
-  'cwru-signal': CwruSignal,
-  'fpcnn-compare': FPCnnCompare,
-  'domain-adapt': DomainAdapt,
-  'rul-sde-pf': RulSdePf,
-  'digital-twin-phm': DigitalTwinPhm,
-  'self-evolution-loop': SelfEvolutionLoop,
-  'smart-factory': SmartFactory,
-  'xjtu-rul': XjtuRul,
-  classification: ClassificationResearch,
-  steam: SteamResearch,
-  vision: VisionResearch,
+  'dataset-registry': DataAssetRegistry, 'cwru-signal': CwruSignal, 'fpcnn-compare': FPCnnCompare,
+  'domain-adapt': DomainAdapt, 'rul-sde-pf': RulSdePf, 'digital-twin-phm': DigitalTwinPhm,
+  'self-evolution-loop': SelfEvolutionLoop, 'smart-factory': SmartFactory, 'xjtu-rul': XjtuRul,
+  classification: ClassificationResearch, steam: SteamResearch, vision: VisionResearch,
 }
 
-function TopicIndex({ topicId }: { topicId: string }) {
-  const navigate = useSpatialNavigate()
+function TopicIndex({ topicId, evidence }: { topicId: string; evidence: EvidenceMap }) {
   const topic = findTopic(topicId)
   if (!topic) return null
-  return (
-    <div className="research-index">
-      <p className="research-index__intro">{topic.summary}</p>
-      {topic.points.map((point) => (
-        <section className="research-index__item" key={point.id}>
-          <div>
-            <h2>{point.title}</h2>
-            <p>{point.summary}</p>
-            <code>{point.api}</code>
-          </div>
-          <button
-            type="button"
-            onClick={() => navigate(`/about/research/${topic.id}/${point.id}`)}
-          >
-            查看交互研究
-          </button>
-        </section>
-      ))}
-    </div>
-  )
+  return <div className="research-index"><p className="research-index__intro">{topic.summary}</p>{topic.points.map(point => (
+    <Link className="research-index__item" key={point.id} to={`/research/${topic.id}/${point.id}`}>
+      <div><h2>{point.title}</h2><p>{point.summary}</p>{point.figure && <span className="research-source-label">{PROVENANCE[point.figure].source} · {PROVENANCE[point.figure].evidence}</span>}</div>
+      <span className="research-index__trailing">{point.figure ? <EvidenceBadge status={figureEvidence(point.figure, evidence).status} /> : <span>目录索引</span>}<span aria-hidden="true">↗</span></span>
+    </Link>
+  ))}</div>
 }
 
-function EvidenceIndex() {
-  const navigate = useSpatialNavigate()
-  return (
-    <div className="research-index">
-      <p className="research-index__intro">
-        以下条目只在后端返回真实实验数据时展示；图表数值直接来自对应接口，前端不做插值或补造。
-      </p>
-      {RESEARCH_TOPICS.filter((topic) => topic.id !== 'results').map((topic) =>
-        topic.points
-          .filter((point) => point.figure)
-          .map((point) => (
-            <section className="research-index__item" key={`${topic.id}-${point.id}`}>
-              <div>
-                <h2>
-                  {topic.index} · {point.title}
-                </h2>
-                <p>{point.summary}</p>
-                <code>{point.api}</code>
-              </div>
-              <button
-                type="button"
-                onClick={() =>
-                  navigate(`/about/research/${topic.id}/${point.id}`)
-                }
-              >
-                打开证据
-              </button>
-            </section>
-          )),
-      )}
-    </div>
-  )
+function EvidenceIndex({ evidence }: { evidence: EvidenceMap }) {
+  return <div className="research-index"><p className="research-index__intro">各证据的状态由本次实际接口返回判断；离线实验、仿真与运行统计分别标注。缺失产物保留说明，不伪造结果。</p>{RESEARCH_TOPICS.flatMap(topic => topic.points.filter(point => point.figure).map(point => (
+    <Link className="research-index__item" key={`${topic.id}/${point.id}`} to={`/research/${topic.id}/${point.id}`}>
+      <div><h2>{topic.index} · {point.title}</h2><p>{point.summary}</p><span className="research-source-label">{PROVENANCE[point.figure!].source}</span></div>
+      <span className="research-index__trailing"><EvidenceBadge status={figureEvidence(point.figure!, evidence).status} /><span aria-hidden="true">↗</span></span>
+    </Link>
+  )))}</div>
 }
 
 export default function AboutPage() {
   const params = useParams<{ topicId?: string; pointId?: string }>()
+  const location = useLocation()
   const topic = findTopic(params.topicId)
   const point = findPoint(topic, params.pointId)
-  const navigate = useSpatialNavigate()
+  const { evidence, refresh } = useResearchData()
+  const articleRef = useRef<HTMLElement>(null)
+  useContentTransition(`${params.topicId ?? 'home'}/${params.pointId ?? ''}`, articleRef)
 
-  if (params.topicId && !topic)
-    return <Navigate to="/about" replace />
-  if (params.topicId && params.pointId && !point)
-    return <Navigate to={`/about/research/${params.topicId}`} replace />
-
-  const isHome = !topic
-  const title = point?.title ?? topic?.title ?? '关于'
+  if (params.topicId && !topic) return <Navigate to={`/research${location.search}`} replace />
+  if (params.pointId && !point) return <Navigate to={`/research/${params.topicId}${location.search}`} replace />
   const Figure = point?.figure ? FIGURES[point.figure] : undefined
+  const entry = point?.figure ? figureEvidence(point.figure, evidence) : undefined
+  // Steam's correlation source is independent; never render a chart whose required payload is absent.
+  const ready = entry?.status === 'available'
+  const waiting = !entry || entry.status === 'loading'
+  const source = point?.figure ? PROVENANCE[point.figure] : undefined
 
   return (
     <>
-      <PageHeading
-        title={title}
-        meta={
-          topic ? (
-            <span>
-              {topic.index} · {topic.title}
-            </span>
-          ) : (
-            <span>研究目录与可复核的实验证据</span>
-          )
-        }
-        actions={
-          topic ? (
-            <button
-              type="button"
-              className="research-back"
-              onClick={() =>
-                navigate(
-                  params.pointId
-                    ? `/about/research/${topic.id}`
-                    : '/about',
-                )
-              }
-            >
-              ← 返回{params.pointId ? '研究方向' : '研究目录'}
-            </button>
-          ) : undefined
-        }
-      />
+      <PageHeading title={point?.title ?? topic?.title ?? '研究中心'} meta={
+        <nav className="research-breadcrumb" aria-label="研究面包屑">
+          {topic ? <><Link to="/research">研究中心</Link><span>/</span>{point ? <><Link to={`/research/${topic.id}`}>{topic.title}</Link><span>/</span><span>{point.title}</span></> : <span>{topic.title}</span>}</> : <span>数据、算法与工程证据</span>}
+        </nav>
+      } actions={topic ? <Link className="research-back" to={params.pointId ? `/research/${topic.id}` : '/research'}>← 返回{params.pointId ? '研究方向' : '研究总览'}</Link> : undefined} />
       <div className="research-layout">
         <ResearchTree topicId={params.topicId} pointId={params.pointId} />
-        <article className="research-article">
-          {isHome && (
-            <>
-              <p className="research-article__lead">
-                这里按研究方向组织平台已有的数据、模型实验与系统机理说明。
-                每个交互图表都由真实后端接口提供数据；没有数据的条目不会出现在目录中。
-              </p>
-              <div className="research-home-grid">
-                {RESEARCH_TOPICS.map((item) => (
-                  <button
-                    type="button"
-                    className="research-home-card"
-                    key={item.id}
-                    onClick={() => navigate(`/about/research/${item.id}`)}
-                  >
-                    <span>{item.index}</span>
-                    <strong>{item.title}</strong>
-                    <p>{item.summary}</p>
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-          {topic && !point && <TopicIndex topicId={topic.id} />}
-          {topic && point && (
-            <>
-              <p className="research-article__lead">{point.summary}</p>
-              <div className="research-article__source">
-                <span>数据接口</span>
-                <code>{point.api}</code>
-              </div>
-              {point.figure === undefined ? (
-                <EvidenceIndex />
-              ) : (
-                Figure && (
-                  <div className="research-figure" key={point.id}>
-                    <Figure />
-                  </div>
-                )
-              )}
-            </>
-          )}
+        <article className="research-article" ref={articleRef} aria-label="研究内容" data-research-article>
+          {!topic && <ResearchOverview evidence={evidence} refresh={refresh} />}
+          {topic && !point && <TopicIndex topicId={topic.id} evidence={evidence} />}
+          {topic && point && <>
+            <p className="research-article__lead">{point.summary}</p>
+            {source && <div className="research-provenance"><div><span className="research-source-label">{source.evidence}</span><strong>{source.source}</strong></div><div>{source.kind !== 'runtime' && <SourceTag source={entry?.data?._meta?.source ?? (entry?.status === 'available' ? 'offline_experiment' : 'unknown')} />}<EvidenceBadge status={entry?.status} /></div><p>{source.kind === 'simulation' ? '本研究使用仿真数据预计算结果，不代表实体设备生产实绩。' : source.kind === 'mixed' ? '公开数据、构造目标域或仿真资产采用各自协议；请结合图表来源核对，不能统一解释为现场采集。' : source.kind === 'runtime' ? '流程图是机制说明；数值是当前数据库运行统计。没有有效根因样本时不推定准确率。' : '本研究展示公开数据上的离线分析或训练产物；不等同于当前设备的在线诊断结果。'}</p></div>}
+            <details className="research-api-source"><summary>核对数据接口</summary><code>{point.api}{point.figure === 'steam' ? ' + /api/v1/viz/steam' : ''}</code></details>
+            {!point.figure ? <EvidenceIndex evidence={evidence} /> : ready && Figure ? <div className="research-figure" key={`${topic.id}/${point.id}`} data-research-figure={point.figure}><Figure /></div> : waiting ? <div className="research-source-loading" role="status">正在核验此研究的实际数据…</div> : <Alert type={entry?.status === 'error' ? 'warning' : 'info'} showIcon message="此研究数据尚未就绪" description={entry?.message} action={<Button size="small" onClick={refresh}>重新核验</Button>} />}
+          </>}
         </article>
       </div>
     </>

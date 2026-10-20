@@ -43,7 +43,7 @@ function drawEmotion(ctx: CanvasRenderingContext2D, emotion: PicoEmotion, f: Pic
     case 'search': {
       ctx.fillStyle = '#18201f'; ctx.fillRect(110, 62, 290, 132)
       const sets = ['> / 01', '01 + >', '+ 10 /', '/ > 10']
-      const phase = f.time * 0.65, index = Math.floor(phase) % sets.length, mix = Math.min(1, (phase % 1) * 5)
+      const phase = f.reduced ? 0 : f.time * 0.65, index = Math.floor(phase) % sets.length, mix = f.reduced ? 1 : Math.min(1, (phase % 1) * 5)
       ctx.font = `${small ? 67 : 48}px ui-monospace, Menlo, monospace`
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = INK
       ctx.save(); ctx.globalAlpha *= 1 - mix; ctx.fillText(sets[(index + sets.length - 1) % sets.length], 256, small ? 128 : 94); ctx.restore()
@@ -51,6 +51,7 @@ function drawEmotion(ctx: CanvasRenderingContext2D, emotion: PicoEmotion, f: Pic
       if (!small) { ctx.globalAlpha *= 0.65; ctx.fillText('10 / +', 256, 160) }; break
     }
     case 'talking':
+      if (f.reduced) { symbol(ctx, 'O', 326, 130); break }
       symbol(ctx, f.mouthFrom, 326, 130, 1 - f.mouthMix, 0.98 - f.mouthMix * 0.09)
       symbol(ctx, f.mouthTo, 326, 130, f.mouthMix, 0.88 + f.mouthMix * 0.12); break
     case 'happy': {
@@ -66,8 +67,15 @@ function drawEmotion(ctx: CanvasRenderingContext2D, emotion: PicoEmotion, f: Pic
       }
       draw(index, 1 - mix); draw((index + 1) % 3, mix); break
     }
-    case 'alert': symbol(ctx, '!', 326, 130); break
-    case 'confused': symbol(ctx, 'x', 326, 130, 1, 0.95); break
+    case 'alert':
+      symbol(ctx, '!', 326, 128, 1, 1.08)
+      ctx.beginPath(); ctx.moveTo(143, 76); ctx.lineTo(190, 69); ctx.stroke(); break
+    case 'confused': {
+      const mix = f.reduced ? 0 : smooth((Math.sin(f.time * 1.1) + .15) / 1.15)
+      symbol(ctx, 'x', 326, 130, 1 - mix * .75, .95)
+      symbol(ctx, '?', 326, 128, mix * .75, .92)
+      ctx.beginPath(); ctx.moveTo(148, 72); ctx.lineTo(187, 82); ctx.stroke(); break
+    }
   }
 }
 
@@ -77,6 +85,8 @@ export function paintFace(ctx: CanvasRenderingContext2D, frame: PicoFrame, small
   ctx.strokeStyle = '#49504a'; ctx.lineWidth = 2; ctx.strokeRect(3, 3, 506, 250)
   for (const [emotion, weight] of Object.entries(frame.weights) as [PicoEmotion, number][]) {
     if (weight < 0.002) continue
-    ctx.save(); ctx.globalAlpha = weight; drawEmotion(ctx, emotion, frame, small); ctx.restore()
+    ctx.save(); ctx.globalAlpha = weight
+    ctx.translate(frame.gazeX * 15, frame.gazeY * 11)
+    drawEmotion(ctx, emotion, frame, small); ctx.restore()
   }
 }

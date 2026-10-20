@@ -131,3 +131,73 @@ test('one shared scheduler sleeps when hidden or offscreen and releases listener
     }
   }
 })
+
+test('60-second idle choreography has pauses, all gaze directions and varied bounded micro actions without inventing business emotion', () => {
+  const a = new PicoController(97), b = new PicoController(97)
+  const kinds = new Set(), changes = []
+  let restFrames = 0, previous = 'rest', doubleClosures = 0, wasClosed = false
+  let minX = 0, maxX = 0, minY = 0, maxY = 0
+  for (let i = 0; i < 60 * 60; i++) {
+    const frame = a.step(1 / 60), same = b.step(1 / 60)
+    assert.deepEqual(frame, same, 'equal seeds and input must be deterministic')
+    assert.equal(frame.weights.idle, 1)
+    assert.equal(frame.weights.alert, 0)
+    assert.equal(frame.weights.confused, 0)
+    kinds.add(frame.action)
+    if (frame.action === 'rest') restFrames++
+    if (frame.action !== previous) changes.push({ at: frame.time, kind: frame.action })
+    previous = frame.action
+    if (frame.action === 'double-blink' && frame.blink > .95 && !wasClosed) doubleClosures++
+    wasClosed = frame.blink > .95
+    minX = Math.min(minX, frame.gazeX); maxX = Math.max(maxX, frame.gazeX)
+    minY = Math.min(minY, frame.gazeY); maxY = Math.max(maxY, frame.gazeY)
+    for (const key of ['yaw', 'pitch', 'roll', 'bob', 'squash', 'wobble', 'lean']) assert.ok(Number.isFinite(frame[key]) && Math.abs(frame[key]) < .5, key)
+    for (const key of ['gazeX', 'gazeY']) assert.ok(Number.isFinite(frame[key]) && Math.abs(frame[key]) < 1, key)
+  }
+  for (const kind of ['rest', 'look-left', 'look-right', 'look-up', 'look-down', 'tilt', 'nod', 'double-blink', 'lean']) assert.ok(kinds.has(kind), kind)
+  assert.ok(restFrames > 60 * 10 && restFrames < 60 * 50, 'real pauses occupy a meaningful but not total proportion')
+  assert.ok(minX < -.5 && maxX > .5 && minY < -.4 && maxY > .4)
+  assert.ok(doubleClosures >= 2)
+  const gaps = changes.filter((row) => row.kind !== 'rest').slice(1).map((row, i) => row.at - changes.filter((x) => x.kind !== 'rest')[i].at)
+  assert.ok(new Set(gaps.map((gap) => gap.toFixed(1))).size > 3, 'not an identical-period loop')
+})
+test('real interaction reactions interrupt from the current pose and settle through the same springs', () => {
+  const controller = new PicoController(122)
+  let prior = controller.step(1 / 60)
+  const gestures = ['attention', 'open', 'close', 'context', 'message', 'answer', 'voice-start', 'voice-pause', 'voice-end', 'notification']
+  for (const gesture of gestures) {
+    for (let i = 0; i < 27; i++) prior = controller.step(1 / 60)
+    controller.react(gesture)
+    const instant = controller.step(0)
+    assert.equal(instant.action, gesture)
+    for (const key of ['yaw', 'pitch', 'roll', 'bob', 'squash', 'wobble', 'gazeX', 'gazeY', 'lean']) assert.ok(Math.abs(instant[key] - prior[key]) < 1e-12, `${gesture}:${key}`)
+    assert.equal(instant.weights.idle, 1, 'a body gesture cannot manufacture semantic alerts')
+  }
+  controller.setEmotion('thinking')
+  for (let i = 0; i < 240; i++) prior = controller.step(1 / 60)
+  assert.equal(prior.action, 'rest')
+  assert.ok(Math.abs(prior.gazeX) < 1e-6 && Math.abs(prior.lean) < 1e-6)
+})
+test('reduced motion neutralizes autonomous pose and gaze while preserving each actual emotion', () => {
+  const controller = new PicoController(52)
+  for (let i = 0; i < 180; i++) controller.step(1 / 60)
+  for (const emotion of PICO_EMOTIONS) {
+    controller.setEmotion(emotion)
+    controller.react('notification')
+    const frame = controller.step(1 / 60, true)
+    assert.equal(frame.weights[emotion], 1)
+    assert.equal(frame.action, 'rest')
+    assert.equal(frame.blink, 0)
+    for (const key of ['yaw', 'pitch', 'roll', 'bob', 'squash', 'wobble', 'gazeX', 'gazeY', 'lean']) assert.ok(Math.abs(frame[key]) < 1e-12, `${emotion}:${key}`)
+  }
+})
+test('incidental hover cannot overwrite deliberate close or speech motion, but user messages can interrupt it', () => {
+ const controller=new PicoController(31)
+ controller.react('close');controller.step(.1);controller.react('attention')
+ assert.equal(controller.step(0).action,'close')
+ controller.react('message');assert.equal(controller.step(0).action,'message')
+ controller.react('voice-start');controller.step(.1);controller.react('attention')
+ assert.equal(controller.step(0).action,'voice-start')
+ for(let i=0;i<150;i++)controller.step(1/60)
+ controller.react('attention');assert.equal(controller.step(0).action,'attention')
+})

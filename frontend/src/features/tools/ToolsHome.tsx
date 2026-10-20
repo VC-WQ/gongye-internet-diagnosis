@@ -1,4 +1,3 @@
-import { Button } from 'antd'
 import { useSpatialNavigate } from '../../hooks/useSpatialNavigate'
 import { PageHeading } from '../../components/BusinessUI'
 import { useWorkspace } from '../../services/workspace'
@@ -13,6 +12,8 @@ interface ToolCard {
 }
 
 const TOOL_CARDS: ToolCard[] = [
+  { key: 'diagnosis', title: '智能诊断', description: '选择设备与有效采样，发起诊断并查看证据。沿用真实诊断流程和未闭环事件保护。', path: '/tools/diagnosis' },
+  { key: 'events', title: '事件与报告', description: '在同一任务中选择事件、查看证据、完成处置，并生成与复制报告。', path: '/tools/events' },
   {
     key: 'simulation',
     title: '仿真测试',
@@ -71,13 +72,13 @@ export default function ToolsHome() {
       <PageHeading title="工具" />
       <div className="tool-grid">
         {tools.map((tool) => (
-          <section className="tool-card" key={tool.key}>
+          <button type="button" className="tool-card" key={tool.key} onClick={() => navigate(link(tool.path))}>
             <div className="tool-card__body">
               <h2>{tool.title}</h2>
               <p>{tool.description}</p>
             </div>
-            <Button onClick={() => navigate(link(tool.path))}>进入</Button>
-          </section>
+            <span className="tool-card__direction" aria-hidden>↗</span>
+          </button>
         ))}
       </div>
     </>

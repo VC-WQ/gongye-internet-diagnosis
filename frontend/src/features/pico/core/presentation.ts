@@ -4,7 +4,7 @@ export const AREA_NAMES: Record<string, string> = {
   factory: '工厂',
   tools: '工具',
   admin: '管理',
-  about: '关于',
+  research: '研究',
 }
 
 /** 顶部只显示一次位置：工厂 / 空压机 A。 */

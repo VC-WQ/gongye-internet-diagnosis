@@ -101,7 +101,7 @@ export default function DomainAdapt() {
       series: results.map((r) => ({
         name: r.title,
         type: 'bar',
-        data: devIds.map((d) => r.per_device[d]?.accuracy ?? 0),
+        data: devIds.map((d) => r.per_device[d]?.accuracy ?? null),
         itemStyle: { color: VARIANT_COLOR[r.id] ?? '#6e7d8b' },
       })),
     }
@@ -121,7 +121,7 @@ export default function DomainAdapt() {
           name: '源域 CWRU 测试准确率',
           type: 'line',
           symbolSize: 8,
-          connectNulls: true,
+          connectNulls: false,
           data: results.map((r) => r.source_test_accuracy),
           lineStyle: { color: '#bf5965' },
           itemStyle: { color: '#bf5965' },
@@ -179,7 +179,7 @@ export default function DomainAdapt() {
             extra={
               <ChartNote
                 desc="在三类仿真设备各自的测试集上，五个变体的诊断准确率对比。"
-                dataSource="源域：CWRU 轴承数据集（真实公开）；目标域：按各设备轴承几何/转速/采样率/共振/信噪比物理机理生成的仿真振动信号。"
+                dataSource="源域：CWRU 轴承数据集（真实公开）；目标域：对 CWRU 源域样本施加转速、结构共振、传感器增益与噪声变换构造的设备域。"
                 insight={
                   v0 && best
                     ? `直接迁移仅 ${(v0.target_macro_accuracy * 100).toFixed(1)}%，域漂严重；${best.title} 提升到 ${(best.target_macro_accuracy * 100).toFixed(1)}%。`
@@ -203,8 +203,8 @@ export default function DomainAdapt() {
             extra={
               <ChartNote
                 desc="每个变体在源域（CWRU 测试集）与目标域（三类设备宏平均）上的准确率对比。"
-                dataSource="CWRU 真实公开数据 + 按物理机理生成的三类设备仿真振动数据。"
-                insight="红线（源域）几乎不动而青线（目标域）大幅上升，说明自适应提升的是跨域泛化能力，而非牺牲源域性能换来的。"
+                dataSource="CWRU 公开源域 + 物理变换构造的三类设备目标域，不是现场采集验证。"
+                insight="目标域宏平均准确率提高时，源域准确率也发生下降，体现迁移权衡；V4 为带标签目标域上界，不属于无监督方法。缺失源域指标不跨点连线。"
               />
             }
           >

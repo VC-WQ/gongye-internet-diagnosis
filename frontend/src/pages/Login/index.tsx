@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useLayoutEffect, useState } from 'react'
 import { Button, Form, Input, Tabs, message } from 'antd'
-import { useLocation } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { login, register } from '../../services/api'
 import { errorText } from '../../hooks/useResource'
 import { useLoginTransition } from '../../motion/LoginTransition'
@@ -9,12 +9,16 @@ export default function Login() {
   const location = useLocation()
   const transition = useLoginTransition()
   const [loading, setLoading] = useState(false)
+  const [showPasswordHelp, setShowPasswordHelp] = useState(false)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     transition.resetForLogin()
     const frame = requestAnimationFrame(() => transition.playIntro())
-    return () => cancelAnimationFrame(frame)
-    // 只在登录页挂载时启动一次；StrictMode 下第二次挂载会重新调度。
+    return () => {
+      cancelAnimationFrame(frame)
+      transition.cancelIntro()
+    }
+    // 每次真正进入登录页重新播放；同次挂载内 provider 防重入。
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -39,7 +43,8 @@ export default function Login() {
       const safe =
         target.startsWith('/') &&
         !target.startsWith('//') &&
-        !target.startsWith('/login')
+        !target.startsWith('/login') &&
+        !/[\\\u0000-\u0020]/.test(target)
           ? target
           : '/dashboard'
       transition.beginSuccess(safe)
@@ -86,7 +91,7 @@ export default function Login() {
       data-login-phase={transition.phase}
       data-intro={transition.introDone ? 'done' : 'running'}
     >
-      <div className="login-red-cover" aria-hidden />
+      <div className="login-intro-cover" data-login-intro-cover aria-hidden />
       <section className="login-brand">
         <div className="login-brand__content">
           <div className="brand-mark" aria-hidden>
@@ -96,9 +101,9 @@ export default function Login() {
           </div>
           <div>
             <h1>
-              设备状态，
+              设备状态
               <br />
-              清晰可见。
+              清晰可见
             </h1>
             <div className="login-graphic" aria-hidden>
               <i />
@@ -119,7 +124,14 @@ export default function Login() {
               { key: 'register', label: '注册', children: form(true) },
             ]}
           />
-          <div className="login-footer">工业设备智能诊断平台</div>
+          <div className="login-footer">
+            <button type="button" aria-expanded={showPasswordHelp} aria-controls="login-password-help"
+              onClick={() => setShowPasswordHelp((value) => !value)}>忘记密码</button>
+            <Link to="/research">研究</Link>
+          </div>
+          {showPasswordHelp && <p id="login-password-help" className="login-help" role="status">
+            平台暂不提供邮件或短信自助重置。请联系本平台管理员，在用户管理中为你的账号重置密码。
+          </p>}
         </div>
       </section>
     </main>

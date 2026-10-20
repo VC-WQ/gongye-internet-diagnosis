@@ -118,27 +118,30 @@ export default function RulSdePf() {
           name: '真实 RUL',
           type: 'line',
           showSymbol: false,
-          smooth: true,
+          smooth: false,
           data: curve.actual.map((v, i) => [((i / (n - 1)) * 100).toFixed(1), v]),
           lineStyle: { color: '#bf5965', width: 2 },
+          itemStyle: { color: '#bf5965' },
         },
         {
           name: 'SDE + 粒子滤波预测',
           type: 'line',
           showSymbol: false,
-          smooth: true,
+          smooth: false,
           connectNulls: false,
           data: curve.sde_pf.map((v, i) => [((i / (n - 1)) * 100).toFixed(1), v]),
           lineStyle: { color: '#477d9e', width: 2 },
+          itemStyle: { color: '#477d9e' },
         },
         {
           name: '指数外推基线',
           type: 'line',
           showSymbol: false,
-          smooth: true,
+          smooth: false,
           connectNulls: false,
           data: curve.baseline.map((v, i) => [((i / (n - 1)) * 100).toFixed(1), v]),
           lineStyle: { color: '#6e7d8b', type: 'dashed' },
+          itemStyle: { color: '#6e7d8b' },
         },
       ],
     }
@@ -152,7 +155,7 @@ export default function RulSdePf() {
       const pairs = pred
         .map((p, i) => [p, actual[i]] as const)
         .filter(([p, a]) => p != null && a != null) as Array<[number, number]>
-      if (!pairs.length) return 0
+      if (!pairs.length) return null
       return pairs.reduce((s, [p, a]) => s + Math.abs(p - a), 0) / pairs.length
     }
     return {
@@ -169,13 +172,13 @@ export default function RulSdePf() {
         {
           name: 'SDE + 粒子滤波',
           type: 'bar',
-          data: cs.map((c) => +maeOf(c.sde_pf, c.actual).toFixed(4)),
+          data: cs.map((c) => { const value = maeOf(c.sde_pf, c.actual); return value == null ? null : +value.toFixed(4) }),
           itemStyle: { color: '#477d9e' },
         },
         {
           name: '指数外推基线',
           type: 'bar',
-          data: cs.map((c) => +maeOf(c.baseline, c.actual).toFixed(4)),
+          data: cs.map((c) => { const value = maeOf(c.baseline, c.actual); return value == null ? null : +value.toFixed(4) }),
           itemStyle: { color: '#64748b' },
         },
       ],
@@ -257,7 +260,7 @@ export default function RulSdePf() {
               <ChartNote
                 desc="按轴承分组统计的 RUL 预测平均绝对误差（MAE），逐根对比两种方法。"
                 dataSource="XJTU-SY 15 根轴承 · 3 种工况（35Hz12kN / 37.5Hz11kN / 40Hz10kN），真实公开数据。"
-                insight="每根轴承上青色柱都低于灰色柱，说明改进不是靠个别样本拉高的均值，而是整体一致变好。"
+                insight="逐轴承展示有效预测点上的 MAE；部分轴承并未优于基线。两种方法的有效预测区间可能不同，请结合具体曲线复核，缺失预测不记为零误差。"
               />
             }
           >

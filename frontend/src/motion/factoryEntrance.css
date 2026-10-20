@@ -1,0 +1,11 @@
+/* Only the surrounding group moves; scene camera transforms retain their owner. */
+.factory-workspace[data-factory-entering] [data-factory-entry] {
+  transition: none;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .factory-workspace[data-factory-entering] [data-factory-entry] {
+    opacity: 1;
+    transform: none;
+  }
+}

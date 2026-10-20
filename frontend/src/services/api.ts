@@ -151,13 +151,26 @@ export const reviseEvent = (
 export const executeEvent = (id: number, operator: string, command?: string) =>
   api.post(`/command-loop/events/${id}/execute`, { operator, command }).then((r) => r.data)
 
+export interface ObservationResult {
+  event_id: number
+  status_state: string
+  feedback_result: {
+    verdict: 'recovered' | 'extend' | 'relapsed'
+    deviation_pct: number
+    diagnosis_confirmed: boolean
+    trigger_rediagnosis: boolean
+    actual_curve: number[]
+    predicted_curve: number[]
+  }
+}
+
 export const observeEvent = (
   id: number,
   actualCurve: number[],
   operator: string,
 ) =>
   api
-    .post(`/command-loop/events/${id}/observe`, {
+    .post<ObservationResult>(`/command-loop/events/${id}/observe`, {
       actual_curve: actualCurve,
       operator,
     })

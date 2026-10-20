@@ -7,7 +7,10 @@ const source = await readFile(
   new URL('../src/features/pico/core/actions.ts', import.meta.url),
   'utf8',
 )
-const { outputText } = ts.transpileModule(source, {
+const workspaceSource = await readFile(new URL('../src/services/workspaceMode.ts', import.meta.url), 'utf8')
+const workspaceOutput = ts.transpileModule(workspaceSource, {compilerOptions:{module:ts.ModuleKind.ES2022}}).outputText
+const workspaceUrl = `data:text/javascript;base64,${Buffer.from(workspaceOutput).toString('base64')}`
+const { outputText } = ts.transpileModule(source.replaceAll("'../../../services/workspaceMode'", JSON.stringify(workspaceUrl)), {
   compilerOptions: { module: ts.ModuleKind.ES2022 },
 })
 const { actionPath, isSafeInternalPath, ALLOWED_ACTIONS } = await import(
@@ -23,27 +26,28 @@ test('only navigation actions are allowlisted', () => {
   )
 })
 
-test('open_event builds a factory panel path with device and event', () => {
+test('open_event uses the sole event tool with device and event', () => {
   const path = actionPath({
     type: 'open_event',
     label: '',
     target: '1',
     params: { device_id: 'pump-001', event_id: 1 },
   })
-  assert.ok(path.startsWith('/dashboard?'))
-  assert.equal(params(path).get('panel'), 'events')
+  assert.ok(path.startsWith('/tools/events?'))
+  assert.equal(params(path).has('panel'), false)
   assert.equal(params(path).get('device'), 'pump-001')
   assert.equal(params(path).get('event'), '1')
 })
 
-test('open_report and open_device build factory panel paths', () => {
+test('open_report and open_device use shared canonical routes', () => {
   const report = actionPath({
     type: 'open_report',
     label: '',
     target: '1',
     params: { device_id: 'pump-001', event_id: '1' },
   })
-  assert.equal(params(report).get('panel'), 'report')
+  assert.equal(new URL(report, 'http://localhost').pathname, '/tools/events')
+  assert.equal(params(report).get('section'), 'report')
   assert.equal(params(report).get('device'), 'pump-001')
   assert.equal(params(report).get('event'), '1')
 
@@ -53,8 +57,7 @@ test('open_report and open_device build factory panel paths', () => {
     target: 'pump-001',
     params: {},
   })
-  assert.equal(params(device).get('panel'), 'device')
-  assert.equal(params(device).get('device'), 'pump-001')
+  assert.equal(device, '/manage/devices/pump-001')
 })
 
 test('legacy Pico action targets are migrated to the four domains', () => {
@@ -65,10 +68,11 @@ test('legacy Pico action targets are migrated to the four domains', () => {
       target: path,
       params: {},
     })
-  assert.equal(params(target('/events')).get('panel'), 'events')
-  assert.equal(params(target('/reports')).get('panel'), 'report')
-  assert.equal(params(target('/diagnose')).get('panel'), 'diagnosis')
-  assert.equal(target('/lab'), '/about/research/signal')
+  assert.equal(target('/events'), '/tools/events')
+  assert.equal(target('/events?device=pump-001&event=7'), '/tools/events?device=pump-001&event=7')
+  assert.equal(target('/reports'), '/tools/events?section=report')
+  assert.equal(target('/diagnose'), '/tools/diagnosis')
+  assert.equal(target('/lab'), '/research/signal')
   assert.equal(target('/ops?tab=eval'), '/tools/evaluation')
   assert.equal(target('/ops?tab=threshold'), '/tools/settings')
   assert.equal(target('/dashboard?device=pump-001'), '/dashboard?device=pump-001')
@@ -123,4 +127,8 @@ test('workspace navigation rejects encoded backslashes, control text and write/a
   )
   assert.equal(isSafeInternalPath('/tools/pico'), true)
   assert.equal(isSafeInternalPath('/about/research/signal'), true)
+  assert.equal(isSafeInternalPath('/research/health/rul'), true)
+  assert.equal(isSafeInternalPath('/manage/records/7'), true)
+  assert.equal(isSafeInternalPath('/manage/../admin/users'), false)
+  assert.equal(isSafeInternalPath('/tools/%2e%2e/admin/users'), false)
 })

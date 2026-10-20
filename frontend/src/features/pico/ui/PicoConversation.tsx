@@ -5,6 +5,7 @@ import { usePico } from '../core/PicoProvider'
 import { actionPath } from '../core/actions'
 import { metaDetails, isNearBottom } from '../core/presentation'
 import type { PicoAction, PicoMessage, PicoReference } from '../core/types'
+import { DURATION, EASE_CSS } from '../../../motion/tokens'
 import { useSpatialNavigate } from '../../../hooks/useSpatialNavigate'
 
 const SUGGESTIONS = ['这台设备怎么样？', '最近有哪些告警？', '查看当前事件报告']
@@ -88,6 +89,7 @@ export default function PicoConversation({
   const mounted = useRef(false)
   const nearBottom = useRef(true)
   const reduced = useRef(false)
+  const pendingTimer = useRef<ReturnType<typeof setTimeout>>()
 
   useEffect(() => {
     const media = matchMedia('(prefers-reduced-motion: reduce)')
@@ -182,7 +184,7 @@ export default function PicoConversation({
           opacity: 1,
         },
       ],
-      { duration: 420, easing: 'cubic-bezier(.22,.61,.36,1)' },
+      { duration: DURATION.messageFlight * 1000, easing: EASE_CSS.balanced },
     )
     const finish = () => {
       setFlight(undefined)
@@ -226,7 +228,7 @@ export default function PicoConversation({
             opacity: 1,
           },
         ],
-        { duration: 460, easing: 'cubic-bezier(.16,1,.3,1)' },
+        { duration: DURATION.messageAnswer * 1000, easing: EASE_CSS.outward },
       )
     }
   }, [messages])
@@ -234,6 +236,7 @@ export default function PicoConversation({
   useEffect(
     () => () => {
       pending.current = null
+      clearTimeout(pendingTimer.current)
     },
     [],
   )
@@ -247,7 +250,8 @@ export default function PicoConversation({
     setDraft('')
     if (box && !reduced.current) {
       pending.current = { id, text, from: box }
-      window.setTimeout(() => {
+      clearTimeout(pendingTimer.current)
+      pendingTimer.current = setTimeout(() => {
         if (pending.current?.id === id) {
           pending.current = null
           setFlyingId(undefined)

@@ -4,11 +4,13 @@ import { usePico } from '../core/PicoProvider'
 import PicoHeader from './PicoHeader'
 import PicoConversation from './PicoConversation'
 import '../pico.css'
+import { DURATION } from '../../../motion/tokens'
+import type { CSSProperties } from 'react'
 
 const PicoAvatar = lazy(() => import('./PicoAvatar'))
 
 export default function PicoDock() {
-  const { open, setOpen, toggle, unread, emotion } = usePico()
+  const { open, setOpen, toggle, unread, emotion, reaction, react } = usePico()
   const location = useLocation()
   const [offset, setOffset] = useState({ x: 0, y: 0 })
   const dockRef = useRef<HTMLDivElement>(null)
@@ -16,6 +18,7 @@ export default function PicoDock() {
   const panelRef = useRef<HTMLElement>(null)
   const orbRef = useRef<HTMLButtonElement>(null)
   const wasOpen = useRef(open)
+  const restoringFocus = useRef(false)
   const dragging = useRef<{
     x: number
     y: number
@@ -73,11 +76,13 @@ export default function PicoDock() {
         panelRef.current
           ?.querySelector<HTMLTextAreaElement>('[data-pico-input]')
           ?.focus({ preventScroll: true })
-      }, 380)
+      }, DURATION.picoReveal * 1000)
     } else if (wasOpen.current) {
-      frame = requestAnimationFrame(() =>
-        orbRef.current?.focus({ preventScroll: true }),
-      )
+      frame = requestAnimationFrame(() => {
+        restoringFocus.current = true
+        orbRef.current?.focus({ preventScroll: true })
+        restoringFocus.current = false
+      })
     }
     wasOpen.current = open
     return () => {
@@ -110,7 +115,9 @@ export default function PicoDock() {
       data-open={open}
       style={{
         transform: open ? undefined : `translate(${offset.x}px,${offset.y}px)`,
-      }}
+        '--pico-morph-duration': `${DURATION.picoMorph * 1000}ms`,
+        '--pico-reveal-duration': `${DURATION.picoReveal * 1000}ms`,
+      } as CSSProperties}
     >
       <div
         ref={morphRef}
@@ -119,7 +126,7 @@ export default function PicoDock() {
       >
         <div className="pico-morph__avatar">
           <Suspense fallback={<span className="pico-loading">Pico</span>}>
-            <PicoAvatar emotion={emotion} size={76} />
+            <PicoAvatar emotion={emotion} reaction={reaction} size={76} />
           </Suspense>
         </div>
         <section
@@ -138,6 +145,8 @@ export default function PicoDock() {
           aria-label={open ? '收起 Pico 助手' : '打开 Pico 助手'}
           aria-expanded={open}
           title="Pico · 点击打开，拖动可移动"
+          onPointerEnter={() => react('attention')}
+          onFocus={() => { if (!restoringFocus.current) react('attention') }}
           onPointerDown={(event) => {
             if (event.button !== 0 || open) return
             const box = event.currentTarget.getBoundingClientRect()

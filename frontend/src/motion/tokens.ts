@@ -1,14 +1,37 @@
-/** V2.2 全站运动令牌：单一来源，禁止在组件里散落魔法时长。 */
+/** 全站运动令牌。时间用秒；几何时间线的节点由这里明确声明。 */
 export const DURATION = {
   hover: 0.18,
   selection: 0.3,
   flip: 0.22,
   content: 0.32,
-  panel: 0.48,
+  panel: 0.42,
   route: 0.42,
   camera: 0.72,
   loginReveal: 1.1,
   loginSuccess: 1.15,
+  picoMorph: 0.42,
+  picoReveal: 0.38,
+  messageFlight: 0.42,
+  messageAnswer: 0.46,
+} as const
+
+export const LOGIN_SEQUENCE = {
+  panelPrepare: 55,
+  panelEnd: 350,
+  redEarliestStart: 65,
+  redEnd: 540,
+  waitingNotice: 1500,
+  waitingHelp: 8000,
+} as const
+
+/** Spatial origins belong to the surrounding layout, never to random cards. */
+export const FACTORY_ENTRANCE = {
+  status: { start: 0, duration: 420, x: 0, y: -12 },
+  devices: { start: 100, duration: 550, x: -24, y: 0 },
+  scene: { start: 150, duration: 760, x: 0, y: 18 },
+  current: { start: 260, duration: 570, x: 24, y: 0 },
+  monitor: { start: 320, duration: 580, x: -16, y: 14 },
+  events: { start: 380, duration: 620, x: 18, y: 14 },
 } as const
 
 export const EASING = {

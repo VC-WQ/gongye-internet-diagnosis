@@ -88,10 +88,12 @@ export default function FactoryScene({
   devices,
   selected,
   onSelect,
+  onClear,
 }: {
   devices: Device[]
   selected?: string
   onSelect: (id: string) => void
+  onClear?: () => void
 }) {
   const [camera, setCamera] = useState<Camera>({ x: 0, y: 0, zoom: 1 })
   const current = useRef(camera)
@@ -205,16 +207,18 @@ export default function FactoryScene({
           tabIndex={0}
           data-camera={`${camera.x.toFixed(2)},${camera.y.toFixed(2)},${camera.zoom.toFixed(3)}`}
           onKeyDown={(e) => {
+            if (e.key === 'Escape') { e.preventDefault(); reset(); onClear?.(); return }
             if ((e.target as Element).closest('[data-device]')) return
             const steps: Record<string, [number, number]> = { ArrowLeft: [45, 0], ArrowRight: [-45, 0], ArrowUp: [0, 45], ArrowDown: [0, -45] }
             if (steps[e.key]) { e.preventDefault(); const [x, y] = steps[e.key]; move({ ...target.current, x: target.current.x + x, y: target.current.y + y }) }
-            if (e.key === 'Home' || e.key === 'Escape') { e.preventDefault(); reset() }
+            if (e.key === 'Home') { e.preventDefault(); reset() }
             if (e.key === '+' || e.key === '=') { e.preventDefault(); zoom(1.15) }
             if (e.key === '-') { e.preventDefault(); zoom(1 / 1.15) }
           }}
           onPointerDown={(e) => {
             if (e.button !== 0 || (e.target as Element).closest('[data-device]')) return
             if (pointers.current.size === 0) { moved.current = false; dragDistance.current = 0 }
+            else moved.current = true
             pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
             e.currentTarget.setPointerCapture(e.pointerId)
           }}
@@ -237,7 +241,7 @@ export default function FactoryScene({
           onPointerUp={(e) => {
             if (!pointers.current.has(e.pointerId)) return
             pointers.current.delete(e.pointerId)
-            if (!moved.current && pointers.current.size === 0) reset()
+            if (!moved.current && pointers.current.size === 0) { reset(); onClear?.() }
           }}
           onPointerCancel={(e) => { pointers.current.delete(e.pointerId); moved.current = true }}
         >

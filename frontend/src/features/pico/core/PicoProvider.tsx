@@ -16,6 +16,7 @@ import { errorText } from '../../../hooks/useResource'
 import { postPicoChat } from '../api/pico'
 import { NotificationGate } from './notificationGate'
 import { buildContextTitle } from './presentation'
+import type { PicoGesture, PicoReaction } from '../animation/controller'
 import type {
   PicoChatResponse,
   PicoEmotion,
@@ -30,6 +31,8 @@ interface PicoValue {
   messages: PicoMessage[]
   busy: boolean
   emotion: PicoEmotion
+  reaction: PicoReaction
+  react: (kind: PicoGesture) => void
   talking: boolean
   speakingId?: string
   speechError: string
@@ -87,6 +90,8 @@ export function PicoProvider({ children }: { children: ReactNode }) {
   const [busy, setBusy] = useState(false)
   const [emotion, setEmotion] = useState<PicoEmotion>('idle')
   const [talking, setTalking] = useState(false)
+  const [reaction, setReaction] = useState<PicoReaction>({ id: 0, kind: 'context' })
+  const react = useCallback((kind: PicoGesture) => setReaction((previous) => ({ id: previous.id + 1, kind })), [])
   const [speakingId, setSpeakingId] = useState<string>()
   const [speechError, setSpeechError] = useState('')
   const [autoRead, setAutoReadState] = useState(readAutoRead)
@@ -123,16 +128,18 @@ export function PicoProvider({ children }: { children: ReactNode }) {
     stopChineseSpeech()
     setTalking(false)
     setSpeakingId(undefined)
-    setEmotion('idle')
+    setEmotion(busyRef.current ? 'thinking' : 'idle')
   }, [])
 
   const setOpen = useCallback(
     (value: boolean) => {
+      if (openRef.current === value) return
       setOpenState(value)
+      react(value ? 'open' : 'close')
       if (value) setUnread(false)
       else stopSpeaking()
     },
-    [stopSpeaking],
+    [stopSpeaking, react],
   )
   const toggle = useCallback(() => setOpen(!openRef.current), [setOpen])
 
@@ -166,6 +173,7 @@ export function PicoProvider({ children }: { children: ReactNode }) {
     }
     if (lastContext.current === key) return
     lastContext.current = key
+    react('context')
     requestRef.current += 1
     abortRef.current?.abort()
     busyRef.current = false
@@ -178,6 +186,7 @@ export function PicoProvider({ children }: { children: ReactNode }) {
     workspace.panel,
     workspace.detailTab,
     stopSpeaking,
+    react,
   ])
 
   // 路由变化时停止播报，避免跨页面残留
@@ -205,8 +214,11 @@ export function PicoProvider({ children }: { children: ReactNode }) {
       setSpeechError('')
       const queued = speakChinese(text, undefined, (state) => {
         const playing = state === 'start' || state === 'resume'
+        if (playing) react('voice-start')
+        else if (state === 'pause') react('voice-pause')
+        else if (state === 'end' || state === 'cancel') react('voice-end')
         setTalking(playing)
-        setEmotion(playing ? 'talking' : 'idle')
+        setEmotion(playing ? 'talking' : busyRef.current ? 'thinking' : 'idle')
         if (state === 'end' || state === 'error' || state === 'cancel')
           setSpeakingId(undefined)
         if (state === 'error')
@@ -215,16 +227,17 @@ export function PicoProvider({ children }: { children: ReactNode }) {
       if (!queued) {
         setSpeakingId(undefined)
         setTalking(false)
-        setEmotion('idle')
+        setEmotion(busyRef.current ? 'thinking' : 'idle')
         setSpeechError('当前浏览器无法播放语音')
       }
     },
-    [],
+    [react],
   )
 
   const notify = useCallback((notification: PicoNotification) => {
     // 先判断是否值得通知；只有被接受的 critical 才允许中断当前读取。
     if (!notificationGate.current.accept(notification)) return
+    react('notification')
     if (notification.severity === 'critical' && busyRef.current) {
       requestRef.current += 1
       abortRef.current?.abort()
@@ -249,7 +262,7 @@ export function PicoProvider({ children }: { children: ReactNode }) {
       },
     ])
     if (!openRef.current && !workbenchRef.current) setUnread(true)
-  }, [])
+  }, [react])
 
   const cancel = useCallback(() => {
     requestRef.current += 1
@@ -276,6 +289,7 @@ export function PicoProvider({ children }: { children: ReactNode }) {
     ) => {
       const content = text.trim()
       if (!content || busyRef.current) return
+      react('message')
       const requestId = ++requestRef.current
       abortRef.current?.abort()
       const controller = new AbortController()
@@ -321,6 +335,7 @@ export function PicoProvider({ children }: { children: ReactNode }) {
             controller.signal,
           )
           if (requestRef.current !== requestId) return
+          react('answer')
           setMessages((previous) => [
             ...previous,
             {
@@ -359,7 +374,7 @@ export function PicoProvider({ children }: { children: ReactNode }) {
       })()
       return userMessageId
     },
-    [messages, workspace, contextTitle, speak],
+    [messages, workspace, contextTitle, speak, react],
   )
 
   const previewEmotion = useCallback(
@@ -378,6 +393,8 @@ export function PicoProvider({ children }: { children: ReactNode }) {
       messages,
       busy,
       emotion,
+      reaction,
+      react,
       talking,
       speakingId,
       speechError,
@@ -403,6 +420,8 @@ export function PicoProvider({ children }: { children: ReactNode }) {
       messages,
       busy,
       emotion,
+      reaction,
+      react,
       talking,
       speakingId,
       speechError,

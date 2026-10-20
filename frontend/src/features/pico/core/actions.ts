@@ -1,80 +1,25 @@
 import type { PicoAction } from './types'
+import { deviceDetailPath, toolPath, legacyRedirect, isSafeInternalPath } from '../../../services/workspaceMode'
+export { isSafeInternalPath } from '../../../services/workspaceMode'
 
-/** 前端动作白名单：Pico 只能导航，不能触发任何写操作。 */
-export const ALLOWED_ACTIONS = [
-  'open_device',
-  'open_event',
-  'open_report',
-  'switch_workspace_view',
-] as const
-
-/** 仅接受站内相对路径，拒绝任意协议/外链注入。 */
-export function isSafeInternalPath(path: string): boolean {
-  if (!path.startsWith('/') || path.startsWith('//') || /[\\\u0000-\u0020]/.test(path)) return false
-  try { if (/[\\\u0000-\u0020]/.test(decodeURIComponent(path))) return false } catch { return false }
-  return path === '/' || /^\/(dashboard|tools|about)([/?#]|$)/.test(path)
-}
-
-/** 旧后端动作仍可能返回旧地址；这里一次性迁到 V2.2 四域。 */
-const LEGACY_TARGETS: Record<string, string> = {
-  '/': '/dashboard',
-  '/devices': '/dashboard',
-  '/events': '/dashboard?panel=events',
-  '/reports': '/dashboard?panel=report',
-  '/diagnose': '/dashboard?panel=diagnosis',
-  '/lab': '/about/research/signal',
-  '/ops': '/tools',
-}
-
-function canonicalTarget(target: string): string {
-  const [pathname, search = ''] = target.split('?')
-  if (pathname === '/ops') {
-    const tab = new URLSearchParams(search).get('tab')
-    if (tab === 'eval') return '/tools/evaluation'
-    if (tab === 'threshold') return '/tools/settings'
-    return '/about/research/mechanism'
-  }
-  const base = LEGACY_TARGETS[pathname.replace(/\/+$/, '') || '/']
-  return base ?? target
-}
+/** Pico 只提供站内导航；所有业务写入仍走原有显式流程。 */
+export const ALLOWED_ACTIONS = ['open_device', 'open_event', 'open_report', 'switch_workspace_view'] as const
 
 export function actionPath(action: PicoAction): string | null {
   const params = action.params ?? {}
-  const deviceId =
-    typeof params.device_id === 'string' ? params.device_id : undefined
-  const rawEvent = params.event_id
-  const eventId =
-    typeof rawEvent === 'number'
-      ? rawEvent
-      : typeof rawEvent === 'string' && Number(rawEvent)
-        ? Number(rawEvent)
-        : undefined
-  const isPositive = typeof eventId === 'number' && Number.isInteger(eventId) && eventId > 0
-
+  const deviceId = typeof params.device_id === 'string' ? params.device_id : undefined
+  const rawEvent = params.event_id ?? action.target
+  const eventId = typeof rawEvent === 'number' || typeof rawEvent === 'string' ? Number(rawEvent) : undefined
+  const event = typeof eventId === 'number' && Number.isSafeInteger(eventId) && eventId > 0 ? eventId : undefined
   switch (action.type) {
-    case 'open_device': {
-      const id = deviceId ?? action.target
-      const query = new URLSearchParams({ panel: 'device' })
-      if (id) query.set('device', id)
-      return `/dashboard?${query}`
-    }
-    case 'open_event': {
-      const query = new URLSearchParams({ panel: 'events' })
-      if (deviceId) query.set('device', deviceId)
-      if (isPositive) query.set('event', String(eventId))
-      return `/dashboard?${query}`
-    }
-    case 'open_report': {
-      const query = new URLSearchParams({ panel: 'report' })
-      if (deviceId) query.set('device', deviceId)
-      if (isPositive) query.set('event', String(eventId))
-      return `/dashboard?${query}`
-    }
+    case 'open_device': return deviceDetailPath((deviceId ?? action.target) || undefined)
+    case 'open_event': return toolPath('events', deviceId, event)
+    case 'open_report': return toolPath('events', deviceId, event, 'report')
     case 'switch_workspace_view': {
-      const target = canonicalTarget(action.target)
+      const [pathname, search = ''] = action.target.split('?')
+      const target = legacyRedirect(pathname, search) ?? action.target
       return isSafeInternalPath(target) ? target : null
     }
-    default:
-      return null
+    default: return null
   }
 }

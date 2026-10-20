@@ -106,7 +106,7 @@ export default function ClassificationResearch() {
           name: dataset.name,
           type: 'line',
           showSymbol: false,
-          smooth: true,
+          smooth: false,
           data: dataset.roc.fpr.map((value, index) => [
             value,
             dataset.roc.tpr[index],

@@ -13,6 +13,7 @@ import { errorText } from '../../../hooks/useResource'
 
 export default function ReportDocumentPanel({
   device,
+  deviceId,
   event,
   eventId,
   events,
@@ -23,6 +24,7 @@ export default function ReportDocumentPanel({
   onOpenEvent,
 }: {
   device?: Device
+  deviceId?: string
   event?: EventSummary
   eventId?: number
   events: EventSummary[]
@@ -35,8 +37,10 @@ export default function ReportDocumentPanel({
   const [document, setDocument] = useState<{ key: string; text: string }>()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [reportKind, setReportKind] = useState<'flash' | 'event'>('flash')
   const sequence = useRef(0)
-  const key = `${device?.id ?? 'all'}:${eventId ?? 'flash'}`
+  const scope = deviceId ?? device?.id
+  const key = `${scope ?? 'all'}:${eventId ?? 'flash'}`
   useEffect(() => {
     sequence.current += 1
     setLoading(false)
@@ -49,11 +53,12 @@ export default function ReportDocumentPanel({
   const generate = async (flash: boolean) => {
     if (!flash && !eventId) return
     const request = ++sequence.current
+    setReportKind(flash ? 'flash' : 'event')
     setLoading(true)
     setError('')
     try {
       const response = flash
-        ? await getFlashReport(device ? { device_id: device.id } : {})
+        ? await getFlashReport(scope ? { device_id: scope } : {})
         : await getEventReport(eventId!)
       if (request === sequence.current) {
         if (typeof response.report !== 'string')
@@ -123,7 +128,7 @@ export default function ReportDocumentPanel({
       <LoadState
         loading={loading || (Boolean(eventId) && eventLoading)}
         error={error || (eventId ? eventError : undefined)}
-        onRetry={error ? () => generate(!eventId) : onRefreshEvent}
+        onRetry={error ? () => generate(reportKind === 'flash') : onRefreshEvent}
       >
         {text ? (
           <div className="report-content">

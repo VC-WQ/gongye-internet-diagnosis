@@ -1,6 +1,6 @@
-import { Button, Empty, Select } from 'antd'
+import { Empty, Select } from 'antd'
 import SensorChart from '../../components/SensorChart'
-import { formatTime } from '../../components/BusinessUI'
+import { formatTime, SourceTag } from '../../components/BusinessUI'
 import { CHANNELS, type useDeviceTelemetry } from '../../services/realtime'
 import type { Device } from '../../services/api'
 
@@ -9,13 +9,11 @@ export default function LiveMonitorPanel({
   telemetry,
   channel,
   onChannel,
-  onExpand,
 }: {
   device?: Device
   telemetry: ReturnType<typeof useDeviceTelemetry>
   channel: string
   onChannel: (channel: string) => void
-  onExpand: () => void
 }) {
   return (
     <section className="factory-panel factory-panel--monitor" aria-label="实时监测">
@@ -33,13 +31,11 @@ export default function LiveMonitorPanel({
               label: meta.name,
             }))}
           />
-          <Button size="small" type="text" onClick={onExpand} disabled={!device}>
-            展开
-          </Button>
+
         </div>
       </header>
       {!device ? (
-        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="选择一台设备" />
+        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="全厂监测：选择设备后显示对应传感器窗口" />
       ) : telemetry.error ? (
         <p className="factory-note factory-note--error">{telemetry.error}</p>
       ) : (
@@ -59,7 +55,7 @@ export default function LiveMonitorPanel({
                   ? '正在读取采样窗口'
                   : '暂无有效采样'}
             </span>
-            <span>{telemetry.samples.length} 点</span>
+            <span><SourceTag source={telemetry.source} /> · {telemetry.samples.length} 点</span>
           </div>
         </>
       )}

@@ -40,17 +40,19 @@ export default function XjtuRul() {
           name: '健康指标 HI',
           type: 'line',
           showSymbol: false,
-          smooth: true,
+          smooth: false,
           data: bearing.series.map((point) => [point.t, point.hi]),
           lineStyle: { color: '#327a60' },
+          itemStyle: { color: '#327a60' },
         },
         {
           name: '剩余寿命 RUL',
           type: 'line',
           showSymbol: false,
-          smooth: true,
+          smooth: false,
           data: bearing.series.map((point) => [point.t, point.rul]),
           lineStyle: { color: '#406783', type: 'dashed' },
+          itemStyle: { color: '#406783' },
         },
       ],
     }
@@ -82,9 +84,9 @@ export default function XjtuRul() {
               />
             )}
             <ChartNote
-              desc="单根轴承全寿命的健康指标 HI（单调下降）与剩余寿命 RUL 随时间演化的退化曲线。"
+              desc="单根轴承全寿命的健康指标 HI与剩余寿命 RUL 随时间演化的退化曲线。"
               dataSource="XJTU-SY 西安交大轴承全寿命加速退化数据集（15 根轴承双通道振动，真实公开数据）。"
-              insight="HI 单调下降是寿命预测的建模依据；SDE 状态方程刻画的正是这条曲线的自加速段。"
+              insight="HI 的整体退化趋势是寿命预测的建模依据；SDE 状态方程刻画的正是这条曲线的自加速段。"
             />
           </Space>
         }

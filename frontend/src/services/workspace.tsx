@@ -15,6 +15,7 @@ import {
   normalizeDetail,
   normalizePanel,
   normalizeStatus,
+  safeDecode,
   workspaceLink,
   type Area,
   type DetailTab,
@@ -66,8 +67,13 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [params, setParams] = useSearchParams()
 
   const area = areaFromPath(location.pathname)
-  const selectedDeviceId = params.get('device') ?? undefined
-  const selectedEventId = Number(params.get('event')) || undefined
+  const pathDevice = location.pathname.startsWith('/manage/devices/')
+    ? safeDecode(location.pathname.split('/')[3] ?? '') : undefined
+  const pathEvent = location.pathname.startsWith('/manage/records/')
+    ? Number(location.pathname.split('/')[3]) : undefined
+  const selectedDeviceId = pathDevice ?? params.get('device') ?? undefined
+  const eventValue = pathEvent ?? Number(params.get('event'))
+  const selectedEventId = Number.isSafeInteger(eventValue) && Number(eventValue) > 0 ? eventValue : undefined
   const panel = normalizePanel(params.get('panel'))
   const detailTab = normalizeDetail(params.get('detail'))
   const statusFilter = normalizeStatus(params.get('status'))
@@ -102,7 +108,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const setDevice = useCallback(
     (id?: string, opts?: { replace?: boolean }) =>
       update(
-        { device: id, event: undefined, page: undefined },
+        { device: id, event: undefined, page: undefined,
+          ...(!id ? { panel: undefined, detail: undefined, tab: undefined, evidence: undefined, channel: undefined } : {}),
+        },
         opts?.replace ?? true,
       ),
     [update],

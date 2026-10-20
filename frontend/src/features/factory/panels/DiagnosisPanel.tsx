@@ -10,7 +10,7 @@ import {
 } from 'antd'
 import { speakChinese, stopChineseSpeech } from '../../../services/speech'
 import DiagnosisSummary from '../../../components/DiagnosisSummary'
-import { LoadState } from '../../../components/BusinessUI'
+import { LoadState, SourceTag } from '../../../components/BusinessUI'
 import {
   createEvent,
   detectVision,
@@ -20,6 +20,8 @@ import {
 import type { useDeviceTelemetry } from '../../../services/realtime'
 import { errorText } from '../../../hooks/useResource'
 import { useWorkspace } from '../../../services/workspace'
+import { useSpatialNavigate } from '../../../hooks/useSpatialNavigate'
+import { toolPath } from '../../../services/workspaceMode'
 
 interface VisionEvidence {
   available: boolean
@@ -59,13 +61,15 @@ export default function DiagnosisPanel({
   onChanged: () => void
 }) {
   const workspace = useWorkspace()
+  const navigate = useSpatialNavigate()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [vision, setVision] = useState<VisionEvidence>()
   const [visionLoading, setVisionLoading] = useState(false)
   const [speaking, setSpeaking] = useState(false)
   const generation = useRef(0)
-  const creating = useRef(false)
+  const creating = useRef(new Map<string, number>())
+  const mounted = useRef(false)
   const currentDevice = useRef(device?.id)
   currentDevice.current = device?.id
   const validEvent = event && event.device_id === device?.id ? event : undefined
@@ -75,9 +79,14 @@ export default function DiagnosisPanel({
       : deviceActiveEvent
 
   useEffect(() => {
+    mounted.current = true
+    return () => { mounted.current = false }
+  }, [])
+
+  useEffect(() => {
     generation.current += 1
     setVision(undefined)
-    setLoading(false)
+    setLoading(Boolean(device?.id && creating.current.has(device.id)))
     setVisionLoading(false)
     setError('')
     setSpeaking(false)
@@ -89,14 +98,14 @@ export default function DiagnosisPanel({
   }, [device?.id])
 
   const start = async () => {
-    if (!device || loading || creating.current) return
+    if (!device || loading || creating.current.has(device.id)) return
     if (!telemetry.samples.length || telemetry.stale || telemetry.error) {
       setError('暂无有效采样，请等待数据源恢复后重试')
       return
     }
-    creating.current = true
     const request = ++generation.current
     const requestDevice = device.id
+    creating.current.set(requestDevice, request)
     setLoading(true)
     setError('')
     stopChineseSpeech()
@@ -126,8 +135,11 @@ export default function DiagnosisPanel({
             : errorText(caught),
         )
     } finally {
-      creating.current = false
-      if (generation.current === request) setLoading(false)
+      if (creating.current.get(requestDevice) === request) creating.current.delete(requestDevice)
+      if (mounted.current && currentDevice.current === requestDevice) {
+        setLoading(false)
+        if (generation.current !== request) onChanged()
+      }
     }
   }
 
@@ -177,6 +189,7 @@ export default function DiagnosisPanel({
                   ? `${telemetry.samples.length} 点有效采样`
                   : '暂无有效采样'}
                 {telemetry.stale ? ' · 数据已过期' : ''}
+                {' · '}<SourceTag source={telemetry.source} />
               </p>
             </div>
             <Button
@@ -204,15 +217,7 @@ export default function DiagnosisPanel({
                 <Button
                   type="primary"
                   onClick={() =>
-                    workspace.setFilters(
-                      {
-                        event: String(activeEvent.id),
-                        panel: 'events',
-                        detail: undefined,
-                        tab: undefined,
-                      },
-                      { replace: false },
-                    )
+                    navigate(toolPath('events', device?.id, activeEvent.id))
                   }
                 >
                   前往事件处置
@@ -301,30 +306,14 @@ export default function DiagnosisPanel({
                   <div className="actions-row">
                     <Button
                       onClick={() =>
-                        workspace.setFilters(
-                          {
-                            event: String(validEvent.id),
-                            panel: 'events',
-                            detail: undefined,
-                            tab: undefined,
-                          },
-                          { replace: false },
-                        )
+                        navigate(toolPath('events', device?.id, validEvent.id))
                       }
                     >
                       事件与时间线
                     </Button>
                     <Button
                       onClick={() =>
-                        workspace.setFilters(
-                          {
-                            event: String(validEvent.id),
-                            panel: 'report',
-                            detail: undefined,
-                            tab: undefined,
-                          },
-                          { replace: false },
-                        )
+                        navigate(toolPath('events', device?.id, validEvent.id, 'report'))
                       }
                     >
                       阅读报告

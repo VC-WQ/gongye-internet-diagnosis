@@ -10,6 +10,7 @@ import {
   type EventSummary,
 } from '../services/api'
 import { errorText } from '../hooks/useResource'
+import { observationOutcome } from '../services/observation'
 import { usePicoOptional } from '../features/pico/core/PicoProvider'
 
 function currentOperator(): string {
@@ -53,12 +54,16 @@ export default function EventActions({
   const alive = useRef(true)
   // 状态推进后清除上一状态的操作提示，避免“已恢复”仍显示观察期样本不足
   const lastStatus = useRef(event.status_state)
+  const lastEventId = useRef(event.id)
   useEffect(() => {
-    if (lastStatus.current !== event.status_state) {
+    if (lastEventId.current !== event.id || lastStatus.current !== event.status_state) {
+      const changedEvent = lastEventId.current !== event.id
+      lastEventId.current = event.id
       lastStatus.current = event.status_state
       setFailure('')
+      if (changedEvent || event.status_state !== 'observing') setSent(undefined)
     }
-  }, [event.status_state])
+  }, [event.id, event.status_state])
   useEffect(() => {
     alive.current = true
     return () => {
@@ -163,25 +168,29 @@ export default function EventActions({
         currentOperator(),
       )
       if (!alive.current) return
-      const status = result?.status_state
+      const outcome = observationOutcome(result)
       message.success(
-        status === 'recovered'
+        outcome === 'recovered'
           ? '观察期评估完成：已恢复'
-          : status === 'observing'
+          : outcome === 'observing'
             ? '观察期评估完成：继续观察'
-            : '观察期评估完成：复发，已重新会诊',
+            : outcome === 'relapsed'
+              ? '观察期评估完成：复发，已重新会诊'
+              : '观察期评估已提交，请刷新查看结果',
       )
       setAwaitingRefresh(true)
       onChanged()
       pico?.notify({
         title: `事件 #${event.id}`,
         text:
-          status === 'recovered'
+          outcome === 'recovered'
             ? '观察期评估完成：设备已恢复。'
-            : status === 'observing'
+            : outcome === 'observing'
               ? '观察期评估完成：仍需继续观察。'
-              : '观察期评估完成：设备复发，已触发再诊断。',
-        severity: status === 'relapsed' ? 'critical' : 'info',
+              : outcome === 'relapsed'
+                ? '观察期评估完成：设备复发，已触发再诊断。'
+                : '观察期评估已提交，请刷新查看结果。',
+        severity: outcome === 'relapsed' ? 'critical' : 'info',
         eventId: event.id,
         deviceId: event.device_id,
       })

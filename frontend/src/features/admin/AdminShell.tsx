@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { useSpatialNavigate } from '../../hooks/useSpatialNavigate'
 import { PageHeading } from '../../components/BusinessUI'
 import './admin.css'
+import '../management/management.css'
 
 const PAGES = [
   { key: 'users', label: '用户', path: '/admin/users' },

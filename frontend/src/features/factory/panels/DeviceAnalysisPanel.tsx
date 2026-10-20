@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import '../factory.css'
 import { Empty, Select, Tabs, Tag } from 'antd'
 import ThemedChart from '../../../components/ThemedChart'
 import SensorChart from '../../../components/SensorChart'

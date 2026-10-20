@@ -103,6 +103,7 @@ export default function CwruSignal() {
         yAxisIndex: i,
         data: w.t_ms.map((t, j) => [t, w.wave[j]]),
         lineStyle: { color: CLS_COLOR[w.name], width: 1.2 },
+        itemStyle: { color: CLS_COLOR[w.name] },
       })),
     }
   }, [data])
@@ -123,9 +124,10 @@ export default function CwruSignal() {
         name: s.label,
         type: 'line',
         showSymbol: false,
-        smooth: true,
+        smooth: false,
         data: s.freqs.map((f, j) => [f, s.amp[j]]),
         lineStyle: { color: CLS_COLOR[s.name], width: 1.5 },
+        itemStyle: { color: CLS_COLOR[s.name] },
       })),
     }
   }, [data])

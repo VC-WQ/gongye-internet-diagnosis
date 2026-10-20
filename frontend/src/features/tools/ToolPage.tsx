@@ -5,6 +5,8 @@ import VisionDetect from '../../components/VisionDetect'
 import SystemEval from '../../pages/SystemEval'
 import PicoWorkbench from '../pico/ui/PicoWorkbench'
 import SettingsTool from './SettingsTool'
+import DiagnosisTool from './DiagnosisTool'
+import EventsTool from './EventsTool'
 import './tools.css'
 
 const META: Partial<Record<ToolKey, string>> = {
@@ -14,7 +16,7 @@ const META: Partial<Record<ToolKey, string>> = {
 
 export default function ToolPage({ tool }: { tool: ToolKey }) {
   const content =
-    tool === 'simulation' ? (
+    tool === 'diagnosis' ? <DiagnosisTool /> : tool === 'events' ? <EventsTool /> : tool === 'simulation' ? (
       <FaultInjection />
     ) : tool === 'vision' ? (
       <VisionDetect />

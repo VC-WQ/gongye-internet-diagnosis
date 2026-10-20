@@ -5,8 +5,12 @@
 }
 .tool-card {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   justify-content: space-between;
+  text-align: left;
+  color: var(--text);
+  cursor: pointer;
+  border-radius: 0;
   gap: 18px;
   min-height: 168px;
   padding: 22px;
@@ -29,10 +33,12 @@
   line-height: 1.75;
   color: var(--muted);
 }
-.tool-card .ant-btn {
-  align-self: flex-start;
-  font-size: 12px;
-}
+.tool-card__direction { color:var(--muted); font-size:18px; }
+.tool-card:focus-visible { outline:2px solid var(--brand); outline-offset:3px; }
+.task-context { display:flex;align-items:center;gap:16px;margin-bottom:24px; }
+.task-context label { color:var(--muted);font-size:12px;flex:none;white-space:nowrap; }
+.task-context .ant-select { width:360px;min-width:0;max-width:360px;flex:1; }
+.task-workspace { min-height:360px; }
 .settings-card {
   margin-bottom: 22px;
 }
