@@ -9,7 +9,7 @@ import './tools.css'
 
 const META: Partial<Record<ToolKey, string>> = {
   simulation: '仅管理员可执行 · 只修改仿真目录状态',
-  pico: '与右下角 Pico 共用同一会话与只读工具',
+  pico: '与全局 Pico 助手共用同一会话与只读工具',
 }
 
 export default function ToolPage({ tool }: { tool: ToolKey }) {

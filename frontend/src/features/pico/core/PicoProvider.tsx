@@ -15,19 +15,13 @@ import { useWorkspace } from '../../../services/workspace'
 import { errorText } from '../../../hooks/useResource'
 import { postPicoChat } from '../api/pico'
 import { NotificationGate } from './notificationGate'
+import { buildContextTitle } from './presentation'
 import type {
   PicoChatResponse,
   PicoEmotion,
   PicoMessage,
   PicoNotification,
 } from './types'
-
-const AREA_LABEL: Record<string, string> = {
-  factory: '工厂',
-  tools: '工具',
-  admin: '管理',
-  about: '关于',
-}
 
 interface PicoValue {
   open: boolean
@@ -39,18 +33,26 @@ interface PicoValue {
   talking: boolean
   speakingId?: string
   speechError: string
+  speechAvailable: boolean
+  autoRead: boolean
+  setAutoRead: (value: boolean) => void
   unread: boolean
-  contextLabel: string
+  contextTitle: string
   deviceId?: string
   eventId?: number
   send: (
     text: string,
-    override?: { device_id?: string; event_id?: number },
-  ) => Promise<void>
+    options?: {
+      override?: { device_id?: string; event_id?: number }
+      userMessageId?: string
+    },
+  ) => string | undefined
   speak: (text: string, messageId?: string) => void
   stopSpeaking: () => void
   notify: (notification: PicoNotification) => void
   cancel: () => void
+  setWorkbenchActive: (active: boolean) => void
+  previewEmotion: (emotion: PicoEmotion) => void
 }
 
 const PicoContext = createContext<PicoValue | null>(null)
@@ -67,6 +69,14 @@ function isCancel(error: unknown): boolean {
   )
 }
 
+function readAutoRead(): boolean {
+  try {
+    return localStorage.getItem('pico:autoRead') === 'true'
+  } catch {
+    return false
+  }
+}
+
 export function PicoProvider({ children }: { children: ReactNode }) {
   const workspace = useWorkspace()
   const catalog = useDeviceCatalog()
@@ -79,8 +89,28 @@ export function PicoProvider({ children }: { children: ReactNode }) {
   const [talking, setTalking] = useState(false)
   const [speakingId, setSpeakingId] = useState<string>()
   const [speechError, setSpeechError] = useState('')
-  const notificationGate = useRef(new NotificationGate())
+  const [autoRead, setAutoReadState] = useState(readAutoRead)
   const [unread, setUnread] = useState(false)
+  const notificationGate = useRef(new NotificationGate())
+  const speechAvailable =
+    typeof window !== 'undefined' && 'speechSynthesis' in window
+
+  const busyRef = useRef(false)
+  const requestRef = useRef(0)
+  const abortRef = useRef<AbortController | null>(null)
+  const openRef = useRef(false)
+  openRef.current = open
+  const workbenchRef = useRef(false)
+  const autoReadRef = useRef(autoRead)
+  autoReadRef.current = autoRead
+  const speechAvailableRef = useRef(speechAvailable)
+  speechAvailableRef.current = speechAvailable
+
+  const device = catalog.data?.find((item) => item.id === workspace.selectedDeviceId)
+  const contextTitle = useMemo(
+    () => buildContextTitle(workspace.area, device?.name),
+    [device?.name, workspace.area],
+  )
 
   // A business reaction settles back to quiet idle; active work/speech owns its state.
   useEffect(() => {
@@ -88,17 +118,6 @@ export function PicoProvider({ children }: { children: ReactNode }) {
     const timer = setTimeout(() => setEmotion('idle'), 4000)
     return () => clearTimeout(timer)
   }, [emotion, busy, talking])
-
-  const busyRef = useRef(false)
-  const requestRef = useRef(0)
-  const abortRef = useRef<AbortController | null>(null)
-  const openRef = useRef(false)
-  openRef.current = open
-
-  const device = catalog.data?.find((item) => item.id === workspace.selectedDeviceId)
-  const contextLabel = `${device?.name ?? workspace.selectedDeviceId ?? '未选择设备'} · ${
-    AREA_LABEL[workspace.area] ?? '工作台'
-  }`
 
   const stopSpeaking = useCallback(() => {
     stopChineseSpeech()
@@ -117,6 +136,24 @@ export function PicoProvider({ children }: { children: ReactNode }) {
   )
   const toggle = useCallback(() => setOpen(!openRef.current), [setOpen])
 
+  const setAutoRead = useCallback(
+    (value: boolean) => {
+      setAutoReadState(value)
+      try {
+        localStorage.setItem('pico:autoRead', String(value))
+      } catch {
+        /* 隐私模式下忽略存储失败 */
+      }
+      if (!value) stopSpeaking()
+    },
+    [stopSpeaking],
+  )
+
+  const setWorkbenchActive = useCallback((active: boolean) => {
+    workbenchRef.current = active
+    if (active) setUnread(false)
+  }, [])
+
   // 上下文变化保持静默：仅取消旧请求、停止播报和失效数据。
   const lastContext = useRef('')
   useEffect(() => {
@@ -134,15 +171,12 @@ export function PicoProvider({ children }: { children: ReactNode }) {
     busyRef.current = false
     setBusy(false)
     stopSpeaking()
-    setEmotion('idle')
-
   }, [
     workspace.area,
     workspace.selectedDeviceId,
     workspace.selectedEventId,
     workspace.panel,
     workspace.detailTab,
-    contextLabel,
     stopSpeaking,
   ])
 
@@ -151,33 +185,52 @@ export function PicoProvider({ children }: { children: ReactNode }) {
     stopSpeaking()
   }, [location.pathname, stopSpeaking])
 
-  useEffect(() => () => {
-    requestRef.current += 1
-    abortRef.current?.abort()
-    stopChineseSpeech()
-  }, [])
+  useEffect(
+    () => () => {
+      requestRef.current += 1
+      abortRef.current?.abort()
+      stopChineseSpeech()
+    },
+    [],
+  )
 
-  const speak = useCallback((text: string, messageId?: string) => {
-    stopChineseSpeech()
-    setSpeakingId(messageId ?? text)
-    setSpeechError('')
-    const queued = speakChinese(text, undefined, (state) => {
-      const playing = state === 'start' || state === 'resume'
-      setTalking(playing)
-      setEmotion(playing ? 'talking' : 'idle')
-      if (state === 'end' || state === 'error' || state === 'cancel') setSpeakingId(undefined)
-      if (state === 'error') setSpeechError('语音播放失败，请检查系统语音服务')
-    })
-    if (!queued) { setSpeakingId(undefined); setTalking(false); setEmotion('idle'); setSpeechError('当前浏览器无法播放语音') }
-  }, [])
+  const speak = useCallback(
+    (text: string, messageId?: string) => {
+      if (!speechAvailableRef.current) {
+        setSpeechError('当前浏览器不支持语音')
+        return
+      }
+      stopChineseSpeech()
+      setSpeakingId(messageId ?? text)
+      setSpeechError('')
+      const queued = speakChinese(text, undefined, (state) => {
+        const playing = state === 'start' || state === 'resume'
+        setTalking(playing)
+        setEmotion(playing ? 'talking' : 'idle')
+        if (state === 'end' || state === 'error' || state === 'cancel')
+          setSpeakingId(undefined)
+        if (state === 'error')
+          setSpeechError('语音播放失败，请检查系统语音服务')
+      })
+      if (!queued) {
+        setSpeakingId(undefined)
+        setTalking(false)
+        setEmotion('idle')
+        setSpeechError('当前浏览器无法播放语音')
+      }
+    },
+    [],
+  )
 
   const notify = useCallback((notification: PicoNotification) => {
-    // A completed business write invalidates any in-flight read even when its toast is enough.
-    requestRef.current += 1
-    abortRef.current?.abort()
-    busyRef.current = false
-    setBusy(false)
+    // 先判断是否值得通知；只有被接受的 critical 才允许中断当前读取。
     if (!notificationGate.current.accept(notification)) return
+    if (notification.severity === 'critical' && busyRef.current) {
+      requestRef.current += 1
+      abortRef.current?.abort()
+      busyRef.current = false
+      setBusy(false)
+    }
     setEmotion(notification.severity === 'critical' ? 'alert' : 'curious')
     const prefix =
       notification.severity === 'critical'
@@ -195,7 +248,7 @@ export function PicoProvider({ children }: { children: ReactNode }) {
           : `${prefix}：${notification.text}`,
       },
     ])
-    if (!openRef.current) setUnread(true)
+    if (!openRef.current && !workbenchRef.current) setUnread(true)
   }, [])
 
   const cancel = useCallback(() => {
@@ -204,6 +257,9 @@ export function PicoProvider({ children }: { children: ReactNode }) {
     busyRef.current = false
     setBusy(false)
     setEmotion('idle')
+    stopChineseSpeech()
+    setTalking(false)
+    setSpeakingId(undefined)
     setMessages((previous) => [
       ...previous,
       { id: nextId('cancel'), role: 'system', text: '已停止本次请求。' },
@@ -211,13 +267,15 @@ export function PicoProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const send = useCallback(
-    async (
+    (
       text: string,
-      override?: { device_id?: string; event_id?: number },
+      options?: {
+        override?: { device_id?: string; event_id?: number }
+        userMessageId?: string
+      },
     ) => {
       const content = text.trim()
       if (!content || busyRef.current) return
-
       const requestId = ++requestRef.current
       abortRef.current?.abort()
       const controller = new AbortController()
@@ -228,6 +286,7 @@ export function PicoProvider({ children }: { children: ReactNode }) {
       stopChineseSpeech()
       setTalking(false)
 
+      const userMessageId = options?.userMessageId ?? nextId('user')
       const history = messages
         .filter((message) => message.role !== 'system')
         .slice(-6)
@@ -235,60 +294,80 @@ export function PicoProvider({ children }: { children: ReactNode }) {
           role: message.role as 'user' | 'assistant',
           content: message.text,
         }))
-      const snapshotLabel = contextLabel
+      const snapshotLabel = contextTitle
       setMessages((previous) => [
         ...previous,
-        { id: nextId('user'), role: 'user', text: content },
+        { id: userMessageId, role: 'user', text: content },
       ])
 
-      try {
-        const response: PicoChatResponse = await postPicoChat(
-          {
-            message: content,
-            page: workspace.area,
-            device_id: override?.device_id ?? workspace.selectedDeviceId,
-            event_id: override?.event_id ?? workspace.selectedEventId,
-            tab:
-              workspace.panel === 'device'
-                ? workspace.detailTab
-                : workspace.panel === 'none'
-                  ? undefined
-                  : workspace.panel,
-            history,
-          },
-          controller.signal,
-        )
-        if (requestRef.current !== requestId) return
-        setMessages((previous) => [
-          ...previous,
-          {
-            id: response.message_id,
-            role: 'assistant',
-            text: response.text,
-            emotion: response.emotion,
-            references: response.references,
-            actions: response.actions,
-            meta: response.meta,
-            contextLabel: snapshotLabel,
-          },
-        ])
-        setEmotion(response.emotion)
-        if (!openRef.current) setUnread(true)
-      } catch (error) {
-        if (requestRef.current !== requestId || isCancel(error)) return
-        setMessages((previous) => [
-          ...previous,
-          { id: nextId('error'), role: 'system', text: errorText(error) },
-        ])
-        setEmotion('confused')
-      } finally {
-        if (requestRef.current === requestId) {
-          busyRef.current = false
-          setBusy(false)
+      void (async () => {
+        try {
+          const response: PicoChatResponse = await postPicoChat(
+            {
+              message: content,
+              page: workspace.area,
+              device_id:
+                options?.override?.device_id ?? workspace.selectedDeviceId,
+              event_id:
+                options?.override?.event_id ?? workspace.selectedEventId,
+              tab:
+                workspace.panel === 'device'
+                  ? workspace.detailTab
+                  : workspace.panel === 'none'
+                    ? undefined
+                    : workspace.panel,
+              history,
+            },
+            controller.signal,
+          )
+          if (requestRef.current !== requestId) return
+          setMessages((previous) => [
+            ...previous,
+            {
+              id: response.message_id,
+              role: 'assistant',
+              text: response.text,
+              emotion: response.emotion,
+              references: response.references,
+              actions: response.actions,
+              meta: response.meta,
+              // 上下文快照只保留在不可见元数据中，供正确性检查；不再逐条渲染。
+              contextLabel: snapshotLabel,
+            },
+          ])
+          setEmotion(response.emotion)
+          if (!openRef.current && !workbenchRef.current) setUnread(true)
+          if (
+            autoReadRef.current &&
+            speechAvailableRef.current &&
+            response.type === 'answer'
+          )
+            speak(response.text, response.message_id)
+        } catch (error) {
+          if (requestRef.current !== requestId || isCancel(error)) return
+          setMessages((previous) => [
+            ...previous,
+            { id: nextId('error'), role: 'system', text: errorText(error) },
+          ])
+          setEmotion('confused')
+        } finally {
+          if (requestRef.current === requestId) {
+            busyRef.current = false
+            setBusy(false)
+          }
         }
-      }
+      })()
+      return userMessageId
     },
-    [messages, workspace, contextLabel],
+    [messages, workspace, contextTitle, speak],
+  )
+
+  const previewEmotion = useCallback(
+    (next: PicoEmotion) => {
+      stopSpeaking()
+      setEmotion(next)
+    },
+    [stopSpeaking],
   )
 
   const value = useMemo<PicoValue>(
@@ -302,8 +381,11 @@ export function PicoProvider({ children }: { children: ReactNode }) {
       talking,
       speakingId,
       speechError,
+      speechAvailable,
+      autoRead,
+      setAutoRead,
       unread,
-      contextLabel,
+      contextTitle,
       deviceId: workspace.selectedDeviceId,
       eventId: workspace.selectedEventId,
       send,
@@ -311,6 +393,8 @@ export function PicoProvider({ children }: { children: ReactNode }) {
       stopSpeaking,
       notify,
       cancel,
+      setWorkbenchActive,
+      previewEmotion,
     }),
     [
       open,
@@ -322,8 +406,11 @@ export function PicoProvider({ children }: { children: ReactNode }) {
       talking,
       speakingId,
       speechError,
+      speechAvailable,
+      autoRead,
+      setAutoRead,
       unread,
-      contextLabel,
+      contextTitle,
       workspace.selectedDeviceId,
       workspace.selectedEventId,
       send,
@@ -331,6 +418,8 @@ export function PicoProvider({ children }: { children: ReactNode }) {
       stopSpeaking,
       notify,
       cancel,
+      setWorkbenchActive,
+      previewEmotion,
     ],
   )
 
