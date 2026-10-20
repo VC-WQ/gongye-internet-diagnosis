@@ -1,6 +1,7 @@
 """Pico 业务编排：上下文校验 -> 只读工具 -> 结构化回答。"""
 from __future__ import annotations
 
+import re
 import uuid
 from typing import Any, Optional
 
@@ -16,6 +17,7 @@ from .schema import (
     PicoChatResponse,
     PicoMeta,
     PicoReference,
+    PicoResolvedContext,
 )
 
 SYSTEM_PROMPT = """你是工业设备智能诊断平台的助手 Pico。
@@ -68,7 +70,7 @@ def _intent(message: str) -> str:
     text = message.replace(" ", "")
     if any(k in text for k in ("报告", "档案", "快报")):
         return "report"
-    if any(k in text for k in ("事件", "告警", "处置", "诊断记录", "历史记录", "时间线")):
+    if any(k in text for k in ("事件", "告警", "处置", "诊断记录", "历史记录", "时间线", "为什么", "原因", "依据", "证据", "这个问题")):
         return "events"
     if any(k in text for k in ("打开", "查看", "带我去", "跳转", "定位")):
         return "navigate"
@@ -77,7 +79,7 @@ def _intent(message: str) -> str:
     return "help"
 
 
-def _error(text: str, *, emotion: str = "confused") -> PicoChatResponse:
+def _error(text: str, *, emotion: str = "confused", revision: Optional[int] = None) -> PicoChatResponse:
     return PicoChatResponse(
         message_id=uuid.uuid4().hex,
         request_id=uuid.uuid4().hex,
@@ -86,6 +88,7 @@ def _error(text: str, *, emotion: str = "confused") -> PicoChatResponse:
         emotion=emotion,  # type: ignore[arg-type]
         references=[],
         actions=[],
+        context_revision=revision,
         meta=PicoMeta(
             data_status="missing",
             source_kind="unknown",
@@ -103,7 +106,9 @@ def _device_text(overview: dict[str, Any]) -> str:
     vibration = last.get("vibration")
     temperature = last.get("temperature")
 
-    if overview.get("stale"):
+    if not overview.get("valid_sample"):
+        sampling = "当前没有有效的实时采样数据。"
+    elif overview.get("stale"):
         sampling = (
             f"最近一次采样在 {age} 秒前，已超过 {tools.STALE_SECONDS} 秒时效，仅供参考。"
             if age is not None
@@ -122,7 +127,7 @@ def _device_text(overview: dict[str, Any]) -> str:
 
     return (
         f"设备 {overview.get('name')}（{overview.get('id')}）目录状态为{status}，"
-        f"健康评分 {health}。{sampling}"
+        f"目录健康评分 {health if health is not None else '未登记'}。{sampling}"
     )
 
 
@@ -145,7 +150,12 @@ def _event_detail_text(event: Any, message: str) -> str:
     label = detail.get("fault_label") or "未分类"
     confidence = detail.get("confidence")
     health = detail.get("health_score")
-    text = f"事件 #{detail['id']} 当前为{state}，故障结论是{label}，置信度 {confidence}，健康评分 {health}。"
+    text = f"事件 #{detail['id']} 当前为{state}，故障结论是{label}"
+    if confidence is not None:
+        text += f"，置信度 {confidence}"
+    if health is not None:
+        text += f"，健康评分 {health}"
+    text += "。"
     if detail.get("summary"):
         text += f"报告摘要：{detail['summary']}"
     if any(k in message for k in ("为什么", "原因", "依据", "证据")):
@@ -189,20 +199,46 @@ def _llm_answer(
     return fallback, "fallback"
 
 
+def _resolve_context(db: Session, body: PicoChatRequest) -> tuple[Optional[str], Optional[int], Optional[str]]:
+    """显式实体 > 同页面指代焦点 > 当前页面；不解析 assistant 文本。"""
+    device_id = body.context.device_id if body.context is not None else body.device_id
+    event_id = body.context.event_id if body.context is not None else body.event_id
+    if body.conversation_focus is not None and re.search(r"它|刚才|那个", body.message):
+        device_id = body.conversation_focus.device_id
+        event_id = body.conversation_focus.event_id
+    explicit_device, error = tools.resolve_device_mention(db, body.message)
+    if error:
+        return None, None, error
+    event_match = re.search(r"(?:事件|记录)\s*[#＃]?\s*(\d+)|[#＃]\s*(\d+)", body.message)
+    explicit_event = int(event_match.group(1) or event_match.group(2)) if event_match else None
+    if explicit_event is not None:
+        if explicit_event < 1:
+            return None, None, "事件编号必须是正整数，请核对。"
+        # 用户显式转问事件时，不能让当前页面的另一台设备阻断。
+        event_id = explicit_event
+        device_id = explicit_device
+    elif explicit_device is not None:
+        device_id = explicit_device
+        event_id = None
+    return device_id, event_id, None
+
+
 def chat(db: Session, user: User, body: PicoChatRequest) -> PicoChatResponse:
     """处理一次 Pico 对话。"""
-    device_id = body.device_id
-    event_id = body.event_id
+    revision = body.context.context_revision if body.context is not None else None
+    device_id, event_id, context_error = _resolve_context(db, body)
+    if context_error:
+        return _error(context_error, revision=revision)
     event = None
 
     # 1. 事件与设备一致性校验
     if event_id is not None:
         event = tools.get_event(db, event_id)
         if event is None:
-            return _error(f"事件 #{event_id} 不存在或不可见。")
+            return _error(f"事件 #{event_id} 不存在或不可见。", revision=revision)
         if device_id and event.device_id != device_id:
             return _error(
-                f"事件 #{event_id} 属于设备 {event.device_id}，与当前设备 {device_id} 不一致。"
+                f"事件 #{event_id} 属于设备 {event.device_id}，与当前设备 {device_id} 不一致。", revision=revision
             )
         device_id = event.device_id
 
@@ -210,8 +246,8 @@ def chat(db: Session, user: User, body: PicoChatRequest) -> PicoChatResponse:
     overview: Optional[dict[str, Any]] = None
     if device_id:
         overview = tools.device_overview(db, device_id)
-        if overview is None:
-            return _error(f"设备 {device_id} 不存在或不可见。")
+        if overview is None and event is None:
+            return _error(f"设备 {device_id} 不存在或不可见。", revision=revision)
 
     intent = _intent(body.message)
 
@@ -229,11 +265,7 @@ def chat(db: Session, user: User, body: PicoChatRequest) -> PicoChatResponse:
                 id=overview["id"],
                 label=str(overview["name"]),
                 source="device_catalog",
-                observed_at=(
-                    str(overview.get("last_sample_age_seconds"))
-                    if overview.get("last_sample_age_seconds") is not None
-                    else None
-                ),
+                observed_at=overview.get("observed_at"),
             )
         )
         actions.append(
@@ -247,8 +279,10 @@ def chat(db: Session, user: User, body: PicoChatRequest) -> PicoChatResponse:
 
     if intent == "device":
         if not overview:
-            return _error("当前页面没有设备上下文，请先选择一台设备，或告诉我设备编号。")
-        data_status = "stale" if overview.get("stale") else "current"
+            if event is not None:
+                return _error(f"事件 #{event.id} 的设备 {event.device_id} 已不在当前目录，无法查询其当前状态；你仍可询问这条历史事件的依据或报告。", revision=revision)
+            return _error("当前页面没有设备上下文，请先选择一台设备，或告诉我设备编号。", revision=revision)
+        data_status = "missing" if not overview.get("valid_sample") else "stale" if overview.get("stale") else "current"
         emotion = (
             "alert"
             if overview.get("status") == "fault"
@@ -258,14 +292,28 @@ def chat(db: Session, user: User, body: PicoChatRequest) -> PicoChatResponse:
         )
         fallback = _device_text(overview)
         facts = {"device": overview}
+        # 目录状态与落库诊断分别说明，不将最近事件说成实时结论。
+        latest = tools.list_device_events(db, device_id, limit=1)
+        if latest:
+            facts["latest_diagnosis"] = tools.event_detail(latest[0])
+            fallback += f"最近一次诊断记录：{_event_line(latest[0])}，记录时间 {latest[0].timestamp.isoformat() if latest[0].timestamp else '未记录'}。"
+            references.append(PicoReference(kind="event", id=str(latest[0].id), label=f"事件 #{latest[0].id}", source="command_loop", observed_at=latest[0].timestamp.isoformat() if latest[0].timestamp else None))
         text, llm_status = _llm_answer(body.message, str(facts), fallback, body.history)
 
     elif intent == "events":
+        if event is None and not device_id and any(k in body.message for k in ("为什么", "原因", "依据", "证据", "这个问题")):
+            return _error("当前没有设备或事件上下文，请选择一台设备或告诉我事件编号，我再查询报警依据。", revision=revision)
+        if event is None and device_id and any(k in body.message for k in ("为什么", "原因", "依据", "证据", "这个问题")):
+            recent = tools.list_device_events(db, device_id, limit=1)
+            event = recent[0] if recent else None
         if event is not None:
             data_status = "current"
             emotion = "alert" if event.severity in ("critical", "alarm") else "curious"
             fallback = _event_detail_text(event, body.message)
             facts = {"event": tools.event_detail(event)}
+            if overview is None:
+                fallback += f"设备 {event.device_id} 已不在当前目录，以上仅为保留的历史记录，不能代表当前运行状态。"
+                facts["device_catalog_missing"] = True
             references.append(
                 PicoReference(
                     kind="event",
@@ -326,6 +374,9 @@ def chat(db: Session, user: User, body: PicoChatRequest) -> PicoChatResponse:
             data_status = "current"
             fallback = _report_text(event)
             facts = {"report": tools.report_summary(event)}
+            if overview is None:
+                fallback += f"设备 {event.device_id} 已不在当前目录，以上为保留的历史报告。"
+                facts["device_catalog_missing"] = True
             references.append(
                 PicoReference(
                     kind="report",
@@ -355,6 +406,8 @@ def chat(db: Session, user: User, body: PicoChatRequest) -> PicoChatResponse:
         text, llm_status = _llm_answer(body.message, str(facts), fallback, body.history)
 
     elif intent == "navigate":
+        if overview is None and event is None:
+            return _error("请告诉我要打开的设备编号或事件编号。", revision=revision)
         target = "device" if overview else "event"
         fallback = "已为你准备页面入口，请点击下方按钮前往。"
         if event is not None:
@@ -384,7 +437,8 @@ def chat(db: Session, user: User, body: PicoChatRequest) -> PicoChatResponse:
     if event is not None:
         saved = event.sensor_data if isinstance(event.sensor_data, list) else []
         sample = saved[-1] if saved and isinstance(saved[-1], dict) else {}
-    source_kind = {"simulation": "simulated", "simulated": "simulated", "real": "real", "history": "offline", "offline": "offline"}.get(sample.get("source"), "unknown")
+    sample_source = sample.get("source")
+    source_kind = {"simulation": "simulated", "simulated": "simulated", "real": "real", "history": "offline", "offline": "offline"}.get(sample_source, "unknown") if isinstance(sample_source, str) else "unknown"
 
     return PicoChatResponse(
         message_id=uuid.uuid4().hex,
@@ -400,4 +454,6 @@ def chat(db: Session, user: User, body: PicoChatRequest) -> PicoChatResponse:
             degraded=llm_status != "live",
             llm=llm_status,  # type: ignore[arg-type]
         ),
+        context_revision=revision,
+        resolved_context=PicoResolvedContext(device_id=device_id, event_id=event.id if event is not None else facts.get("latest_diagnosis", {}).get("id")) if device_id or event is not None else None,
     )

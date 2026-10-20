@@ -7,7 +7,10 @@
 """
 from __future__ import annotations
 
+import math
+import re
 import time
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 from sqlalchemy.orm import Session
@@ -39,31 +42,85 @@ def get_event(session: Session, event_id: int) -> Optional[Event]:
     return session.get(Event, event_id)
 
 
+def resolve_device_mention(session: Session, message: str) -> tuple[Optional[str], Optional[str]]:
+    """只解析真实目录 ID/唯一名称；未知或歧义不能回退到当前设备。"""
+    normalized = re.sub(r"\s+", "", message).casefold()
+    devices = session.query(Device).all()
+    matched: set[str] = set()
+    for device in devices:
+        name = re.sub(r"\s+", "", device.name).casefold()
+        aliases = {name}
+        if name.startswith("驱动电机"):
+            aliases.add(name.replace("驱动电机", "电机", 1))
+        if name.startswith("离心泵"):
+            aliases.add(name.replace("离心泵", "泵", 1))
+        if any(alias and alias in normalized for alias in aliases):
+            matched.add(device.id)
+    # IDs use token boundaries, preventing motor-001 from matching motor-0010.
+    tokens = re.findall(r"(?<![A-Za-z0-9_-])[A-Za-z][A-Za-z0-9_]*(?:-[A-Za-z0-9_]+)+(?![A-Za-z0-9_-])", message)
+    for token in tokens:
+        device = next((d for d in devices if d.id.casefold() == token.casefold()), None)
+        if device is None:
+            return None, f"设备 {token} 不存在或不可见，请核对设备编号。"
+        matched.add(device.id)
+    named = re.findall(r"(?:驱动电机|电机|离心泵|泵|空压机)\s*[A-Za-z](?![A-Za-z0-9])", message)
+    if named and not matched:
+        return None, f"没有找到设备“{named[0]}”，请核对名称或提供设备编号。"
+    if len(matched) > 1:
+        return None, "你提到了多台设备，请明确这次要查看哪一台。"
+    return (next(iter(matched)) if matched else None), None
+
+
+def finite_number(value: Any) -> Optional[float]:
+    if isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value):
+        return float(value)
+    return None
+
+
+def device_telemetry(device_id: str) -> dict[str, Any]:
+    """有界、白名单采样摘要；过期/无效时间不冒充当前数据。"""
+    window = mqtt_pipeline_service.get_window(device_id)[-MAX_WINDOW_POINTS:]
+    raw = window[-1] if window and isinstance(window[-1], dict) else {}
+    timestamp = finite_number(raw.get("timestamp"))
+    now = time.time()
+    valid_timestamp = timestamp is not None and 0 < timestamp <= now + 5
+    age = round(max(0.0, now - timestamp), 1) if valid_timestamp else None
+    observed_at = datetime.fromtimestamp(timestamp, timezone.utc).isoformat() if valid_timestamp else None
+    last = {
+        key: number
+        for key in ("vibration", "temperature", "current", "pressure", "speed", "acoustic")
+        if (number := finite_number(raw.get(key))) is not None
+    }
+    valid_sample = valid_timestamp and bool(last)
+    if raw:
+        last.update({"source": raw.get("source") if raw.get("source") in ("real", "simulation", "simulated", "history", "offline") else "unknown"})
+    return {
+        "device_id": device_id,
+        "window_points": len(window),
+        "observed_at": observed_at,
+        "last_sample_age_seconds": age,
+        "stale": age is None or age > STALE_SECONDS,
+        "valid_sample": valid_sample,
+        "last_sample": last or None,
+    }
+
+
 def device_overview(session: Session, device_id: str) -> Optional[dict[str, Any]]:
     """设备目录 + 最新窗口时效（只读）。"""
     device = get_device(session, device_id)
     if device is None:
         return None
 
-    window = mqtt_pipeline_service.get_window(device_id)[-MAX_WINDOW_POINTS:]
-    last = window[-1] if window else None
-    last_ts = last.get("timestamp") if isinstance(last, dict) else None
-    age = round(time.time() - float(last_ts), 1) if isinstance(last_ts, (int, float)) else None
-    stale = age is None or age > STALE_SECONDS
-
     return {
         "id": device.id,
         "name": device.name,
         "device_type": device.device_type,
         "status": device.status,
-        "health_score": device.health_score,
-        "edge_anomaly_score": device.edge_anomaly_score,
-        "threshold_vibration": device.threshold_vibration,
-        "threshold_temp": device.threshold_temp,
-        "window_points": len(window),
-        "last_sample_age_seconds": age,
-        "stale": stale,
-        "last_sample": last,
+        "health_score": finite_number(device.health_score),
+        "edge_anomaly_score": finite_number(device.edge_anomaly_score),
+        "threshold_vibration": finite_number(device.threshold_vibration),
+        "threshold_temp": finite_number(device.threshold_temp),
+        **device_telemetry(device_id),
     }
 
 
@@ -80,8 +137,8 @@ def list_device_events(
 
 def event_detail(event: Event) -> dict[str, Any]:
     """事件的安全摘要（不含原始全量窗口）。"""
-    diag = event.agent_diagnosis or {}
-    report = diag.get("report") or {}
+    diag = event.agent_diagnosis if isinstance(event.agent_diagnosis, dict) else {}
+    report = diag.get("report") if isinstance(diag.get("report"), dict) else {}
     return {
         "id": event.id,
         "device_id": event.device_id,

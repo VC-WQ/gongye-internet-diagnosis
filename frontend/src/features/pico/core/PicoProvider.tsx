@@ -16,12 +16,14 @@ import { errorText } from '../../../hooks/useResource'
 import { postPicoChat } from '../api/pico'
 import { NotificationGate } from './notificationGate'
 import { buildContextTitle } from './presentation'
+import { buildPicoContext, canCommitPicoResponse, picoContextFingerprint, validatedPicoFocus, withPicoOverride } from './context'
 import type { PicoGesture, PicoReaction } from '../animation/controller'
 import type {
   PicoChatResponse,
   PicoEmotion,
   PicoMessage,
   PicoNotification,
+  PicoResolvedContext,
 } from './types'
 
 interface PicoValue {
@@ -116,6 +118,20 @@ export function PicoProvider({ children }: { children: ReactNode }) {
     () => buildContextTitle(workspace.area, device?.name),
     [device?.name, workspace.area],
   )
+  const snapshot = buildPicoContext({
+    area: workspace.area,
+    pathname: location.pathname,
+    search: location.search,
+    deviceId: workspace.selectedDeviceId,
+    eventId: workspace.selectedEventId,
+    contextRevision: workspace.contextRevision,
+  })
+  const contextKey = picoContextFingerprint(snapshot)
+  const contextRef = useRef({ snapshot, key: contextKey })
+  // Update synchronously: a response can settle between render and the cancel effect.
+  contextRef.current = { snapshot, key: contextKey }
+  const focusRef = useRef<{ key: string; value: PicoResolvedContext }>()
+  if (focusRef.current?.key !== contextKey) focusRef.current = undefined
 
   // A business reaction settles back to quiet idle; active work/speech owns its state.
   useEffect(() => {
@@ -162,17 +178,10 @@ export function PicoProvider({ children }: { children: ReactNode }) {
   }, [])
 
   // 上下文变化保持静默：仅取消旧请求、停止播报和失效数据。
-  const lastContext = useRef('')
+  const lastContext = useRef(contextKey)
   useEffect(() => {
-    const key = `${workspace.area}|${workspace.selectedDeviceId ?? ''}|${
-      workspace.selectedEventId ?? ''
-    }|${workspace.panel}|${workspace.detailTab}`
-    if (!lastContext.current) {
-      lastContext.current = key
-      return
-    }
-    if (lastContext.current === key) return
-    lastContext.current = key
+    if (lastContext.current === contextKey) return
+    lastContext.current = contextKey
     react('context')
     requestRef.current += 1
     abortRef.current?.abort()
@@ -180,11 +189,7 @@ export function PicoProvider({ children }: { children: ReactNode }) {
     setBusy(false)
     stopSpeaking()
   }, [
-    workspace.area,
-    workspace.selectedDeviceId,
-    workspace.selectedEventId,
-    workspace.panel,
-    workspace.detailTab,
+    contextKey,
     stopSpeaking,
     react,
   ])
@@ -301,12 +306,15 @@ export function PicoProvider({ children }: { children: ReactNode }) {
       setTalking(false)
 
       const userMessageId = options?.userMessageId ?? nextId('user')
+      const captured = contextRef.current
+      const requestContext = withPicoOverride(captured.snapshot, options?.override)
+      const focus = !options?.override && focusRef.current?.key === captured.key ? focusRef.current.value : undefined
       const history = messages
         .filter((message) => message.role !== 'system')
         .slice(-6)
         .map((message) => ({
           role: message.role as 'user' | 'assistant',
-          content: message.text,
+          content: message.text.slice(0, 1000),
         }))
       const snapshotLabel = contextTitle
       setMessages((previous) => [
@@ -319,22 +327,25 @@ export function PicoProvider({ children }: { children: ReactNode }) {
           const response: PicoChatResponse = await postPicoChat(
             {
               message: content,
-              page: workspace.area,
-              device_id:
-                options?.override?.device_id ?? workspace.selectedDeviceId,
-              event_id:
-                options?.override?.event_id ?? workspace.selectedEventId,
-              tab:
-                workspace.panel === 'device'
-                  ? workspace.detailTab
-                  : workspace.panel === 'none'
-                    ? undefined
-                    : workspace.panel,
+              context: requestContext,
+              conversation_focus: focus,
+              // Keep the old fields during protocol migration; context is authoritative.
+              page: requestContext.area,
+              device_id: requestContext.device_id,
+              event_id: requestContext.event_id,
+              tab: requestContext.active_tab,
               history,
             },
             controller.signal,
           )
-          if (requestRef.current !== requestId) return
+          if (!canCommitPicoResponse({
+            requestId, currentRequestId: requestRef.current,
+            fingerprint: captured.key, currentFingerprint: contextRef.current.key,
+            revision: requestContext.context_revision, responseRevision: response.context_revision,
+          })) return
+          const resolved = validatedPicoFocus(response.resolved_context)
+          if (resolved) focusRef.current = { key: captured.key, value: resolved }
+          else if (response.type === 'error') focusRef.current = undefined
           react('answer')
           setMessages((previous) => [
             ...previous,
@@ -359,7 +370,7 @@ export function PicoProvider({ children }: { children: ReactNode }) {
           )
             speak(response.text, response.message_id)
         } catch (error) {
-          if (requestRef.current !== requestId || isCancel(error)) return
+          if (requestRef.current !== requestId || contextRef.current.key !== captured.key || isCancel(error)) return
           setMessages((previous) => [
             ...previous,
             { id: nextId('error'), role: 'system', text: errorText(error) },
@@ -374,7 +385,7 @@ export function PicoProvider({ children }: { children: ReactNode }) {
       })()
       return userMessageId
     },
-    [messages, workspace, contextTitle, speak, react],
+    [messages, contextTitle, speak, react],
   )
 
   const previewEmotion = useCallback(

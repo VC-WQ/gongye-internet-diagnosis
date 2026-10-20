@@ -15,6 +15,22 @@ export type PicoActionType =
   | 'open_report'
   | 'switch_workspace_view'
 
+/** Explicit business state only: no DOM, input contents or authentication data. */
+export interface PicoContextSnapshot {
+  area: string
+  route: string
+  device_id?: string
+  event_id?: number
+  active_tab?: string
+  visible_section?: string
+  context_revision: number
+}
+
+export interface PicoResolvedContext {
+  device_id?: string
+  event_id?: number
+}
+
 export interface PicoReference {
   kind: 'device' | 'event' | 'report' | 'telemetry'
   id: string
@@ -47,6 +63,8 @@ export interface PicoChatResponse {
   references: PicoReference[]
   actions: PicoAction[]
   meta: PicoMeta
+  context_revision?: number | null
+  resolved_context?: PicoResolvedContext | null
 }
 
 export interface PicoMessage {

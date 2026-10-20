@@ -1,5 +1,5 @@
 import api from '../../../services/api'
-import type { PicoChatResponse } from '../core/types'
+import type { PicoChatResponse, PicoContextSnapshot, PicoResolvedContext } from '../core/types'
 
 export interface PicoChatPayload {
   message: string
@@ -7,6 +7,8 @@ export interface PicoChatPayload {
   device_id?: string
   event_id?: number
   tab?: string
+  context?: PicoContextSnapshot
+  conversation_focus?: PicoResolvedContext
   history?: Array<{ role: 'user' | 'assistant'; content: string }>
 }
 
