@@ -194,9 +194,6 @@ export default function FactoryScene({
 
   return (
     <div className="factory-scene">
-      <div className="scene-caption">
-        <span>设备</span>
-      </div>
       {!devices.length ? (
         <Empty description="暂无设备" />
       ) : (
@@ -335,34 +332,22 @@ export default function FactoryScene({
                       x="-95"
                       y="-16"
                       width="190"
-                      height="52"
+                      height="40"
                       rx="0"
                       fill={chosen ? 'var(--surface-raised)' : 'var(--surface)'}
                       stroke={chosen ? 'var(--brand)' : 'var(--line)'}
                     />
-                    <circle cx="-77" cy="1" r="4" fill={color} />
+                    <circle cx="-78" cy="3" r="4" fill={color} />
                     <text
-                      x="-64"
-                      y="6"
+                      x="-65"
+                      y="8"
                       fill="var(--text)"
                       fontSize="15"
                       fontWeight="500"
                     >
-                      {Array.from(device.name).length > 7
-                        ? Array.from(device.name).slice(0, 6).join('') + '…'
+                      {Array.from(device.name).length > 8
+                        ? Array.from(device.name).slice(0, 7).join('') + '…'
                         : device.name}
-                    </text>
-                    <text x="-64" y="25" fill="var(--muted)" fontSize="10">
-                      {device.id}
-                    </text>
-                    <text
-                      x="78"
-                      y="7"
-                      textAnchor="end"
-                      fill={color}
-                      fontSize="11"
-                    >
-                      {STATUS_META[device.status]?.label ?? '未知'}
                     </text>
                   </g>
                 </g>

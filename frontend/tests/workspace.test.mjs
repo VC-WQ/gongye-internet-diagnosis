@@ -3,7 +3,6 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import ts from 'typescript'
 
-// Exercise the shipped route mapper with Node's test runner.
 const source = await readFile(
   new URL('../src/services/workspaceMode.ts', import.meta.url),
   'utf8',
@@ -11,119 +10,203 @@ const source = await readFile(
 const { outputText } = ts.transpileModule(source, {
   compilerOptions: { module: ts.ModuleKind.ES2022 },
 })
-const { modeFromPath } = await import(
+const {
+  legacyRedirect,
+  factoryPath,
+  factoryState,
+  upperLevelPath,
+  isSafeInternalPath,
+  workspaceLink,
+  normalizeStatus,
+  normalizePanel,
+} = await import(
   `data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`
 )
 
-test('workspace mode maps every primary route', () => {
-  assert.equal(modeFromPath('/'), 'overview')
-  assert.equal(modeFromPath('/dashboard'), 'overview')
-  assert.equal(modeFromPath('/devices'), 'devices')
-  assert.equal(modeFromPath('/device/pump-001'), 'device')
-  assert.equal(modeFromPath('/diagnose'), 'diagnose')
-  assert.equal(modeFromPath('/events'), 'events')
-  assert.equal(modeFromPath('/reports'), 'reports')
-  assert.equal(modeFromPath('/lab'), 'lab')
-  assert.equal(modeFromPath('/ops'), 'ops')
-  assert.equal(modeFromPath('/admin'), 'admin')
-  assert.equal(modeFromPath('/admin/users'), 'admin')
-  assert.equal(modeFromPath('/unknown'), 'unknown')
-})
+function parsed(path) {
+  const url = new URL(path, 'http://localhost')
+  return { pathname: url.pathname, params: url.searchParams }
+}
 
-test('trailing slashes do not change workspace mode', () => {
-  for (const [path, mode] of [
-    ['/dashboard/', 'overview'],
-    ['/devices/', 'devices'],
-    ['/diagnose/', 'diagnose'],
-    ['/events/', 'events'],
-    ['/reports/', 'reports'],
+test('legacy flat routes migrate once into the single factory URL', () => {
+  const devices = parsed(
+    legacyRedirect(
+      '/devices',
+      '?device=compressor-001&event=9&q=air&status=fault&page=2&tab=history&channel=temperature',
+    ),
+  )
+  assert.equal(devices.pathname, '/dashboard')
+  assert.equal(devices.params.get('device'), 'compressor-001')
+  assert.equal(devices.params.get('event'), '9')
+  assert.equal(devices.params.get('q'), 'air')
+  assert.equal(devices.params.get('status'), 'fault')
+  assert.equal(devices.params.get('channel'), 'temperature')
+  assert.equal(devices.params.has('view'), false)
+
+  const device = parsed(
+    legacyRedirect(
+      '/device/' + encodeURIComponent('pump / A'),
+      '?device=wrong&event=5&tab=acoustic',
+    ),
+  )
+  assert.equal(device.params.get('device'), 'pump / A')
+  assert.equal(device.params.get('panel'), 'device')
+  assert.equal(device.params.get('detail'), 'acoustic')
+  assert.equal(device.params.get('event'), '5')
+
+  const report = parsed(legacyRedirect('/diagnose', '?tab=report&event=8'))
+  assert.equal(report.params.get('panel'), 'report')
+  const timeline = parsed(
+    legacyRedirect('/diagnose', '?tab=trajectory&device=pump-001&event=8'),
+  )
+  assert.equal(timeline.params.get('panel'), 'events')
+  assert.equal(timeline.params.get('tab'), 'timeline')
+  assert.equal(timeline.params.get('event'), '8')
+
+  for (const [path, expected] of [
+    ['/events', 'events'],
+    ['/reports', 'report'],
   ]) {
-    assert.equal(modeFromPath(path), mode)
+    const result = parsed(legacyRedirect(path, '?device=pump-001&event=3'))
+    assert.equal(result.params.get('panel'), expected)
+    assert.equal(result.params.get('device'), 'pump-001')
   }
 })
 
-const { canonicalWorkspacePath, viewFromLocation, workspaceLink, transitionWorkspacePath } = await import(
-  `data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`
-)
+test('legacy six-view dashboard and old tools routes are redirected, including simulation', () => {
+  const scene = parsed(legacyRedirect('/dashboard', '?view=scene&device=pump-001'))
+  assert.equal(scene.pathname, '/dashboard')
+  assert.equal(scene.params.has('view'), false)
+  assert.equal(scene.params.get('device'), 'pump-001')
 
-function query(path) { return new URL(path, 'http://localhost').searchParams }
+  const detail = parsed(
+    legacyRedirect('/dashboard', '?view=device&device=pump-001&tab=history'),
+  )
+  assert.equal(detail.params.get('panel'), 'device')
+  assert.equal(detail.params.get('detail'), 'history')
 
-test('all six modes run under the same workspace URL and match Pico context', () => {
-  for (const view of ['scene', 'devices', 'device', 'diagnose', 'events', 'reports']) {
-    const search = `?view=${view}&device=pump-001&event=12`
-    assert.equal(viewFromLocation('/dashboard', search), view)
-    assert.equal(modeFromPath('/dashboard', search), view === 'scene' ? 'overview' : view)
-    assert.equal(canonicalWorkspacePath('/dashboard', search), `/dashboard${search}`)
+  const simulation = legacyRedirect(
+    '/dashboard',
+    '?view=devices&tab=inject&device=motor-001',
+  )
+  assert.equal(simulation, '/tools/simulation?device=motor-001')
+
+  assert.equal(legacyRedirect('/lab'), '/about/research/signal')
+  assert.equal(legacyRedirect('/ops', '?tab=eval'), '/tools/evaluation')
+  assert.equal(legacyRedirect('/ops', '?tab=threshold'), '/tools/settings')
+  assert.equal(legacyRedirect('/ops', '?tab=evolution'), '/about/research/mechanism')
+  assert.equal(legacyRedirect('/unknown'), undefined)
+  assert.equal(legacyRedirect('/tools/not-a-tool'), '/tools')
+  assert.equal(legacyRedirect('/admin/whatever'), '/admin/users')
+})
+
+test('legacy redirects are idempotent for canonical factory URLs', () => {
+  const targets = [
+    legacyRedirect('/devices', '?device=pump-001&status=degraded&q=泵'),
+    legacyRedirect('/device/pump-001', '?event=4&tab=latent'),
+    legacyRedirect('/diagnose', '?tab=report&device=pump-001&event=4'),
+    legacyRedirect('/dashboard', '?view=events&device=pump-001&event=4&tab=timeline'),
+  ]
+  for (const target of targets) {
+    assert.ok(target?.startsWith('/dashboard'))
+    const url = new URL(target, 'http://localhost')
+    assert.equal(legacyRedirect(url.pathname, url.search), undefined, target)
   }
 })
 
-test('legacy deep links preserve device, event, valid filters and panel parameters', () => {
-  for (const [path, view] of [['/devices', 'devices'], ['/diagnose', 'diagnose'], ['/events', 'events'], ['/reports', 'reports']]) {
-    const result = canonicalWorkspacePath(path, '?device=compressor-001&event=9&q=air&status=fault&page=2&tab=history&channel=temperature')
-    const params = query(result)
-    assert.equal(params.get('view'), view)
-    for (const [key, value] of Object.entries({ device: 'compressor-001', event: '9', q: 'air', status: 'fault', page: '2', tab: 'history', channel: 'temperature' }))
-      assert.equal(params.get(key), value)
-    const parsed = new URL(result, 'http://localhost')
-    assert.equal(canonicalWorkspacePath(parsed.pathname, parsed.search), result, 'redirect must be idempotent')
-  }
+test('malformed device ids and invalid numeric state normalize without throwing', () => {
+  const malformed = parsed(legacyRedirect('/device/%E0%A4%A', '?event=-2&page=NaN'))
+  assert.equal(malformed.pathname, '/dashboard')
+  assert.equal(malformed.params.has('device'), false)
+  assert.equal(malformed.params.has('event'), false)
+  assert.equal(malformed.params.has('page'), false)
+  const invalid = parsed(
+    legacyRedirect(
+      '/dashboard',
+      '?view=wrong&event=-2&page=NaN&redirect=https://example.com',
+    ),
+  )
+  assert.equal(invalid.params.has('view'), false)
+  assert.equal(invalid.params.has('event'), false)
+  assert.equal(invalid.params.has('page'), false)
+  assert.equal(invalid.params.has('redirect'), false)
 })
 
-test('device path identity wins and special characters survive exactly once', () => {
-  const result = canonicalWorkspacePath('/device/' + encodeURIComponent('pump / A'), '?device=wrong&event=5&tab=acoustic')
-  assert.equal(query(result).get('device'), 'pump / A')
-  assert.equal(query(result).get('tab'), 'acoustic')
-  assert.equal(query(result).get('event'), '5')
-  assert.equal(query(workspaceLink('/device/' + encodeURIComponent('pump / A'))).get('device'), 'pump / A')
+test('factory state and path helpers keep one canonical internal state', () => {
+  assert.equal(normalizeStatus('fault'), 'fault')
+  assert.equal(normalizeStatus('nope'), 'all')
+  assert.equal(normalizePanel('report'), 'report')
+  assert.equal(normalizePanel('view'), 'none')
+  const state = factoryState(
+    '?device=pump-001&event=12&status=degraded&panel=device&detail=latent&q=%E6%B3%B5&page=2&channel=acoustic',
+  )
+  assert.deepEqual(state, {
+    deviceId: 'pump-001',
+    eventId: 12,
+    statusFilter: 'degraded',
+    panel: 'device',
+    detailTab: 'latent',
+    subview: undefined,
+    keyword: '泵',
+    page: 2,
+    channel: 'acoustic',
+    evidence: undefined,
+  })
+  assert.equal(
+    factoryPath({
+      device: 'pump-001',
+      event: 12,
+      status: 'fault',
+      panel: 'device',
+      detail: 'history',
+      q: '泵',
+      page: 2,
+    }),
+    '/dashboard?device=pump-001&event=12&status=fault&panel=device&detail=history&q=%E6%B3%B5&page=2',
+  )
+  assert.equal(
+    factoryPath({ panel: 'none', status: 'all', page: 1 }),
+    '/dashboard',
+  )
+  assert.equal(factoryState('?event=0&page=0').eventId, undefined)
+  assert.equal(factoryState('?event=0&page=0').page, 1)
 })
 
-test('legacy diagnosis report and trajectory links retain the intended read view', () => {
-  assert.equal(query(canonicalWorkspacePath('/diagnose', '?tab=report&event=8')).get('view'), 'reports')
-  const timeline = query(canonicalWorkspacePath('/diagnose', '?tab=trajectory&device=pump-001&event=8'))
-  assert.equal(timeline.get('view'), 'events')
-  assert.equal(timeline.get('tab'), 'timeline')
-  assert.equal(timeline.get('event'), '8')
+test('upper level follows information hierarchy instead of history length', () => {
+  assert.equal(
+    upperLevelPath(
+      '/dashboard',
+      '?device=pump-001&status=fault&panel=diagnosis&q=泵',
+    ),
+    '/dashboard?device=pump-001&status=fault&q=%E6%B3%B5',
+  )
+  assert.equal(upperLevelPath('/dashboard', '?device=pump-001'), null)
+  assert.equal(upperLevelPath('/tools/vision'), '/tools')
+  assert.equal(upperLevelPath('/tools'), '/dashboard')
+  assert.equal(
+    upperLevelPath('/about/research/signal/cwru'),
+    '/about/research/signal',
+  )
+  assert.equal(upperLevelPath('/about/research/signal'), '/about')
+  assert.equal(upperLevelPath('/about'), '/dashboard')
+  assert.equal(upperLevelPath('/admin/records'), '/admin/users')
 })
 
-test('mode changes isolate filters and never resurrect a previous device or event', () => {
-  const result = query(transitionWorkspacePath('devices', '?view=events&device=pump-002&event=19&page=4&tab=timeline', 'view=devices&device=pump-001&event=6&q=motor&status=offline&page=2'))
-  assert.equal(result.get('device'), 'pump-002')
-  assert.equal(result.get('event'), '19')
-  assert.equal(result.get('q'), 'motor')
-  assert.equal(result.get('page'), '2')
-  assert.equal(result.get('status'), 'offline')
-  assert.equal(result.has('tab'), false)
-  const cleared = query(transitionWorkspacePath('reports', '?view=devices', 'device=old&event=6'))
-  assert.equal(cleared.has('device'), false)
-  assert.equal(cleared.has('event'), false)
+test('Pico navigation only accepts the four new domains', () => {
+  assert.equal(isSafeInternalPath('/dashboard?device=pump-001'), true)
+  assert.equal(isSafeInternalPath('/tools/pico'), true)
+  assert.equal(isSafeInternalPath('/about/research/signal'), true)
+  assert.equal(isSafeInternalPath('/admin/users'), false)
+  assert.equal(isSafeInternalPath('/events'), false)
+  assert.equal(isSafeInternalPath('https://example.com'), false)
+  assert.equal(isSafeInternalPath('//evil.example'), false)
+  assert.equal(isSafeInternalPath('/dashboard\\evil'), false)
 })
 
-test('invalid URL state normalizes safely without routing management into ordinary reports', () => {
-  const result = query(canonicalWorkspacePath('/dashboard', '?view=wrong&event=-2&page=NaN&redirect=https://example.com'))
-  assert.equal(result.get('view'), 'scene')
-  assert.equal(result.has('event'), false)
-  assert.equal(result.has('page'), false)
-  assert.equal(result.has('redirect'), false)
-  assert.equal(canonicalWorkspacePath('/admin/records', '?device=pump-001'), undefined)
-  assert.equal(canonicalWorkspacePath('/unknown'), undefined)
-  assert.equal(query(canonicalWorkspacePath('/device/%E0%A4%A', '')).has('device'), false)
-})
-
-test('the real workspace Provider renders invalid encoded legacy IDs without throwing', async () => {
-  const React = await import('react')
-  const { renderToString } = await import('react-dom/server')
-  const { StaticRouter } = await import('react-router-dom/server.js')
-  const source = await readFile(new URL('../src/services/workspace.tsx', import.meta.url), 'utf8')
-  let compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText
-  const modeUrl = `data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`
-  compiled = compiled.replace(/(['"])(react(?:\/jsx-runtime)?|react-router-dom)\1/g, (_, quote, specifier) => JSON.stringify(import.meta.resolve(specifier)))
-  compiled = compiled.replace(/(['"])\.\/workspaceMode\1/g, JSON.stringify(modeUrl))
-  const { WorkspaceProvider, useWorkspace } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`)
-  const Probe = () => React.createElement('span', null, useWorkspace().selectedDeviceId ?? 'no-device')
-  for (const path of ['/device/%E0%A4%A', '/device/%', '/device/%ZZ']) {
-    const html = renderToString(React.createElement(StaticRouter, { location: path }, React.createElement(WorkspaceProvider, null, React.createElement(Probe))))
-    assert.ok(html.includes('no-device'))
-  }
-  const valid = renderToString(React.createElement(StaticRouter, { location: '/device/pump%20A' }, React.createElement(WorkspaceProvider, null, React.createElement(Probe))))
-  assert.ok(valid.includes('pump A'))
+test('workspaceLink keeps old call sites working while writing new URLs', () => {
+  const event = parsed(workspaceLink('/events', 'pump-001', 5))
+  assert.equal(event.pathname, '/dashboard')
+  assert.equal(event.params.get('panel'), 'events')
+  assert.equal(event.params.get('device'), 'pump-001')
+  assert.equal(event.params.get('event'), '5')
 })

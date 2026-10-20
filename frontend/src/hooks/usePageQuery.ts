@@ -1,5 +1,4 @@
 import { useSearchParams } from 'react-router-dom'
-import { workspaceLink } from '../services/workspaceMode'
 
 export function usePageQuery() {
   const [params, setParams] = useSearchParams()
@@ -20,6 +19,3 @@ export function usePageQuery() {
   }
   return { params, update }
 }
-
-/** 所有业务链接直接进入同一个工作空间；旧路由仅供外部兼容。 */
-export const deviceLink = workspaceLink

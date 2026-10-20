@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button, Card, Popconfirm, Space, Tag, message } from 'antd'
+import { Button, Popconfirm, Space, Tag, message } from 'antd'
 import {
   getMe,
   acceptThresholdSuggestion,
@@ -16,12 +16,17 @@ interface Suggestion {
   reason: string
   status: string
 }
-export default function ThresholdSuggestions() {
+export default function ThresholdSuggestions({
+  deviceId,
+}: {
+  deviceId?: string
+}) {
   const account = useResource('account', getMe)
   const canManage = account.data?.role === 'admin'
   const resource = useResource<Suggestion[]>(
-    'threshold-suggestions',
-    listThresholdSuggestions,
+    `threshold-suggestions:${deviceId ?? 'all'}`,
+    () =>
+      listThresholdSuggestions(deviceId ? { device_id: deviceId } : undefined),
   )
   const [acting, setActing] = useState<number>()
   const act = async (id: number, accept: boolean) => {
@@ -41,7 +46,7 @@ export default function ThresholdSuggestions() {
     }
   }
   return (
-    <Card title="阈值建议">
+    <section className="surface threshold-suggestions">
       <LoadState
         loading={resource.loading}
         error={resource.error}
@@ -98,6 +103,6 @@ export default function ThresholdSuggestions() {
           ))}
         </Space>
       </LoadState>
-    </Card>
+    </section>
   )
 }

@@ -13,7 +13,7 @@ import { injectFault, type Device } from '../../services/api'
 import { useDeviceCatalog } from '../../services/realtime'
 import { usePageQuery } from '../../hooks/usePageQuery'
 import { errorText } from '../../hooks/useResource'
-import { LoadState, SourceTag, StatusTag } from '../../components/BusinessUI'
+import { LoadState, StatusTag } from '../../components/BusinessUI'
 export default function FaultInjection() {
   const catalog = useDeviceCatalog()
   const { params, update } = usePageQuery()
@@ -51,10 +51,6 @@ export default function FaultInjection() {
   }
   return (
     <section className="surface">
-      <div className="section-header">
-        <h2>仿真测试</h2>
-        <SourceTag source="simulation" />
-      </div>
       <Alert
         showIcon
         type="warning"

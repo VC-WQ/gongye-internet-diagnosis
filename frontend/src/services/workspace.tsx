@@ -9,27 +9,44 @@ import {
   type ReactNode,
 } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-import { modeFromPath, workspaceLink, deviceFromPath, type WorkspaceMode } from './workspaceMode'
+import {
+  areaFromPath,
+  factoryPath,
+  normalizeDetail,
+  normalizePanel,
+  normalizeStatus,
+  workspaceLink,
+  type Area,
+  type DetailTab,
+  type FactoryPanel,
+  type StatusFilter,
+} from './workspaceMode'
 
-export type { WorkspaceMode } from './workspaceMode'
+export type { Area, DetailTab, FactoryPanel, StatusFilter } from './workspaceMode'
 
 export interface WorkspaceFilters {
   q?: string
-  status?: string
   page?: number
 }
 
 interface WorkspaceValue {
   pathname: string
-  mode: WorkspaceMode
+  area: Area
   selectedDeviceId?: string
   selectedEventId?: number
-  activePanel?: string
+  panel: FactoryPanel
+  detailTab: DetailTab
+  statusFilter: StatusFilter
+  channel?: string
   searchFilters: WorkspaceFilters
   contextRevision: number
   setDevice: (id?: string, opts?: { replace?: boolean }) => void
   setEvent: (id?: number, opts?: { replace?: boolean }) => void
-  setPanel: (panel?: string, opts?: { replace?: boolean }) => void
+  setPanel: (panel: FactoryPanel, opts?: { replace?: boolean }) => void
+  closePanel: () => void
+  setDetail: (tab: DetailTab) => void
+  setStatusFilter: (status: StatusFilter) => void
+  setChannel: (channel?: string) => void
   setFilters: (
     values: Record<string, string | undefined>,
     opts?: { replace?: boolean },
@@ -48,16 +65,16 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
 
-  const mode = modeFromPath(location.pathname, location.search)
-  const routeDevice = deviceFromPath(location.pathname)
-  const queryDevice = params.get('device') ?? undefined
-  const selectedDeviceId = routeDevice || queryDevice || undefined
+  const area = areaFromPath(location.pathname)
+  const selectedDeviceId = params.get('device') ?? undefined
   const selectedEventId = Number(params.get('event')) || undefined
-  const activePanel = params.get('tab') ?? undefined
+  const panel = normalizePanel(params.get('panel'))
+  const detailTab = normalizeDetail(params.get('detail'))
+  const statusFilter = normalizeStatus(params.get('status'))
+  const channel = params.get('channel') ?? undefined
   const searchFilters = useMemo<WorkspaceFilters>(
     () => ({
       q: params.get('q') ?? undefined,
-      status: params.get('status') ?? undefined,
       page: Number(params.get('page')) || undefined,
     }),
     [params],
@@ -84,21 +101,51 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   const setDevice = useCallback(
     (id?: string, opts?: { replace?: boolean }) =>
-      update({ device: id, event: undefined }, opts?.replace ?? false),
+      update(
+        { device: id, event: undefined, page: undefined },
+        opts?.replace ?? true,
+      ),
     [update],
   )
   const setEvent = useCallback(
     (id?: number, opts?: { replace?: boolean }) =>
       update(
         { event: id == null ? undefined : String(id) },
-        opts?.replace ?? false,
+        opts?.replace ?? true,
       ),
     [update],
   )
-  // 面板切换用 replace，避免一次后退只回到上一个 Tab
+  // 打开面板写入历史（后退可关闭）；关闭用 replace，避免留下无意义来回记录。
   const setPanel = useCallback(
-    (panel?: string, opts?: { replace?: boolean }) =>
-      update({ tab: panel }, opts?.replace ?? true),
+    (next: FactoryPanel, opts?: { replace?: boolean }) =>
+      update(
+        { panel: next === 'none' ? undefined : next },
+        opts?.replace ?? (next === 'none'),
+      ),
+    [update],
+  )
+  const closePanel = useCallback(
+    () => update({ panel: undefined, detail: undefined, tab: undefined }, true),
+    [update],
+  )
+  const setDetail = useCallback(
+    (tab: DetailTab) => update({ detail: tab === 'realtime' ? undefined : tab }, true),
+    [update],
+  )
+  const setStatusFilter = useCallback(
+    (status: StatusFilter) =>
+      update(
+        {
+          status: status === 'all' ? undefined : status,
+          event: undefined,
+          page: undefined,
+        },
+        true,
+      ),
+    [update],
+  )
+  const setChannel = useCallback(
+    (next?: string) => update({ channel: next }, true),
     [update],
   )
   const setFilters = useCallback(
@@ -121,11 +168,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   )
 
   // 上下文指纹变化或业务写入后递增，供 Pico/列表判断“旧响应是否已过期”
-  const fingerprint = `${location.pathname}|${mode}|${selectedDeviceId ?? ''}|${
+  const fingerprint = `${location.pathname}|${area}|${selectedDeviceId ?? ''}|${
     selectedEventId ?? ''
-  }|${activePanel ?? ''}|${params.get('q') ?? ''}|${
-    params.get('status') ?? ''
-  }|${params.get('page') ?? ''}`
+  }|${panel}|${detailTab}|${statusFilter}|${channel ?? ''}|${params.get('q') ?? ''}|${
+    params.get('page') ?? ''
+  }`
   const [revision, setRevision] = useState(0)
   const lastFingerprint = useRef(fingerprint)
   useEffect(() => {
@@ -139,30 +186,44 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const value = useMemo<WorkspaceValue>(
     () => ({
       pathname: location.pathname,
-      mode,
+      area,
       selectedDeviceId,
       selectedEventId,
-      activePanel,
+      panel,
+      detailTab,
+      statusFilter,
+      channel,
       searchFilters,
       contextRevision: revision,
       setDevice,
       setEvent,
       setPanel,
+      closePanel,
+      setDetail,
+      setStatusFilter,
+      setChannel,
       setFilters,
       navigateWorkspace,
       invalidate,
     }),
     [
       location.pathname,
-      mode,
+      area,
       selectedDeviceId,
       selectedEventId,
-      activePanel,
+      panel,
+      detailTab,
+      statusFilter,
+      channel,
       searchFilters,
       revision,
       setDevice,
       setEvent,
       setPanel,
+      closePanel,
+      setDetail,
+      setStatusFilter,
+      setChannel,
       setFilters,
       navigateWorkspace,
       invalidate,
@@ -180,4 +241,29 @@ export function useWorkspace(): WorkspaceValue {
   const value = useContext(WorkspaceContext)
   if (!value) throw new Error('useWorkspace must be used inside WorkspaceProvider')
   return value
+}
+
+/** 供不依赖 URL 的纯展示组件复用当前工厂身份。 */
+export function useFactorySelection() {
+  const workspace = useWorkspace()
+  return {
+    deviceId: workspace.selectedDeviceId,
+    eventId: workspace.selectedEventId,
+    selectDevice: workspace.setDevice,
+    selectEvent: workspace.setEvent,
+  }
+}
+
+/** 生成带当前设备/事件身份的工厂地址。 */
+export function useFactoryLink() {
+  const workspace = useWorkspace()
+  return useCallback(
+    (options: Parameters<typeof factoryPath>[0]) =>
+      factoryPath({
+        device: workspace.selectedDeviceId,
+        event: workspace.selectedEventId,
+        ...options,
+      }),
+    [workspace.selectedDeviceId, workspace.selectedEventId],
+  )
 }

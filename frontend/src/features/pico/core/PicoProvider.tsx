@@ -22,17 +22,11 @@ import type {
   PicoNotification,
 } from './types'
 
-const MODE_LABEL: Record<string, string> = {
-  overview: '工厂总览',
-  devices: '设备监测',
-  device: '设备详情',
-  diagnose: '智能诊断',
-  events: '事件处置',
-  reports: '报告与档案',
-  lab: '算法实验室',
-  ops: '系统运维',
+const AREA_LABEL: Record<string, string> = {
+  factory: '工厂',
+  tools: '工具',
   admin: '管理',
-  unknown: '工作台',
+  about: '关于',
 }
 
 interface PicoValue {
@@ -103,7 +97,7 @@ export function PicoProvider({ children }: { children: ReactNode }) {
 
   const device = catalog.data?.find((item) => item.id === workspace.selectedDeviceId)
   const contextLabel = `${device?.name ?? workspace.selectedDeviceId ?? '未选择设备'} · ${
-    MODE_LABEL[workspace.mode] ?? '工作台'
+    AREA_LABEL[workspace.area] ?? '工作台'
   }`
 
   const stopSpeaking = useCallback(() => {
@@ -126,9 +120,9 @@ export function PicoProvider({ children }: { children: ReactNode }) {
   // 上下文变化保持静默：仅取消旧请求、停止播报和失效数据。
   const lastContext = useRef('')
   useEffect(() => {
-    const key = `${workspace.mode}|${workspace.selectedDeviceId ?? ''}|${
+    const key = `${workspace.area}|${workspace.selectedDeviceId ?? ''}|${
       workspace.selectedEventId ?? ''
-    }|${workspace.activePanel ?? ''}`
+    }|${workspace.panel}|${workspace.detailTab}`
     if (!lastContext.current) {
       lastContext.current = key
       return
@@ -143,10 +137,11 @@ export function PicoProvider({ children }: { children: ReactNode }) {
     setEmotion('idle')
 
   }, [
-    workspace.mode,
+    workspace.area,
     workspace.selectedDeviceId,
     workspace.selectedEventId,
-    workspace.activePanel,
+    workspace.panel,
+    workspace.detailTab,
     contextLabel,
     stopSpeaking,
   ])
@@ -250,10 +245,15 @@ export function PicoProvider({ children }: { children: ReactNode }) {
         const response: PicoChatResponse = await postPicoChat(
           {
             message: content,
-            page: workspace.mode,
+            page: workspace.area,
             device_id: override?.device_id ?? workspace.selectedDeviceId,
             event_id: override?.event_id ?? workspace.selectedEventId,
-            tab: workspace.activePanel,
+            tab:
+              workspace.panel === 'device'
+                ? workspace.detailTab
+                : workspace.panel === 'none'
+                  ? undefined
+                  : workspace.panel,
             history,
           },
           controller.signal,
