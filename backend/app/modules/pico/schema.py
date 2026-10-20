@@ -26,7 +26,7 @@ class PicoContextSnapshot(BaseModel):
     area: str = Field(min_length=1, max_length=32)
     route: str = Field(min_length=1, max_length=256, pattern=r"^/(?:[^/\s][^\s]*)?$")
     device_id: Optional[str] = Field(default=None, min_length=1, max_length=64)
-    event_id: Optional[int] = Field(default=None, ge=1, strict=True)
+    event_id: Optional[int] = Field(default=None, ge=1, le=9007199254740991, strict=True)
     active_tab: Optional[str] = Field(default=None, max_length=32)
     visible_section: Optional[str] = Field(default=None, max_length=32)
     context_revision: int = Field(default=0, ge=0, strict=True)
@@ -37,14 +37,14 @@ class PicoResolvedContext(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
     device_id: Optional[str] = Field(default=None, min_length=1, max_length=64)
-    event_id: Optional[int] = Field(default=None, ge=1, strict=True)
+    event_id: Optional[int] = Field(default=None, ge=1, le=9007199254740991, strict=True)
 
 
 class PicoChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=500)
     page: Optional[str] = Field(default=None, max_length=64)
     device_id: Optional[str] = Field(default=None, max_length=64)
-    event_id: Optional[int] = Field(default=None, ge=1)
+    event_id: Optional[int] = Field(default=None, ge=1, le=9007199254740991)
     tab: Optional[str] = Field(default=None, max_length=32)
     history: list[PicoTurn] = Field(default_factory=list, max_length=8)
     context: Optional[PicoContextSnapshot] = None
@@ -52,7 +52,7 @@ class PicoChatRequest(BaseModel):
 
 
 class PicoReference(BaseModel):
-    kind: Literal["device", "event", "report", "telemetry"]
+    kind: Literal["device", "event", "report", "telemetry", "research", "knowledge"]
     id: str
     label: str
     source: str
@@ -71,6 +71,7 @@ class PicoMeta(BaseModel):
     source_kind: Literal["real", "simulated", "offline", "unknown"]
     degraded: bool
     llm: Literal["live", "unconfigured", "fallback"]
+    planner: Optional[Literal["live", "unconfigured", "fallback"]] = None
 
 
 class PicoChatResponse(BaseModel):

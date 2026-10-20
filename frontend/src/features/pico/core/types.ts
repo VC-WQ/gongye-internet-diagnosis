@@ -32,7 +32,7 @@ export interface PicoResolvedContext {
 }
 
 export interface PicoReference {
-  kind: 'device' | 'event' | 'report' | 'telemetry'
+  kind: 'device' | 'event' | 'report' | 'telemetry' | 'research' | 'knowledge'
   id: string
   label: string
   source: string

@@ -25,5 +25,6 @@ export const getPicoCapabilities = () =>
 
 export const postPicoChat = (payload: PicoChatPayload, signal?: AbortSignal) =>
   api
-    .post<PicoChatResponse>('/pico/chat', payload, { signal, timeout: 18000 })
+    // Planner (7s) + answer (10s), both without retry, plus bounded local queries.
+    .post<PicoChatResponse>('/pico/chat', payload, { signal, timeout: 25000 })
     .then((r) => r.data)

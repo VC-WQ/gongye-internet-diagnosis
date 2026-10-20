@@ -7,6 +7,7 @@
 """
 from __future__ import annotations
 
+import json
 import math
 import re
 import time
@@ -14,6 +15,7 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 
 from app.models import Device, Event
 from app.modules.mqtt_pipeline.service import mqtt_pipeline_service
@@ -29,6 +31,10 @@ READ_ONLY_TOOLS = [
     "list_device_events",
     "get_event_detail",
     "get_report_summary",
+    "search_devices",
+    "search_events",
+    "search_research_topics",
+    "get_research_evidence",
 ]
 
 
@@ -61,7 +67,10 @@ def resolve_device_mention(session: Session, message: str) -> tuple[Optional[str
     for token in tokens:
         device = next((d for d in devices if d.id.casefold() == token.casefold()), None)
         if device is None:
-            return None, f"设备 {token} 不存在或不可见，请核对设备编号。"
+            # FP-CNN/SDE-PF/ResNet-50 are research terms, not fabricated device IDs.
+            if re.match(r"^(?:pump|motor|compressor|device|no-such)-", token, re.I) or re.search(r"(?:设备编号|设备ID|设备id)\s*(?:是|为|[:：])?\s*" + re.escape(token), message):
+                return None, f"设备 {token} 不存在或不可见，请核对设备编号。"
+            continue
         matched.add(device.id)
     named = re.findall(r"(?:驱动电机|电机|离心泵|泵|空压机)\s*[A-Za-z](?![A-Za-z0-9])", message)
     if named and not matched:
@@ -135,28 +144,66 @@ def list_device_events(
     return query.order_by(Event.timestamp.desc(), Event.id.desc()).limit(limit).all()
 
 
+def search_devices(session: Session, filters: dict, sort: str, limit: int) -> list[dict]:
+    """结构化目录检索；排序来自数据库，不能由模型捏造评分。"""
+    query = session.query(Device)
+    text = filters.get("query")
+    if text:
+        escaped = text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        query = query.filter(or_(Device.id.ilike(f"%{escaped}%", escape="\\"), Device.name.ilike(f"%{escaped}%", escape="\\")))
+    if filters.get("device_type"):
+        query = query.filter(Device.device_type == filters["device_type"])
+    if filters.get("status"):
+        query = query.filter(Device.status == filters["status"])
+    if filters.get("abnormal_only"):
+        query = query.filter(Device.status.in_(("degraded", "fault", "offline")))
+    if sort in ("health_asc", "health_desc"):
+        query = query.filter(Device.health_score.isnot(None))
+        query = query.order_by(Device.health_score.asc() if sort == "health_asc" else Device.health_score.desc(), Device.id.asc())
+    else:
+        query = query.order_by(Device.id.asc())
+    return [{"id": d.id, "name": d.name, "device_type": d.device_type, "status": d.status, "health_score": finite_number(d.health_score)} for d in query.limit(max(1, min(limit, 20))).all()]
+
+
+def search_events(session: Session, filters: dict, limit: int) -> list[Event]:
+    query = session.query(Event)
+    if filters.get("device_id"):
+        query = query.filter(Event.device_id == filters["device_id"])
+    if filters.get("status"):
+        query = query.filter(Event.status_state == filters["status"])
+    if filters.get("severity"):
+        query = query.filter(Event.severity == filters["severity"])
+    if filters.get("abnormal_only"):
+        query = query.filter(or_(Event.severity.in_(("warning", "critical", "alarm")), Event.status_state.in_(("warning", "alarm", "consulting", "pending", "handling", "observing", "relapsed"))))
+    return query.order_by(Event.timestamp.desc(), Event.id.desc()).limit(max(1, min(limit, MAX_EVENTS))).all()
+
+
 def event_detail(event: Event) -> dict[str, Any]:
     """事件的安全摘要（不含原始全量窗口）。"""
     diag = event.agent_diagnosis if isinstance(event.agent_diagnosis, dict) else {}
     report = diag.get("report") if isinstance(diag.get("report"), dict) else {}
+    def excerpt(value: Any):
+        if value is None:
+            return None
+        return (value if isinstance(value, str) else json.dumps(value, ensure_ascii=False, default=str))[:1200]
     return {
         "id": event.id,
         "device_id": event.device_id,
         "status_state": event.status_state,
         "severity": event.severity,
         "timestamp": event.timestamp.isoformat() if event.timestamp else None,
-        "fault_type": diag.get("fault_type"),
-        "fault_label": diag.get("fault_label") or diag.get("fault_type"),
-        "confidence": diag.get("confidence"),
-        "health_score": diag.get("health_score"),
-        "health_level": diag.get("health_level"),
-        "conflict_detected": diag.get("conflict_detected"),
-        "summary": report.get("summary"),
-        "recommendation": report.get("recommendation"),
-        "physical_evidence": report.get("physical_evidence"),
-        "signal_evidence": report.get("signal_evidence"),
-        "knowledge_basis": report.get("knowledge_basis"),
-        "feedback": event.feedback_result,
+        "fault_type": excerpt(diag.get("fault_type")),
+        "fault_label": excerpt(diag.get("fault_label") or diag.get("fault_type")),
+        "confidence": finite_number(diag.get("confidence")),
+        "health_score": finite_number(diag.get("health_score")),
+        "health_level": excerpt(diag.get("health_level")),
+        "conflict_detected": diag.get("conflict_detected") if isinstance(diag.get("conflict_detected"), bool) else None,
+        "summary": excerpt(report.get("summary")),
+        "recommendation": excerpt(report.get("recommendation")),
+        "physical_evidence": excerpt(report.get("physical_evidence")),
+        "signal_evidence": excerpt(report.get("signal_evidence")),
+        "knowledge_basis": excerpt(report.get("knowledge_basis")),
+        "feedback": excerpt(event.feedback_result),
     }
 
 

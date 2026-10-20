@@ -1,6 +1,7 @@
 """Pico 业务编排：上下文校验 -> 只读工具 -> 结构化回答。"""
 from __future__ import annotations
 
+import json
 import re
 import uuid
 from typing import Any, Optional
@@ -10,7 +11,8 @@ from sqlalchemy.orm import Session
 from app.models import User
 from app.modules.multi_agent.llm_client import llm_client
 
-from . import tools
+from . import tools, retrieval
+from .planner import ANSWER_TIMEOUT, model_plan
 from .schema import (
     PicoAction,
     PicoChatRequest,
@@ -51,7 +53,7 @@ EVENT_STATE_LABEL = {
 def capabilities() -> dict[str, Any]:
     """Pico 能力清单（供前端显示降级状态）。"""
     return {
-        "version": "1.0",
+        "version": "1.2",
         "llm_available": llm_client.available,
         "tools": tools.READ_ONLY_TOOLS,
         "limits": {
@@ -60,6 +62,9 @@ def capabilities() -> dict[str, Any]:
             "events_max": tools.MAX_EVENTS,
             "window_points_max": tools.MAX_WINDOW_POINTS,
             "stale_seconds": tools.STALE_SECONDS,
+            "tool_calls_max": 3,
+            "planner_timeout_seconds": 7,
+            "answer_timeout_seconds": 10,
         },
         "write_tools": [],
     }
@@ -193,7 +198,7 @@ def _llm_answer(
         f"工具结果：\n{facts}\n\n"
         "请基于工具结果回答；没有的事实不要补充。"
     )
-    text = llm_client.chat(SYSTEM_PROMPT, prompt)
+    text = llm_client.chat(SYSTEM_PROMPT, prompt, timeout=ANSWER_TIMEOUT, max_retries=0)
     if text:
         return text, "live"
     return fallback, "fallback"
@@ -212,8 +217,8 @@ def _resolve_context(db: Session, body: PicoChatRequest) -> tuple[Optional[str],
     event_match = re.search(r"(?:事件|记录)\s*[#＃]?\s*(\d+)|[#＃]\s*(\d+)", body.message)
     explicit_event = int(event_match.group(1) or event_match.group(2)) if event_match else None
     if explicit_event is not None:
-        if explicit_event < 1:
-            return None, None, "事件编号必须是正整数，请核对。"
+        if explicit_event < 1 or explicit_event > 9007199254740991:
+            return None, None, "事件编号必须是有效的正整数，请核对。"
         # 用户显式转问事件时，不能让当前页面的另一台设备阻断。
         event_id = explicit_event
         device_id = explicit_device
@@ -223,7 +228,7 @@ def _resolve_context(db: Session, body: PicoChatRequest) -> tuple[Optional[str],
     return device_id, event_id, None
 
 
-def chat(db: Session, user: User, body: PicoChatRequest) -> PicoChatResponse:
+def _context_chat(db: Session, user: User, body: PicoChatRequest) -> PicoChatResponse:
     """处理一次 Pico 对话。"""
     revision = body.context.context_revision if body.context is not None else None
     device_id, event_id, context_error = _resolve_context(db, body)
@@ -456,4 +461,205 @@ def chat(db: Session, user: User, body: PicoChatRequest) -> PicoChatResponse:
         ),
         context_revision=revision,
         resolved_context=PicoResolvedContext(device_id=device_id, event_id=event.id if event is not None else facts.get("latest_diagnosis", {}).get("id")) if device_id or event is not None else None,
+    )
+
+
+def _query_text(result: dict) -> str:
+    """无模型时简洁呈现已查询结果；不从通用知识补指标。"""
+    name, data = result["tool"], result["data"]
+    if data is None:
+        return result.get("message", "没有查询到可用数据。")
+    if name == "get_device_overview":
+        latest = data.get("latest_diagnosis")
+        return _device_text(data) + (f"最近一次落库诊断：#{latest['id']} {latest.get('fault_label') or '未分类'}，记录时间 {latest.get('timestamp') or '未记录'}。" if latest else "")
+    if name == "get_device_telemetry":
+        if result["status"] == "missing":
+            return f"设备 {data['device_id']} 没有有效的实时采样。"
+        values = data.get("last_sample") or {}
+        readings = []
+        for key, label, unit in (("vibration", "振动", "g"), ("temperature", "温度", "℃"), ("current", "电流", "A"), ("pressure", "压力", "MPa"), ("speed", "转速", "rpm")):
+            if key in values:
+                readings.append(f"{label} {values[key]:.3g} {unit}")
+        return f"设备 {data['device_id']} 最近采样（{data['observed_at']}）：{'，'.join(readings)}。" + ("采样已过期，仅供参考。" if result["status"] == "stale" else "")
+    if name == "search_devices":
+        if not data:
+            return "没有找到符合条件的设备目录记录。"
+        order = "按目录健康评分从低到高" if result.get("sort") == "health_asc" else "按目录健康评分从高到低" if result.get("sort") == "health_desc" else "查询到的设备"
+        return order + "：" + "；".join(f"{row['name']}（{row['id']}）{row['health_score'] if row['health_score'] is not None else '未登记'} 分，{STATUS_LABEL.get(row['status'], row['status'])}" for row in data[:10]) + "。"
+    if name in ("list_device_events", "search_events"):
+        if not data:
+            return "没有找到符合条件的诊断事件。"
+        lines = []
+        for row in data[:5]:
+            line = f"#{row['id']} · {row['device_id']}：{row.get('fault_label') or '未分类'}（{EVENT_STATE_LABEL.get(row.get('status_state'), row.get('status_state') or '状态未记录')}）"
+            if row.get("timestamp"):
+                line += f"，{row['timestamp']}"
+            if row.get("summary") and len(data) == 1:
+                line += f"，{str(row['summary'])[:300]}"
+            lines.append(line)
+        return f"最近 {len(data)} 条诊断事件：" + "；".join(lines) + "。"
+    if name in ("get_event_detail", "get_report_summary"):
+        if name == "get_report_summary":
+            text = f"事件 #{data['event_id']} 报告：{data.get('summary') or '暂无报告摘要'}；维护建议：{data.get('recommendation') or '暂无维护建议'}。"
+        else:
+            text = f"事件 #{data['id']}（{data['device_id']}）结论：{data.get('fault_label') or '未分类'}，状态{EVENT_STATE_LABEL.get(data.get('status_state'), data.get('status_state') or '未记录')}。"
+            if data.get("summary"):
+                text += str(data["summary"])[:400]
+            evidence = data.get("physical_evidence") or data.get("signal_evidence") or data.get("knowledge_basis")
+            text += f"依据：{str(evidence)[:500]}。" if evidence else "没有更多可追溯依据。"
+        return text + ("该设备已不在当前目录，以上为保留的历史记录。" if data.get("device_catalog_missing") else "")
+    if name == "search_research_topics":
+        if not data:
+            return "没有在项目研究目录和知识资料中找到与该问题匹配的证据。"
+        return "\n".join(f"{hit['title']}：{hit['summary'][:240]}" for hit in data[:5])
+    if name == "get_research_evidence":
+        if not data:
+            return "研究目录中没有这个主题与研究点的组合。"
+        labels = {"offline_public": "公开数据离线实验", "simulation": "仿真实验", "constructed_domain": "构造目标域实验", "mixed": "公开与仿真资产登记", "runtime": "当前运行统计"}
+        return "\n".join(f"{item['title']}（{labels.get(item['kind'], item['kind'])}）：" + (_evidence_text(item) if item['status'] == 'available' else "尚无可用实验产物，不能给出效果数值。") for item in data)
+    return "没有查询到可用数据。"
+
+
+def _evidence_text(item: dict) -> str:
+    """展示少量真实代表指标，不把原始 JSON 当作降级答案。"""
+    data = item["evidence"]
+    point = item["id"].split("/")[-1]
+
+    def metrics(row, fields):
+        return "，".join(f"{label} {row[key]:.6g}" for key, label in fields if isinstance(row.get(key), (int, float)))
+
+    if point == "rul":
+        values = data.get("metrics", {})
+        return "；".join(f"{label}：{metrics(values[name], [('rmse', 'RMSE'), ('mae', 'MAE'), ('r2', 'R²')])}" for name, label in (("sde_pf", "SDE + 粒子滤波"), ("baseline", "指数外推基线")) if values.get(name)) + "。"
+    if point == "vision":
+        return "；".join(f"{row.get('name', '模型')}：" + "，".join([f"mAP@50 {row['mAP50']:.2%}"] if isinstance(row.get('mAP50'), (int, float)) else []) + (f"，速度 {row['fps']:.4g} FPS" if isinstance(row.get('fps'), (int, float)) else "") + (f"，参数 {row['params_M']:.4g} M" if isinstance(row.get('params_M'), (int, float)) else "") for row in data.get("models", [])[:3]) + "。"
+    if point == "fpcnn":
+        row = data.get("full", {})
+        fields = []
+        if isinstance(row.get("baseline_acc"), (int, float)):
+            fields.append(f"基线 CNN 准确率 {row['baseline_acc']:.2%}")
+        if isinstance(row.get("fp_acc"), (int, float)):
+            fields.append(f"FP-CNN 准确率 {row['fp_acc']:.2%}")
+        if isinstance(row.get("delta"), (int, float)):
+            fields.append(f"差值 {row['delta'] * 100:.2f} 个百分点")
+        return "，".join(fields) + "；零差值代表本次对照没有增益。" if row.get("delta") == 0 else "，".join(fields) + "。"
+    if point in ("assets", "evidence"):
+        rows = data.get("datasets", [])
+        return f"读取了 {len(rows)} 项资产登记：" + "；".join(f"{row.get('name', '未命名')}" + (f" {row['samples']:.0f} 个样本" if isinstance(row.get("samples"), (int, float)) else "") + (f"（{row['source']}）" if row.get("source") else "") for row in rows[:5]) + "。"
+    if point == "domain":
+        return "；".join(f"{row.get('title') or row.get('id', '对照方法')}：目标域宏平均准确率 {row['target_macro_accuracy']:.2%}" for row in data.get("results", [])[:4] if isinstance(row.get("target_macro_accuracy"), (int, float))) + "。目标域由物理变换构造，不能当作现场效果。"
+    if point == "classification":
+        parts = []
+        for dataset in data.get("datasets", [])[:3]:
+            rows = dataset.get("models", [])
+            named = next((row for row in rows if row.get("name") == dataset.get("best_model")), rows[0] if rows else None)
+            if named:
+                parts.append(f"{dataset.get('name', '分类任务')} · {named.get('name', '模型')}：{metrics(named, [('f1', 'F1'), ('auc', 'AUC'), ('accuracy', '准确率')])}")
+        return "；".join(parts) + "。"
+    if point == "steam":
+        rows = data.get("methods", [])
+        best = max((row for row in rows if isinstance(row.get("r2"), (int, float))), key=lambda row: row["r2"], default=None)
+        return f"本次对照 {len(rows)} 个方法" + (f"，R²最高为 {best.get('name', '模型')}：{metrics(best, [('r2', 'R²'), ('rmse', 'RMSE'), ('mae', 'MAE')])}。" if best else "；缺少可比较的 R² 指标。")
+    if point == "xjtu":
+        rows = data.get("bearings", [])
+        return f"读取 {len(rows)} 个轴承的退化曲线：" + "；".join(f"{row.get('id', '轴承')} 含 {row['series_points']} 个时序点" for row in rows[:3] if "series_points" in row) + "。"
+    if point == "twin":
+        row = data.get("overview", {})
+        parts = []
+        if "n_trajectories" in row:
+            parts.append(f"{row['n_trajectories']} 条仿真退化轨迹")
+        if data.get("ttf_metrics"):
+            parts.append("失效时间预测 " + metrics(data["ttf_metrics"], [("mae_hours", "MAE（小时）"), ("rmse_hours", "RMSE（小时）")]))
+        return "；".join(parts) + "。"
+    if point in ("cwru", "factory"):
+        return metrics(data.get("overview", {}), [("n_samples", "样本数"), ("fs", "采样率（Hz）"), ("n_machines", "仿真机组数"), ("n_sections", "工段数"), ("failure_rate", "仿真故障比例")]) + "。"
+    if point == "loop":
+        row = data.get("metrics", {})
+        if row.get("total") == 0:
+            return "当前没有人工根因样本，不能报告准确率或误报、漏报率。"
+        return metrics(row, [("total", "人工根因样本"), ("accuracy", "准确率"), ("false_alarm_rate", "误报率"), ("miss_rate", "漏报率")]) + "。"
+    return "已读取研究摘要；具体指标可在对应研究页核对。"
+
+
+def _plan_matches_entities(db: Session, plan, message: str, device_id: Optional[str], event_id: Optional[int]) -> bool:
+    """结构合法还不够：模型不能把明确目标换成另一台设备。"""
+    explicit_device, _ = tools.resolve_device_mention(db, message)
+    event_match = re.search(r"(?:事件|记录)\s*[#＃]?\s*(\d+)|[#＃]\s*(\d+)", message)
+    bound_event = int(event_match.group(1) or event_match.group(2)) if event_match else event_id
+    bound_device = explicit_device or device_id
+    for call in plan.calls:
+        if call.name == "search_devices" and explicit_device:
+            query = call.args.filters.query
+            query_device, query_error = tools.resolve_device_mention(db, query or "")
+            if query_error or query_device != explicit_device:
+                return False
+        if call.name in ("get_device_overview", "get_device_telemetry", "list_device_events") and bound_device and call.args.device_id != bound_device:
+            return False
+        if call.name in ("get_event_detail", "get_report_summary"):
+            if bound_event and call.args.event_id != bound_event:
+                return False
+            event = tools.get_event(db, call.args.event_id)
+            if bound_device and event is not None and event.device_id != bound_device:
+                return False
+        if call.name == "search_events" and bound_device and call.args.filters.device_id != bound_device:
+            return False
+    return True
+
+
+def chat(db: Session, user: User, body: PicoChatRequest) -> PicoChatResponse:
+    """真实模型优先计划；工具受约束执行；无模型走有限检索/上下文兜底。"""
+    revision = body.context.context_revision if body.context is not None else None
+    global_query = retrieval.global_scope(body.message)
+    research_query = retrieval.is_research_query(body.message)
+    device_id, event_id, context_error = (None, None, None) if global_query or research_query else _resolve_context(db, body)
+    if context_error:
+        return _error(context_error, revision=revision)
+    context = {"area": body.context.area if body.context else body.page, "device_id": device_id, "event_id": event_id, "active_tab": body.context.active_tab if body.context else body.tab}
+    plan, planner_status = model_plan(body.message, context)
+    if plan is not None and (not retrieval.plan_respects_scope(plan, body.message) or not _plan_matches_entities(db, plan, body.message, device_id, event_id)):
+        plan, planner_status = None, "fallback"
+    if plan is None:
+        plan = retrieval.fallback_plan(db, body.message, context)
+    if plan is None:
+        return _context_chat(db, user, body)
+    if plan.mode == "clarify":
+        return _error("我还不能确定要查询的对象，请提供设备名称、编号或事件编号。", revision=revision)
+    results = [retrieval.execute_call(db, call) for call in plan.calls]
+    fallback = "\n".join(_query_text(result) for result in results)
+    facts = json.dumps({"question_scope": "global" if global_query else "research" if research_query else "context", "results": results}, ensure_ascii=False, allow_nan=False, default=str)
+    if research_query and all(result["status"] == "missing" for result in results):
+        # No evidence is a useful negative result, not an invitation to invent a model.
+        text, llm_status = fallback, "fallback" if llm_client.available else "unconfigured"
+    else:
+        text, llm_status = _llm_answer(body.message, facts, fallback, body.history)
+    refs, actions = [], []
+    seen_refs, seen_actions = set(), set()
+    for result in results:
+        for reference in result["references"]:
+            key = (reference["kind"], reference["id"])
+            if key not in seen_refs:
+                refs.append(PicoReference.model_validate(reference))
+                seen_refs.add(key)
+        for action in result["actions"]:
+            key = (action["type"], action["target"])
+            if key not in seen_actions:
+                actions.append(PicoAction.model_validate(action))
+                seen_actions.add(key)
+    # Multi-result global answers must not implicitly select the first row.
+    if not global_query and not research_query:
+        explicit_device, _ = tools.resolve_device_mention(db, body.message)
+        for result in results:
+            if result["tool"] == "search_devices" and explicit_device and result["data"] and len(result["data"]) == 1 and result["data"][0]["id"] == explicit_device:
+                result["focus"] = {"device_id": explicit_device}
+    targets = [result["focus"] for result in results if result["focus"]] if not global_query and not research_query else []
+    device_targets = {target["device_id"] for target in targets if target.get("device_id")}
+    event_targets = {target["event_id"] for target in targets if target.get("event_id")}
+    focus = PicoResolvedContext(device_id=next(iter(device_targets)), event_id=next(iter(event_targets)) if len(event_targets) == 1 else None) if len(device_targets) == 1 else None
+    statuses = {result["status"] for result in results}
+    source_kinds = {result["source_kind"] for result in results}
+    return PicoChatResponse(
+        message_id=uuid.uuid4().hex, request_id=uuid.uuid4().hex, type="answer", text=text,
+        emotion="curious", references=refs[:30], actions=actions[:6],
+        context_revision=revision, resolved_context=focus,
+        meta=PicoMeta(data_status="missing" if statuses == {"missing"} else "stale" if "stale" in statuses else "current", source_kind=next(iter(source_kinds)) if len(source_kinds) == 1 else "unknown", degraded=llm_status != "live", llm=llm_status, planner=planner_status),
     )

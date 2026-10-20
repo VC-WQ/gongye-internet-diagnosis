@@ -3,18 +3,21 @@ import { createPortal } from 'react-dom'
 import { Button, Input, Popover } from 'antd'
 import { usePico } from '../core/PicoProvider'
 import { actionPath } from '../core/actions'
+import { referencePath } from '../core/references'
 import { metaDetails, isNearBottom } from '../core/presentation'
 import type { PicoAction, PicoMessage, PicoReference } from '../core/types'
 import { DURATION, EASE_CSS } from '../../../motion/tokens'
 import { useSpatialNavigate } from '../../../hooks/useSpatialNavigate'
 
-const SUGGESTIONS = ['这台设备怎么样？', '最近有哪些告警？', '查看当前事件报告']
+const SUGGESTIONS = ['这台设备怎么样？', '健康评分最低的三台设备是哪些？', '系统用了哪些故障诊断算法？']
 
 const KIND_LABEL: Record<PicoReference['kind'], string> = {
   device: '设备',
   event: '事件',
   report: '报告',
   telemetry: '采样',
+  research: '研究',
+  knowledge: '知识',
 }
 
 interface Flight {
@@ -273,17 +276,19 @@ export default function PicoConversation({
       <>
         {message.references && message.references.length > 0 && (
           <div className="pico-refs">
-            {message.references.map((reference) => (
-              <span
-                key={`${reference.kind}:${reference.id}`}
-                className="pico-ref"
-                title={`${reference.source}${
-                  reference.observed_at ? ` · ${reference.observed_at}` : ''
-                }`}
-              >
-                {KIND_LABEL[reference.kind]} · {reference.label}
-              </span>
-            ))}
+            {message.references.map((reference) => {
+              const key = `${reference.kind}:${reference.id}`
+              const title = `${reference.source}${reference.observed_at ? ` · ${reference.observed_at}` : ''}`
+              const label = `${KIND_LABEL[reference.kind]} · ${reference.label}`
+              const path = referencePath(reference)
+              return path ? (
+                <a key={key} className="pico-ref" href={path} title={title}
+                  aria-label={`查看研究依据：${reference.label}`}
+                  onClick={event => { event.preventDefault(); navigate(path); if (variant === 'dock') setOpen(false) }}>
+                  {label}
+                </a>
+              ) : <span key={key} className="pico-ref" title={title}>{label}</span>
+            })}
           </div>
         )}
         <div className="pico-message__actions">
@@ -339,8 +344,8 @@ export default function PicoConversation({
           <div className="pico-empty">
             <PicoFaceGlyph />
             <p>
-              我是 Pico。可以问我当前设备状态、最近事件、事件依据或报告摘要。
-              {!deviceId && ' 当前页面没有设备上下文，请先在工厂中选择设备。'}
+              我是 Pico。可以查询设备状态、事件与报告，也能查找全厂设备和研究资料。
+              {!deviceId && ' 当前没有选定设备，你可以说出设备编号，或直接查询全厂信息。'}
             </p>
             <div className="pico-suggestions">
               {SUGGESTIONS.map((item) => (
