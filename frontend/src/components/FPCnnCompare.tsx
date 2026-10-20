@@ -2,7 +2,7 @@ import { LoadState } from './BusinessUI'
 import { errorText } from '../hooks/useResource'
 import { useEffect, useMemo, useState } from 'react'
 import { Card, Col, Empty, Row, Space, Spin, Table, Tag } from 'antd'
-import ReactECharts from 'echarts-for-react'
+import ThemedChart from './ThemedChart'
 import { getFpCnnCompare } from '../services/api'
 import ChartNote from './ChartNote'
 import { xAxisBase, yAxisBase } from '../theme/echarts'
@@ -197,9 +197,9 @@ export default function FPCnnCompare() {
         <Col span={24} style={{ marginBottom: 12 }}>
           <Space size={8} wrap>
             <Tag color="cyan">FP-CNN</Tag>
-            <span style={{ color: '#6e7d8b', fontSize: 13 }}>
+            <span style={{ color: "var(--muted)", fontSize: 13 }}>
               把轴承理论特征频率（BPFO / BPFI / BSF / FTF）做成可学习高斯频带嵌入 CNN，
-              实现物理知识与深度学习的<strong style={{ color: '#293543' }}>特征级</strong>融合
+              实现物理知识与深度学习的<strong style={{ color: "var(--text)" }}>特征级</strong>融合
             </span>
           </Space>
         </Col>
@@ -221,7 +221,7 @@ export default function FPCnnCompare() {
             }
           >
             {data?.few_shot?.length ? (
-              <ReactECharts theme="tech-dark" option={fewShotOption} style={{ height: 280 }} />
+              <ThemedChart option={fewShotOption} style={{ height: 280 }} />
             ) : (
               <Empty description="暂无实验结果" />
             )}
@@ -245,7 +245,7 @@ export default function FPCnnCompare() {
             }
           >
             {data?.noise?.length ? (
-              <ReactECharts theme="tech-dark" option={noiseOption} style={{ height: 280 }} />
+              <ThemedChart option={noiseOption} style={{ height: 280 }} />
             ) : (
               <Empty description="暂无实验结果" />
             )}
@@ -265,7 +265,7 @@ export default function FPCnnCompare() {
             }
           >
             {data?.bands?.learned ? (
-              <ReactECharts theme="tech-dark" option={bandOption} style={{ height: 280 }} />
+              <ThemedChart option={bandOption} style={{ height: 280 }} />
             ) : (
               <Empty description="暂无实验结果" />
             )}
@@ -299,7 +299,7 @@ export default function FPCnnCompare() {
               ]}
             />
             {data?.full && (
-              <div style={{ marginTop: 10, fontSize: 12, color: '#6e7d8b' }}>
+              <div style={{ marginTop: 10, fontSize: 12, color: "var(--muted)" }}>
                 全量数据下：基线 {(data.full.baseline_acc * 100).toFixed(2)}% vs FP-CNN{' '}
                 {(data.full.fp_acc * 100).toFixed(2)}%（Δ {data.full.delta >= 0 ? '+' : ''}
                 {(data.full.delta * 100).toFixed(2)} 个百分点）。

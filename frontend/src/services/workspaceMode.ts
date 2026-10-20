@@ -37,6 +37,16 @@ export function modeFromPath(pathname: string, search = ''): WorkspaceMode {
   return 'unknown'
 }
 
+/** Provider 与兼容路由共用，非法百分号编码不能在鉴权后渲染时抛出异常。 */
+export function deviceFromPath(pathname: string): string | undefined {
+  if (!pathname.startsWith('/device/')) return undefined
+  try {
+    return decodeURIComponent(pathname.split('/')[2] ?? '') || undefined
+  } catch {
+    return undefined
+  }
+}
+
 /** 旧链接仅迁移 URL，不挂载业务组件，因此不会重复提交诊断。 */
 export function canonicalWorkspacePath(pathname: string, search = ''): string | undefined {
   const view = viewFromLocation(pathname, search)
@@ -48,12 +58,9 @@ export function canonicalWorkspacePath(pathname: string, search = ''): string | 
     if (value) query.set(key, value)
   }
   if (pathname.replace(/\/+$/, '').startsWith('/device/')) {
-    try {
-      const id = decodeURIComponent(pathname.split('/')[2] ?? '')
-      if (id) query.set('device', id)
-    } catch {
-      query.delete('device')
-    }
+    const id = deviceFromPath(pathname)
+    if (id) query.set('device', id)
+    else query.delete('device')
   }
   if (pathname.replace(/\/+$/, '') === '/diagnose') {
     if (source.get('tab') === 'report') query.delete('tab')

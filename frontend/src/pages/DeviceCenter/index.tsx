@@ -1,5 +1,6 @@
+import { useSpatialNavigate } from '../../hooks/useSpatialNavigate'
 import { Button, Card, Input, Select, Space, Table, Tabs } from 'antd'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 import { usePageQuery, deviceLink } from '../../hooks/usePageQuery'
 import { useDeviceCatalog } from '../../services/realtime'
 import {
@@ -15,7 +16,7 @@ import FaultInjection from '../FaultInjection'
 import type { Device } from '../../services/api'
 
 export default function DeviceCenter() {
-  const navigate = useNavigate()
+  const navigate = useSpatialNavigate()
   const location = useLocation()
   const { params, update } = usePageQuery()
   const resource = useDeviceCatalog()
@@ -143,7 +144,7 @@ export default function DeviceCenter() {
                           title: '设备编号',
                           dataIndex: 'id',
                           render: (id) => (
-                            <span style={{ color: '#7a8794', fontSize: 12 }}>
+                            <span style={{ color: "var(--muted)", fontSize: 12 }}>
                               {id}
                             </span>
                           ),

@@ -1,19 +1,17 @@
-import '../theme/echarts'
-import ReactECharts from 'echarts-for-react'
-import { Empty } from 'antd'
+import ThemedChart from './ThemedChart'
+import { Empty, theme } from 'antd'
 import { CHANNELS, type Sample } from '../services/realtime'
 
 export default function SensorChart({
   samples,
   channel = 'vibration',
-  dark = false,
   height = 200,
 }: {
   samples: Sample[]
   channel?: string
-  dark?: boolean
   height?: number
 }) {
+  const { token } = theme.useToken()
   const meta = CHANNELS[channel]
   const points = samples.filter(
     (p) => typeof p[channel] === 'number' && Number.isFinite(p[channel]),
@@ -28,8 +26,7 @@ export default function SensorChart({
       </div>
     )
   return (
-    <ReactECharts
-      theme={dark ? 'control-dark' : 'tech-dark'}
+    <ThemedChart
       style={{ height }}
       option={{
         animation: false,
@@ -51,9 +48,9 @@ export default function SensorChart({
             showSymbol: false,
             smooth: false,
             data: points.map((p) => [p.timestamp, p[channel]]),
-            lineStyle: { width: 2, color: dark ? '#7dc8bb' : '#348875' },
+            lineStyle: { width: 2, color: token.colorSuccess },
             areaStyle: {
-              color: dark ? 'rgba(125,200,187,.07)' : 'rgba(52,136,117,.04)',
+              color: token.colorSuccess, opacity: 0.06,
             },
           },
         ],

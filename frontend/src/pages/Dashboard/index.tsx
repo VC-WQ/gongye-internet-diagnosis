@@ -1,14 +1,13 @@
+import { useSpatialNavigate } from '../../hooks/useSpatialNavigate'
 import { useEffect, useRef, useState } from 'react'
 import {
   Alert,
   Button,
-  ConfigProvider,
   Empty,
   Select,
   Space,
-  theme,
 } from 'antd'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 import { listEvents } from '../../services/api'
 import { useResource } from '../../hooks/useResource'
 import { deviceLink, usePageQuery } from '../../hooks/usePageQuery'
@@ -29,20 +28,8 @@ import {
 import FactoryScene from '../../components/FactoryScene'
 import SensorChart from '../../components/SensorChart'
 
-const darkTheme = {
-  algorithm: theme.darkAlgorithm,
-  token: {
-    colorPrimary: '#9dc8c1',
-    colorInfo: '#9dc8c1',
-    colorBgContainer: '#1a2936',
-    colorBgElevated: '#233643',
-    colorText: '#e1e8ed',
-    colorTextSecondary: '#9badba',
-    colorBorder: '#3b4e5e',
-  },
-}
 export default function Dashboard({ active = true }: { active?: boolean }) {
-  const navigate = useNavigate()
+  const navigate = useSpatialNavigate()
   const location = useLocation()
   const { params, update } = usePageQuery()
   const catalog = useDeviceCatalog(active)
@@ -79,7 +66,6 @@ export default function Dashboard({ active = true }: { active?: boolean }) {
     .filter((d) => d.status === 'fault' || d.status === 'degraded')
     .sort((a, b) => (a.health_score ?? 100) - (b.health_score ?? 100))
   return (
-    <ConfigProvider theme={darkTheme}>
       <div ref={root} className="factory-dashboard">
         <div className="overview-heading">
           <div>
@@ -224,7 +210,7 @@ export default function Dashboard({ active = true }: { active?: boolean }) {
               传感器时效单独判定
             </div>
           </aside>
-          <section className="overview-scene-panel" aria-label="中央设备场景">
+          <section className="overview-scene-panel" aria-label="中央设备场景" title="按设备目录示意排列，不代表物理工厂平面；状态取自设备目录，采样时效单独判断">
             <LoadState
               loading={catalog.loading && !catalog.data}
               error={!catalog.data ? catalog.error : undefined}
@@ -313,7 +299,6 @@ export default function Dashboard({ active = true }: { active?: boolean }) {
                 <SensorChart
                   samples={telemetry.samples}
                   channel={channel}
-                  dark
                   height={165}
                 />
               )}
@@ -365,6 +350,5 @@ export default function Dashboard({ active = true }: { active?: boolean }) {
           </aside>
         </div>
       </div>
-    </ConfigProvider>
   )
 }

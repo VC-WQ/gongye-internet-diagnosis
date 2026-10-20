@@ -1,10 +1,11 @@
+import { useSpatialNavigate } from '../../hooks/useSpatialNavigate'
 import { useState } from 'react'
 import { Button, Form, Input, Tabs, message } from 'antd'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 import { login, register } from '../../services/api'
 import { errorText } from '../../hooks/useResource'
 export default function Login() {
-  const navigate = useNavigate()
+  const navigate = useSpatialNavigate()
   const location = useLocation()
   const [loading, setLoading] = useState(false)
   const submit = async (

@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-import { modeFromPath, workspaceLink, type WorkspaceMode } from './workspaceMode'
+import { modeFromPath, workspaceLink, deviceFromPath, type WorkspaceMode } from './workspaceMode'
 
 export type { WorkspaceMode } from './workspaceMode'
 
@@ -49,9 +49,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [params, setParams] = useSearchParams()
 
   const mode = modeFromPath(location.pathname, location.search)
-  const routeDevice = location.pathname.startsWith('/device/')
-    ? decodeURIComponent(location.pathname.split('/')[2] ?? '')
-    : undefined
+  const routeDevice = deviceFromPath(location.pathname)
   const queryDevice = params.get('device') ?? undefined
   const selectedDeviceId = routeDevice || queryDevice || undefined
   const selectedEventId = Number(params.get('event')) || undefined

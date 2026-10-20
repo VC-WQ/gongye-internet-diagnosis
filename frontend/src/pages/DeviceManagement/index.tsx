@@ -65,7 +65,7 @@ export default function DeviceManagement() {
     {
       title: '健康分',
       dataIndex: 'health_score',
-      render: (v: number) => <span style={{ fontWeight: 700, color: v > 85 ? '#52c41a' : v >= 60 ? '#faad14' : '#f5222d' }}>{Math.round(v)}</span>,
+      render: (v: number) => <span style={{ fontWeight: 700, color: v > 85 ? "var(--status-ok)" : v >= 60 ? "var(--status-warn)" : "var(--status-danger)" }}>{Math.round(v)}</span>,
     },
     {
       title: '操作',

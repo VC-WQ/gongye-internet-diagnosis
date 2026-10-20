@@ -1,6 +1,5 @@
-import '../../theme/echarts'
 import { Select, Tabs, Timeline as AntTimeline } from 'antd'
-import ReactECharts from 'echarts-for-react'
+import ThemedChart from '../../components/ThemedChart'
 import { getTimelineEvent } from '../../services/api'
 import { useResource } from '../../hooks/useResource'
 import { usePageQuery } from '../../hooks/usePageQuery'
@@ -101,8 +100,8 @@ export default function Timeline({ eventId }: { eventId?: number }) {
                   />
                 </div>
                 <LoadState empty={!channel} emptyText="暂无传感器证据">
-                  <ReactECharts
-                    theme="tech-dark"
+                  <ThemedChart
+
                     style={{ height: 260 }}
                     option={plot(
                       [
@@ -126,8 +125,8 @@ export default function Timeline({ eventId }: { eventId?: number }) {
                 empty={!latent.length}
                 emptyText="暂无已记录的孪生隐状态"
               >
-                <ReactECharts
-                  theme="tech-dark"
+                <ThemedChart
+
                   style={{ height: 260 }}
                   option={plot(
                     latent.map(([key, values]) => ({
@@ -176,7 +175,7 @@ export default function Timeline({ eventId }: { eventId?: number }) {
                     style={{
                       fontSize: 12,
                       lineHeight: 1.8,
-                      color: '#6c7886',
+                      color: "var(--muted)",
                       marginTop: 6,
                     }}
                   >

@@ -77,16 +77,16 @@ function NodeChain({ nodes }: { nodes: Array<{ t: string; d: string; c: string }
             style={{
               minWidth: 108,
               padding: '8px 10px',
-              borderRadius: 6,
-              background: 'rgba(15, 32, 56, 0.75)',
+              borderRadius: 0,
+              background: "var(--surface-muted)",
               border: `1px solid ${n.c}55`,
               borderLeft: `3px solid ${n.c}`,
             }}
           >
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#293543' }}>{n.t}</div>
-            <div style={{ fontSize: 11, color: '#6e7d8b', marginTop: 2 }}>{n.d}</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{n.t}</div>
+            <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{n.d}</div>
           </div>
-          {i < nodes.length - 1 && <span style={{ color: '#475569', fontSize: 16 }}>→</span>}
+          {i < nodes.length - 1 && <span style={{ color: "var(--muted)", fontSize: 16 }}>→</span>}
         </div>
       ))}
     </div>
@@ -135,7 +135,7 @@ export default function SelfEvolutionLoop() {
         <Col span={24} style={{ marginBottom: 12 }}>
           <Space size={8} wrap>
 
-            <span style={{ color: '#6e7d8b', fontSize: 13 }}>
+            <span style={{ color: "var(--muted)", fontSize: 13 }}>
               事件反馈与阈值调整
             </span>
           </Space>
@@ -159,22 +159,22 @@ export default function SelfEvolutionLoop() {
               <Statistic
                 title="近 30 天事件总数"
                 value={inner?.total_events ?? '—'}
-                valueStyle={{ color: '#477d9e' }}
+                valueStyle={{ color: "var(--status-info)" }}
               />
               <Statistic
                 title="观察期判定·已恢复"
                 value={inner?.feedback_verdict?.recovered ?? '—'}
-                valueStyle={{ color: '#348875' }}
+                valueStyle={{ color: "var(--status-ok)" }}
               />
               <Statistic
                 title="观察期判定·复发"
                 value={inner?.feedback_verdict?.relapsed ?? '—'}
-                valueStyle={{ color: '#bf5965' }}
+                valueStyle={{ color: "var(--status-danger)" }}
               />
               <Statistic
                 title="自动再诊断次数"
                 value={inner?.auto_reconsult_count ?? '—'}
-                valueStyle={{ color: '#9a6a25' }}
+                valueStyle={{ color: "var(--status-warn)" }}
               />
               <Statistic
                 title="自动触发阈值建议"
@@ -183,11 +183,11 @@ export default function SelfEvolutionLoop() {
               />
             </div>
             {inner?.note && (
-              <div style={{ marginTop: 10, fontSize: 12, color: '#6e7d8b' }}>{inner.note}</div>
+              <div style={{ marginTop: 10, fontSize: 12, color: "var(--muted)" }}>{inner.note}</div>
             )}
             {inner?.by_state && Object.keys(inner.by_state).length > 0 && (
               <div style={{ marginTop: 12 }}>
-                <div style={{ fontSize: 12, color: '#6e7d8b', marginBottom: 6 }}>
+                <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 6 }}>
                   事件状态分布（近 30 天）
                 </div>
                 <Space size={6} wrap>
@@ -220,11 +220,11 @@ export default function SelfEvolutionLoop() {
               <Statistic
                 title="阈值建议总数"
                 value={outer?.suggestions_total ?? '—'}
-                valueStyle={{ color: '#477d9e' }}
+                valueStyle={{ color: "var(--status-info)" }}
               />
-              <Statistic title="已采纳" value={outer?.accepted ?? '—'} valueStyle={{ color: '#348875' }} />
-              <Statistic title="已拒绝" value={outer?.rejected ?? '—'} valueStyle={{ color: '#bf5965' }} />
-              <Statistic title="待决策" value={outer?.pending ?? '—'} valueStyle={{ color: '#9a752d' }} />
+              <Statistic title="已采纳" value={outer?.accepted ?? '—'} valueStyle={{ color: "var(--status-ok)" }} />
+              <Statistic title="已拒绝" value={outer?.rejected ?? '—'} valueStyle={{ color: "var(--status-danger)" }} />
+              <Statistic title="待决策" value={outer?.pending ?? '—'} valueStyle={{ color: "var(--status-warn)" }} />
               <Statistic
                 title="人工采纳率"
                 value={(outer?.adoption_rate == null ? '—' : (outer.adoption_rate * 100).toFixed(1))}
@@ -234,11 +234,11 @@ export default function SelfEvolutionLoop() {
               <Statistic
                 title="涉及设备数"
                 value={outer?.devices_involved ?? '—'}
-                valueStyle={{ color: '#477d9e' }}
+                valueStyle={{ color: "var(--status-info)" }}
               />
             </div>
             {outer?.note && (
-              <div style={{ marginTop: 10, fontSize: 12, color: '#6e7d8b' }}>{outer.note}</div>
+              <div style={{ marginTop: 10, fontSize: 12, color: "var(--muted)" }}>{outer.note}</div>
             )}
           </Card>
         </Col>
@@ -263,9 +263,9 @@ export default function SelfEvolutionLoop() {
                     title="诊断准确率"
                     value={(m.accuracy * 100).toFixed(1)}
                     suffix="%"
-                    valueStyle={{ color: '#477d9e', fontSize: 28 }}
+                    valueStyle={{ color: "var(--status-info)", fontSize: 28 }}
                   />
-                  <div style={{ fontSize: 11, color: '#6e7d8b' }}>
+                  <div style={{ fontSize: 11, color: "var(--muted)" }}>
                     已注入根因样本 {m.total} 条
                   </div>
                 </Col>
@@ -274,27 +274,27 @@ export default function SelfEvolutionLoop() {
                     title="误报率"
                     value={(m.false_alarm_rate * 100).toFixed(1)}
                     suffix="%"
-                    valueStyle={{ color: '#9a752d', fontSize: 28 }}
+                    valueStyle={{ color: "var(--status-warn)", fontSize: 28 }}
                   />
-                  <div style={{ fontSize: 11, color: '#6e7d8b' }}>告警中实际为正常的比例</div>
+                  <div style={{ fontSize: 11, color: "var(--muted)" }}>告警中实际为正常的比例</div>
                 </Col>
                 <Col xs={12} lg={6}>
                   <Statistic
                     title="漏报率"
                     value={(m.miss_rate * 100).toFixed(1)}
                     suffix="%"
-                    valueStyle={{ color: '#bf5965', fontSize: 28 }}
+                    valueStyle={{ color: "var(--status-danger)", fontSize: 28 }}
                   />
-                  <div style={{ fontSize: 11, color: '#6e7d8b' }}>实际故障中判为正常的比例</div>
+                  <div style={{ fontSize: 11, color: "var(--muted)" }}>实际故障中判为正常的比例</div>
                 </Col>
                 <Col xs={12} lg={6}>
                   <Statistic
                     title="平均诊断延迟"
                     value={m.avg_latency_seconds.toFixed(1)}
                     suffix="s"
-                    valueStyle={{ color: '#477d9e', fontSize: 28 }}
+                    valueStyle={{ color: "var(--status-info)", fontSize: 28 }}
                   />
-                  <div style={{ fontSize: 11, color: '#6e7d8b' }}>
+                  <div style={{ fontSize: 11, color: "var(--muted)" }}>
                     阈值累计标定 {m.threshold_calibration_count} 次
                   </div>
                 </Col>

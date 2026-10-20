@@ -2,7 +2,7 @@ import { LoadState } from './BusinessUI'
 import { errorText } from '../hooks/useResource'
 import { useEffect, useMemo, useState } from 'react'
 import { Card, Col, Empty, Row, Space, Spin, Table, Tag } from 'antd'
-import ReactECharts from 'echarts-for-react'
+import ThemedChart from './ThemedChart'
 import { getDomainAdapt } from '../services/api'
 import ChartNote from './ChartNote'
 import { xAxisBase, yAxisBase } from '../theme/echarts'
@@ -151,20 +151,20 @@ export default function DomainAdapt() {
         <Col span={24} style={{ marginBottom: 12 }}>
           <Space size={8} wrap>
             <Tag color="cyan">CORAL / DANN</Tag>
-            <span style={{ color: '#6e7d8b', fontSize: 13 }}>
+            <span style={{ color: "var(--muted)", fontSize: 13 }}>
               CWRU 试验台训练 → 迁移到离心泵 / 电机 / 空压机三类设备，
-              用 CORAL / DANN 做<strong style={{ color: '#293543' }}>无目标域标签</strong>的域自适应
+              用 CORAL / DANN 做<strong style={{ color: "var(--text)" }}>无目标域标签</strong>的域自适应
             </span>
           </Space>
         </Col>
 
         <Col span={24} style={{ marginBottom: 16 }}>
           <Card styles={{ body: cardBodyStyle }}>
-            <div style={{ fontSize: 13, color: '#536170', marginBottom: 8 }}>
-              <strong style={{ color: '#477d9e' }}>要解决的问题：</strong>
+            <div style={{ fontSize: 13, color: "var(--text)", marginBottom: 8 }}>
+              <strong style={{ color: "var(--status-info)" }}>要解决的问题：</strong>
               {data?.problem ?? '加载中…'}
             </div>
-            <div style={{ fontSize: 12, color: '#6e7d8b' }}>
+            <div style={{ fontSize: 12, color: "var(--muted)" }}>
               智能会诊的故障分类依赖 CWRU 数据集训练的 1D-CNN，但它采集自实验室电机试验台；
               现场三类设备的轴承型号、转速、采样率、结构共振与信噪比全都不同，
               直接迁移会产生分布漂移。本实验量化该漂移，并验证无监督域自适应能否补回。
@@ -189,7 +189,7 @@ export default function DomainAdapt() {
             }
           >
             {devIds.length && results.length ? (
-              <ReactECharts theme="tech-dark" option={perDeviceOption} style={{ height: 300 }} />
+              <ThemedChart option={perDeviceOption} style={{ height: 300 }} />
             ) : (
               <Empty description="暂无实验结果" />
             )}
@@ -209,7 +209,7 @@ export default function DomainAdapt() {
             }
           >
             {results.length ? (
-              <ReactECharts theme="tech-dark" option={summaryOption} style={{ height: 300 }} />
+              <ThemedChart option={summaryOption} style={{ height: 300 }} />
             ) : (
               <Empty description="暂无实验结果" />
             )}
@@ -243,8 +243,8 @@ export default function DomainAdapt() {
               ]}
             />
             {data?.conclusion && (
-              <div style={{ marginTop: 10, fontSize: 12, color: '#6e7d8b' }}>
-                <strong style={{ color: '#477d9e' }}>结论：</strong>
+              <div style={{ marginTop: 10, fontSize: 12, color: "var(--muted)" }}>
+                <strong style={{ color: "var(--status-info)" }}>结论：</strong>
                 {data.conclusion}
               </div>
             )}
@@ -305,8 +305,8 @@ export default function DomainAdapt() {
                 { title: '信噪比 (dB)', dataIndex: 'snr', key: 'snr', render: (v: number) => (v == null ? '—' : v.toFixed(0)) },
               ]}
             />
-            <div style={{ marginTop: 10, fontSize: 12, color: '#6e7d8b' }}>
-              每一行都是一种工况：连<strong style={{ color: '#293543' }}>轴承几何</strong>
+            <div style={{ marginTop: 10, fontSize: 12, color: "var(--muted)" }}>
+              每一行都是一种工况：连<strong style={{ color: "var(--text)" }}>轴承几何</strong>
               （滚珠数 / 滚珠直径 / 节径）都不同，因此同一类故障的特征频率在各设备上落在不同位置 ——
               这正是"实验室模型不敢直接上现场"的根因。
             </div>
@@ -316,7 +316,7 @@ export default function DomainAdapt() {
         {data?.methods && (
           <Col span={24} style={{ marginTop: 16 }}>
             <Card title="方法说明" styles={{ body: cardBodyStyle }}>
-              <Space direction="vertical" size={4} style={{ fontSize: 12, color: '#6e7d8b' }}>
+              <Space direction="vertical" size={4} style={{ fontSize: 12, color: "var(--muted)" }}>
                 {Object.entries(data.methods).map(([k, v]) => (
                   <div key={k}>
                     <Tag color={k === 'oracle' ? 'red' : k === 'none' ? 'default' : 'cyan'}>{k}</Tag>

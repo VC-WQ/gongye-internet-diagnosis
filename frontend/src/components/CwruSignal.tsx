@@ -2,7 +2,7 @@ import { LoadState } from './BusinessUI'
 import { errorText } from '../hooks/useResource'
 import { useEffect, useMemo, useState } from 'react'
 import { Card, Col, Empty, Row, Space, Spin, Statistic } from 'antd'
-import ReactECharts from 'echarts-for-react'
+import ThemedChart from './ThemedChart'
 import { getCwruSignal } from '../services/api'
 import ChartNote from './ChartNote'
 
@@ -181,7 +181,7 @@ export default function CwruSignal() {
         orient: 'horizontal',
         left: 'center',
         bottom: 0,
-        inRange: { color: ['#0f2038', '#477d9e', '#bf5965'] },
+        inRange: { color: ['#eee7dd', '#849aa4', '#b6535c'] },
       },
       series: [{ type: 'heatmap', data: heat, label: { show: false } }],
     }
@@ -191,10 +191,10 @@ export default function CwruSignal() {
     <LoadState loading={loading} error={loadError} onRetry={() => window.location.reload()}><Spin spinning={false}>
       <Row gutter={16}>
         <Col span={24} style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 16, fontWeight: 600, color: '#477d9e' }}>
+          <div style={{ fontSize: 16, fontWeight: 600, color: "var(--status-info)" }}>
             CWRU 轴承故障·信号诊断（时域 → 频域 → 特征空间，经典方法论实证）
           </div>
-          <div style={{ fontSize: 12, color: '#6e7d8b', marginTop: 2 }}>
+          <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>
             {data
               ? `${data.overview.n_samples.toLocaleString()} 段驱动端振动信号（12kHz，4 类故障 × 3 种故障直径）`
               : ''}
@@ -214,7 +214,7 @@ export default function CwruSignal() {
             }
           >
             {data ? (
-              <ReactECharts theme="tech-dark" option={waveOption} style={{ height: 300 }} />
+              <ThemedChart option={waveOption} style={{ height: 300 }} />
             ) : (
               <Empty description="暂无实验结果" />
             )}
@@ -234,7 +234,7 @@ export default function CwruSignal() {
             }
           >
             {data ? (
-              <ReactECharts theme="tech-dark" option={specOption} style={{ height: 300 }} />
+              <ThemedChart option={specOption} style={{ height: 300 }} />
             ) : (
               <Empty description="暂无实验结果" />
             )}
@@ -251,7 +251,7 @@ export default function CwruSignal() {
                   <Statistic
                     title="嵌入样本"
                     value={data.tsne.points.length}
-                    valueStyle={{ fontSize: 18, color: '#477d9e' }}
+                    valueStyle={{ fontSize: 18, color: "var(--status-info)" }}
                   />
                   <ChartNote
                     desc="将高维振动特征经 PCA 降维后做 t-SNE 嵌入到二维空间，观察四类故障的可分性。"
@@ -269,7 +269,7 @@ export default function CwruSignal() {
             }
           >
             {data ? (
-              <ReactECharts theme="tech-dark" option={tsneOption} style={{ height: 320 }} />
+              <ThemedChart option={tsneOption} style={{ height: 320 }} />
             ) : (
               <Empty description="暂无实验结果" />
             )}
@@ -289,7 +289,7 @@ export default function CwruSignal() {
             }
           >
             {data ? (
-              <ReactECharts theme="tech-dark" option={sevOption} style={{ height: 320 }} />
+              <ThemedChart option={sevOption} style={{ height: 320 }} />
             ) : (
               <Empty description="暂无实验结果" />
             )}

@@ -1,3 +1,4 @@
+import { useSpatialNavigate } from '../../hooks/useSpatialNavigate'
 import { useEffect, useRef, useState } from 'react'
 import {
   Alert,
@@ -8,7 +9,7 @@ import {
   Upload,
   message,
 } from 'antd'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 import { speakChinese, stopChineseSpeech } from '../../services/speech'
 import DiagnosisSummary from '../../components/DiagnosisSummary'
 import { LoadState, PageHeading, SourceTag } from '../../components/BusinessUI'
@@ -37,7 +38,7 @@ const DAMAGE_LABELS: Record<string, string> = {
   scratches: '划痕',
 }
 export default function ChatWindow() {
-  const navigate = useNavigate()
+  const navigate = useSpatialNavigate()
   const location = useLocation()
   const { params, update } = usePageQuery()
   const catalog = useDeviceCatalog()

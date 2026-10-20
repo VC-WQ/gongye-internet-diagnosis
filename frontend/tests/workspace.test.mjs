@@ -108,3 +108,22 @@ test('invalid URL state normalizes safely without routing management into ordina
   assert.equal(canonicalWorkspacePath('/unknown'), undefined)
   assert.equal(query(canonicalWorkspacePath('/device/%E0%A4%A', '')).has('device'), false)
 })
+
+test('the real workspace Provider renders invalid encoded legacy IDs without throwing', async () => {
+  const React = await import('react')
+  const { renderToString } = await import('react-dom/server')
+  const { StaticRouter } = await import('react-router-dom/server.js')
+  const source = await readFile(new URL('../src/services/workspace.tsx', import.meta.url), 'utf8')
+  let compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText
+  const modeUrl = `data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`
+  compiled = compiled.replace(/(['"])(react(?:\/jsx-runtime)?|react-router-dom)\1/g, (_, quote, specifier) => JSON.stringify(import.meta.resolve(specifier)))
+  compiled = compiled.replace(/(['"])\.\/workspaceMode\1/g, JSON.stringify(modeUrl))
+  const { WorkspaceProvider, useWorkspace } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`)
+  const Probe = () => React.createElement('span', null, useWorkspace().selectedDeviceId ?? 'no-device')
+  for (const path of ['/device/%E0%A4%A', '/device/%', '/device/%ZZ']) {
+    const html = renderToString(React.createElement(StaticRouter, { location: path }, React.createElement(WorkspaceProvider, null, React.createElement(Probe))))
+    assert.ok(html.includes('no-device'))
+  }
+  const valid = renderToString(React.createElement(StaticRouter, { location: '/device/pump%20A' }, React.createElement(WorkspaceProvider, null, React.createElement(Probe))))
+  assert.ok(valid.includes('pump A'))
+})

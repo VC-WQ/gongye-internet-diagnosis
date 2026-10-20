@@ -81,3 +81,41 @@ def test_pending_revision_keeps_state_and_records_authenticated_identity():
             timeline = db.query(EventTimeline).filter_by(event_id=event_id).one()
             assert timeline.operator == 'admin'
             assert timeline.from_state == timeline.to_state == 'pending'
+
+
+def test_threshold_decisions_require_admin_and_use_server_identity(monkeypatch):
+    from app.modules.command_loop.threshold_adapter import threshold_adapter
+    calls=[]
+    monkeypatch.setattr(threshold_adapter,'accept',lambda db,sid,who: calls.append(('accept',sid,who)) or {'id':sid})
+    monkeypatch.setattr(threshold_adapter,'reject',lambda db,sid,who: calls.append(('reject',sid,who)) or {'id':sid})
+    with TestClient(app) as client:
+        body={'operator':'forged-admin'}
+        assert client.post('/api/v1/threshold/suggestions/1/accept',json=body).status_code==401
+        registration=client.post('/api/v1/auth/register',json={'username':'v21_threshold_reader','password':'isolated-test-123'})
+        headers={'Authorization':f"Bearer {registration.json()['token']}"}
+        for action in ['accept','reject']:
+            assert client.post(f'/api/v1/threshold/suggestions/1/{action}',headers=headers,json=body).status_code==403
+        assert calls==[]
+        for action in ['accept','reject']:
+            assert client.post(f'/api/v1/threshold/suggestions/1/{action}',headers=_admin_headers(client),json=body).status_code==200
+        assert calls==[('accept',1,'admin'),('reject',1,'admin')]
+
+
+def test_threshold_history_and_effects_require_login_before_service_access(monkeypatch):
+    from app.modules.threshold.service import threshold_effect_service
+    calls = []
+    monkeypatch.setattr(threshold_effect_service, 'list_effects',
+                        lambda *args: calls.append('list') or [])
+    monkeypatch.setattr(threshold_effect_service, 'compute_effect',
+                        lambda *args: calls.append('effect') or {})
+    monkeypatch.setattr(threshold_effect_service, 'history',
+                        lambda *args: calls.append('history') or {})
+    paths = ['/api/v1/threshold/effects', '/api/v1/threshold/effects/1',
+             '/api/v1/threshold/history/pump-001']
+    with TestClient(app) as client:
+        for path in paths:
+            assert client.get(path).status_code == 401
+        assert calls == []
+        for path in paths:
+            assert client.get(path, headers=_admin_headers(client)).status_code == 200
+        assert calls == ['list', 'effect', 'history']

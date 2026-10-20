@@ -5,10 +5,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.models import get_db
+from app.modules.auth.deps import get_current_user
 
 from .service import WINDOW_DAYS_DEFAULT, threshold_effect_service
 
-router = APIRouter(prefix="/threshold", tags=["动态阈值"])
+router = APIRouter(prefix="/threshold", tags=["动态阈值"], dependencies=[Depends(get_current_user)])
 
 
 @router.get("/effects")

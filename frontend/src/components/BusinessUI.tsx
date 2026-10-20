@@ -10,10 +10,10 @@ export const STATUS_META: Record<
   string,
   { label: string; color: string; hex: string }
 > = {
-  healthy: { label: '正常', color: 'success', hex: '#51b89b' },
-  degraded: { label: '退化', color: 'warning', hex: '#dba55a' },
-  fault: { label: '告警', color: 'error', hex: '#df6e73' },
-  offline: { label: '离线', color: 'default', hex: '#7d8997' },
+  healthy: { label: '正常', color: 'success', hex: 'var(--status-ok)' },
+  degraded: { label: '退化', color: 'warning', hex: 'var(--status-warn)' },
+  fault: { label: '告警', color: 'error', hex: 'var(--status-danger)' },
+  offline: { label: '离线', color: 'default', hex: 'var(--muted)' },
 }
 export const EVENT_META: Record<string, { label: string; color: string }> = {
   normal: { label: '正常', color: 'success' },
@@ -115,15 +115,7 @@ export function SourceTag({ source = 'unknown' }: { source?: string }) {
     </Tooltip>
   )
 }
-export function formatTime(value?: string | number | null) {
-  if (value == null) return '—'
-  const date = new Date(
-    typeof value === 'number' && value < 1e12 ? value * 1000 : value,
-  )
-  return Number.isFinite(date.getTime())
-    ? date.toLocaleString('zh-CN', { hour12: false })
-    : '—'
-}
+export { formatTime } from '../services/time'
 export function numberText(value: unknown, digits = 1) {
   return typeof value === 'number' && Number.isFinite(value)
     ? value.toFixed(digits)

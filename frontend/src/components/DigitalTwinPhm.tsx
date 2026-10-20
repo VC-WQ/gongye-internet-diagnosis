@@ -2,7 +2,7 @@ import { LoadState } from './BusinessUI'
 import { errorText } from '../hooks/useResource'
 import { useEffect, useMemo, useState } from 'react'
 import { Card, Col, Empty, Row, Space, Spin, Statistic } from 'antd'
-import ReactECharts from 'echarts-for-react'
+import ThemedChart from './ThemedChart'
 import { getPumpPhm } from '../services/api'
 import ChartNote from './ChartNote'
 import { xAxisBase, yAxisBase } from '../theme/echarts'
@@ -137,7 +137,7 @@ export default function DigitalTwinPhm() {
           radius: ['25%', '65%'],
           center: ['50%', '45%'],
           roseType: 'radius',
-          itemStyle: { borderRadius: 4 },
+          itemStyle: { borderRadius: 0 },
           label: { formatter: '{b}\n{c}' },
           data: dist.map((d) => ({
             name: FAULT_TYPE_LABEL[d.name] ?? d.name,
@@ -219,10 +219,10 @@ export default function DigitalTwinPhm() {
     <LoadState loading={loading} error={loadError} onRetry={() => window.location.reload()}><Spin spinning={false}>
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={24} style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 16, fontWeight: 600, color: '#477d9e' }}>
+          <div style={{ fontSize: 16, fontWeight: 600, color: "var(--status-info)" }}>
             数字孪生预测性维护（DigitalTwin 仿真数据集实证）
           </div>
-          <div style={{ fontSize: 12, color: '#6e7d8b', marginTop: 2 }}>
+          <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>
             {data ? `${data.overview.n_trajectories} 条运行轨迹 / ${data.overview.n_steps.toLocaleString()} 时间步 · 数字孪生预测 TTF 平均误差仅 ${mae}h，预防维护 ROI ${roi}x` : ''}
           </div>
         </Col>
@@ -240,7 +240,7 @@ export default function DigitalTwinPhm() {
             }
           >
             {data ? (
-              <ReactECharts theme="tech-dark" option={degOption} style={{ height: 300 }} />
+              <ThemedChart option={degOption} style={{ height: 300 }} />
             ) : (
               <Empty description="暂无实验结果" />
             )}
@@ -260,7 +260,7 @@ export default function DigitalTwinPhm() {
             }
           >
             {data ? (
-              <ReactECharts theme="tech-dark" option={distOption} style={{ height: 300 }} />
+              <ThemedChart option={distOption} style={{ height: 300 }} />
             ) : (
               <Empty description="暂无实验结果" />
             )}
@@ -278,7 +278,7 @@ export default function DigitalTwinPhm() {
                     title="平均绝对误差"
                     value={mae}
                     suffix="小时"
-                    valueStyle={{ fontSize: 18, color: '#348875' }}
+                    valueStyle={{ fontSize: 18, color: "var(--status-ok)" }}
                   />
                   <ChartNote
                     desc="预测剩余寿命 TTF 与真实值的散点对比，越贴近 y=x 理想线预测越准。"
@@ -296,7 +296,7 @@ export default function DigitalTwinPhm() {
             }
           >
             {data ? (
-              <ReactECharts theme="tech-dark" option={ttfOption} style={{ height: 260 }} />
+              <ThemedChart option={ttfOption} style={{ height: 260 }} />
             ) : (
               <Empty description="暂无实验结果" />
             )}
@@ -314,7 +314,7 @@ export default function DigitalTwinPhm() {
                     title="ROI"
                     value={roi}
                     suffix="x"
-                    valueStyle={{ fontSize: 18, color: '#477d9e' }}
+                    valueStyle={{ fontSize: 18, color: "var(--status-info)" }}
                   />
                   <ChartNote
                     desc="预防维护成本、预期节省、停机损失、不干预累计损失四项对比，量化预测性维护的经济价值。"
@@ -332,7 +332,7 @@ export default function DigitalTwinPhm() {
             }
           >
             {data ? (
-              <ReactECharts theme="tech-dark" option={roiOption} style={{ height: 260 }} />
+              <ThemedChart option={roiOption} style={{ height: 260 }} />
             ) : (
               <Empty description="暂无实验结果" />
             )}

@@ -2,7 +2,7 @@ import { LoadState } from './BusinessUI'
 import { errorText } from '../hooks/useResource'
 import { useEffect, useMemo, useState } from 'react'
 import { Card, Col, Empty, Row, Spin, Statistic } from 'antd'
-import ReactECharts from 'echarts-for-react'
+import ThemedChart from './ThemedChart'
 import { getSmartFactory } from '../services/api'
 import ChartNote from './ChartNote'
 import { xAxisBase, yAxisBase } from '../theme/echarts'
@@ -70,7 +70,7 @@ export default function SmartFactory() {
           radius: ['20%', '70%'],
           center: ['50%', '45%'],
           roseType: 'radius',
-          itemStyle: { borderRadius: 4 },
+          itemStyle: { borderRadius: 0 },
           label: { formatter: '{b}\n{c}' },
           data: items.map((d) => ({ name: d.label, value: d.failures })),
         },
@@ -156,10 +156,10 @@ export default function SmartFactory() {
     <LoadState loading={loading} error={loadError} onRetry={() => window.location.reload()}><Spin spinning={false}>
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={24} style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 16, fontWeight: 600, color: '#477d9e' }}>
+          <div style={{ fontSize: 16, fontWeight: 600, color: "var(--status-info)" }}>
             产线级多机组异常态势（SmartFactory 合成数据集实证）
           </div>
-          <div style={{ fontSize: 12, color: '#6e7d8b', marginTop: 2 }}>
+          <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>
             {ov
               ? `${ov.n_samples.toLocaleString()} 条运行记录 · ${ov.n_machines} 台设备 / ${ov.n_sections} 个工段 · 整体故障率 ${(ov.failure_rate * 100).toFixed(1)}%`
               : ''}
@@ -179,7 +179,7 @@ export default function SmartFactory() {
             }
           >
             {data ? (
-              <ReactECharts theme="tech-dark" option={sectionOption} style={{ height: 300 }} />
+              <ThemedChart option={sectionOption} style={{ height: 300 }} />
             ) : (
               <Empty description="暂无实验结果" />
             )}
@@ -199,7 +199,7 @@ export default function SmartFactory() {
             }
           >
             {data ? (
-              <ReactECharts theme="tech-dark" option={sensorOption} style={{ height: 220 }} />
+              <ThemedChart option={sensorOption} style={{ height: 220 }} />
             ) : (
               <Empty description="暂无实验结果" />
             )}
@@ -219,7 +219,7 @@ export default function SmartFactory() {
             }
           >
             {data ? (
-              <ReactECharts theme="tech-dark" option={histOption} style={{ height: 300 }} />
+              <ThemedChart option={histOption} style={{ height: 300 }} />
             ) : (
               <Empty description="暂无实验结果" />
             )}

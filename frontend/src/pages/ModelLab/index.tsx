@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Card, Col, Collapse, Empty, Row, Select, Space, Spin, Table, Tag } from 'antd'
-import ReactECharts from 'echarts-for-react'
+import ThemedChart from '../../components/ThemedChart'
 import { getClassification, getSteamAnalysis, getSteamMl, getXjtuRul } from '../../services/api'
 import ChartNote from '../../components/ChartNote'
 import SmartFactory from '../../components/SmartFactory'
@@ -14,7 +14,7 @@ import FPCnnCompare from '../../components/FPCnnCompare'
 import RulSdePf from '../../components/RulSdePf'
 import DomainAdapt from '../../components/DomainAdapt'
 import PicoLab from '../../features/pico/ui/PicoLab'
-import { xAxisBase, yAxisBase, AXIS_LABEL_COLOR } from '../../theme/echarts'
+import { xAxisBase, yAxisBase } from '../../theme/echarts'
 
 const cardBodyStyle = { padding: 12 }
 
@@ -97,7 +97,7 @@ function confusionOption(ds: ClsDataset) {
       min: 0,
       max: Math.max(tn, fp, fn, tp),
       show: false,
-      inRange: { color: ['#0f2038', '#38bdf8'] },
+      inRange: { color: ['#f2e9e5', '#aa454e'] },
     },
     series: [
       {
@@ -108,8 +108,11 @@ function confusionOption(ds: ClsDataset) {
           [0, 1, tn],
           [1, 1, fn],
         ],
-        label: { show: true, fontSize: 16, fontWeight: 700 },
-        itemStyle: { borderColor: '#22d3ee', borderWidth: 2 },
+        label: { show: true, fontSize: 16, fontWeight: 700,
+          formatter: (p: { value: number[] }) => `{${p.value[2] > Math.max(tn, fp, fn, tp) / 2 ? 'high' : 'low'}|${p.value[2]}}`,
+          rich: { high: { color: '#fff' }, low: { color: '#272521' } },
+        },
+        itemStyle: { borderColor: '#e4e1da', borderWidth: 1 },
       },
     ],
   }
@@ -218,7 +221,7 @@ export default function ModelLab() {
         {
           type: 'bar',
           data: top.map((e) => e.importance),
-          itemStyle: { color: '#22d3ee' },
+          itemStyle: { color: '#477d9e' },
           label: { show: true, position: 'right' },
         },
       ],
@@ -331,13 +334,13 @@ export default function ModelLab() {
         name: '特征',
         nameLocation: 'middle',
         nameGap: 52,
-        axisLabel: { color: AXIS_LABEL_COLOR, fontSize: 9, rotate: 90, interval: 0 },
+        axisLabel: { fontSize: 9, rotate: 90, interval: 0 },
         splitArea: { show: true },
       }),
       yAxis: yAxisBase({
         type: 'category',
         data: names,
-        axisLabel: { color: AXIS_LABEL_COLOR, fontSize: 9, interval: 0 },
+        axisLabel: { fontSize: 9, interval: 0 },
         splitArea: { show: true },
       }),
       visualMap: {
@@ -349,8 +352,7 @@ export default function ModelLab() {
         bottom: 6,
         itemWidth: 14,
         itemHeight: 180,
-        textStyle: { color: AXIS_LABEL_COLOR },
-        inRange: { color: ['#0ea5e9', '#0b1220', '#f5222d'] },
+        inRange: { color: ['#477d9e', '#ece6dc', '#b24b55'] },
       },
       series: [
         {
@@ -375,7 +377,7 @@ export default function ModelLab() {
   // 统一的章节标题
   const SectionTitle = ({ idx, title, sub }: { idx: string; title: string; sub?: string }) => (
     <div id={`lab-${idx}`} className="lab-section" style={{ margin: '28px 0 12px' }}>
-      <div style={{ fontSize: 16, fontWeight: 600, color: '#22d3ee' }}>
+      <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text)" }}>
         <span
           style={{
             display: 'inline-block',
@@ -383,8 +385,8 @@ export default function ModelLab() {
             height: 22,
             lineHeight: '22px',
             textAlign: 'center',
-            borderRadius: 4,
-            background: 'rgba(34, 211, 238, 0.16)',
+            borderRadius: 0,
+            background: "var(--brand-soft)",
             marginRight: 8,
             fontSize: 13,
           }}
@@ -446,7 +448,7 @@ export default function ModelLab() {
           }
         >
           {xjtuBearing ? (
-            <ReactECharts theme="tech-dark" option={xjtuHiOption} style={{ height: 300 }} />
+            <ThemedChart option={xjtuHiOption} style={{ height: 300 }} />
           ) : (
             <Empty description="数据准备中" />
           )}
@@ -470,8 +472,8 @@ export default function ModelLab() {
       <CwruSignal />
 
       {/* ============ F. 视觉分支 ============ */}
-      <div style={{ marginTop: 40, paddingTop: 16, borderTop: '1px solid #1e293b' }}>
-        <div style={{ fontSize: 16, fontWeight: 600, color: '#22d3ee' }}>
+      <div style={{ marginTop: 40, paddingTop: 16, borderTop: "1px solid var(--line)" }}>
+        <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text)" }}>
           <span
             style={{
               display: 'inline-block',
@@ -479,8 +481,8 @@ export default function ModelLab() {
               height: 22,
               lineHeight: '22px',
               textAlign: 'center',
-              borderRadius: 4,
-              background: 'rgba(34, 211, 238, 0.16)',
+              borderRadius: 0,
+              background: "var(--brand-soft)",
               marginRight: 8,
               fontSize: 13,
             }}
@@ -489,7 +491,7 @@ export default function ModelLab() {
           </span>
           视觉分支 · 关键部件表面缺陷检测（多模态第五路证据）
         </div>
-        <div style={{ fontSize: 12, color: '#78879b', marginTop: 4, marginBottom: 12 }}>
+        <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 4, marginBottom: 12 }}>
           振动诊断看设备"动态响应"，视觉检测看部件"表面形貌"，二者判的是同一类失效的两种表现；
           检测结果作为第五路证据进入会诊的 D-S 融合（见智能会诊页面上传入口）。
         </div>
@@ -504,11 +506,11 @@ export default function ModelLab() {
             {
               key: 'aux',
               label: (
-                <span style={{ color: '#94a3b8' }}>
-                  <strong style={{ color: '#e2e8f0' }}>G · 辅助材料：通用算法横评</strong>
+                <span style={{ color: "var(--muted)" }}>
+                  <strong style={{ color: "var(--text)" }}>G · 辅助材料：通用算法横评</strong>
                   <span style={{ fontSize: 12, marginLeft: 10 }}>
                     （工业蒸汽量回归 / 机器故障与制造缺陷表格分类 —— 用于佐证方法学广度，
-                    <strong style={{ color: '#faad14' }}>与本系统三类主线设备无直接关系，故折叠收纳</strong>）
+                    <strong style={{ color: "var(--status-warn)" }}>与本系统三类主线设备无直接关系，故折叠收纳</strong>）
                   </span>
                 </span>
               ),
@@ -528,7 +530,7 @@ export default function ModelLab() {
                       }
                     >
                       {steamMl ? (
-                        <ReactECharts theme="tech-dark" option={steamScatterOption} style={{ height: 300 }} />
+                        <ThemedChart option={steamScatterOption} style={{ height: 300 }} />
                       ) : (
                         <Empty description="数据准备中" />
                       )}
@@ -548,7 +550,7 @@ export default function ModelLab() {
                       }
                     >
                       {steamMl ? (
-                        <ReactECharts theme="tech-dark" option={steamImportanceOption} style={{ height: 300 }} />
+                        <ThemedChart option={steamImportanceOption} style={{ height: 300 }} />
                       ) : (
                         <Empty description="数据准备中" />
                       )}
@@ -590,7 +592,7 @@ export default function ModelLab() {
                         }
                       >
                         {ds.confusion_matrix.tp + ds.confusion_matrix.tn + ds.confusion_matrix.fp + ds.confusion_matrix.fn > 0 ? (
-                          <ReactECharts theme="tech-dark" option={confusionOption(ds)} style={{ height: 260 }} />
+                          <ThemedChart option={confusionOption(ds)} style={{ height: 260 }} />
                         ) : (
                           <Empty description="数据准备中" />
                         )}
@@ -611,7 +613,7 @@ export default function ModelLab() {
                       }
                     >
                       {clsData.length ? (
-                        <ReactECharts theme="tech-dark" option={rocOption} style={{ height: 300 }} />
+                        <ThemedChart option={rocOption} style={{ height: 300 }} />
                       ) : (
                         <Empty description="数据准备中" />
                       )}
@@ -631,7 +633,7 @@ export default function ModelLab() {
                       }
                     >
                       {clsData[0]?.feature_importance?.length ? (
-                        <ReactECharts theme="tech-dark" option={importanceOption} style={{ height: 300 }} />
+                        <ThemedChart option={importanceOption} style={{ height: 300 }} />
                       ) : (
                         <Empty description="数据准备中" />
                       )}
@@ -666,7 +668,7 @@ export default function ModelLab() {
                       }
                     >
                       {correlation ? (
-                        <ReactECharts theme="tech-dark" option={correlationHeatmapOption} style={{ height: 380 }} />
+                        <ThemedChart option={correlationHeatmapOption} style={{ height: 380 }} />
                       ) : (
                         <Empty description="数据准备中" />
                       )}

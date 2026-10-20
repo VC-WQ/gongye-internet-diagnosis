@@ -1,7 +1,7 @@
-import '../../theme/echarts'
+import { useSpatialNavigate } from '../../hooks/useSpatialNavigate'
 import { Button, Card, Empty, Select, Space, Tabs } from 'antd'
-import { useLocation, useNavigate } from 'react-router-dom'
-import ReactECharts from 'echarts-for-react'
+import { useLocation } from 'react-router-dom'
+import ThemedChart from '../../components/ThemedChart'
 import {
   getAcousticFusion,
   getAcousticSpectrum,
@@ -27,7 +27,7 @@ import SensorChart from '../../components/SensorChart'
 import DigitalTwinPhm from '../../components/DigitalTwinPhm'
 
 export default function DeviceDetail() {
-  const navigate = useNavigate()
+  const navigate = useSpatialNavigate()
   const location = useLocation()
   const { params, update } = usePageQuery()
   const deviceId = params.get('device') ?? ''
@@ -228,8 +228,8 @@ export default function DeviceDetail() {
                   emptyText="暂无健康历史"
                 >
                   <SourceTag source="history" />
-                  <ReactECharts
-                    theme="tech-dark"
+                  <ThemedChart
+
                     style={{ height: 330 }}
                     option={{
                       ...chartBase,
@@ -277,8 +277,8 @@ export default function DeviceDetail() {
                   emptyText="暂无孪生隐状态"
                 >
                   <SourceTag source="history" />
-                  <ReactECharts
-                    theme="tech-dark"
+                  <ThemedChart
+
                     style={{ height: 330 }}
                     option={{
                       ...chartBase,
@@ -336,8 +336,8 @@ export default function DeviceDetail() {
                       %
                     </span>
                   </div>
-                  <ReactECharts
-                    theme="tech-dark"
+                  <ThemedChart
+
                     style={{ height: 330 }}
                     option={{
                       tooltip: { position: 'top' },

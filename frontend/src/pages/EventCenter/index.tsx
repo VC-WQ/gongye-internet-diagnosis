@@ -1,6 +1,7 @@
+import { useSpatialNavigate } from '../../hooks/useSpatialNavigate'
 import { useEffect } from 'react'
 import { Button, Select, Space, Tabs } from 'antd'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 import { getEvent, listEvents } from '../../services/api'
 import { useResource } from '../../hooks/useResource'
 import { deviceLink, usePageQuery } from '../../hooks/usePageQuery'
@@ -18,7 +19,7 @@ import Timeline from '../Timeline'
 
 export default function EventCenter() {
   const { params, update } = usePageQuery()
-  const navigate = useNavigate()
+  const navigate = useSpatialNavigate()
   const location = useLocation()
   const catalog = useDeviceCatalog()
   const device = params.get('device') ?? undefined

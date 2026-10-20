@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Button, Card, Popconfirm, Space, Tag, message } from 'antd'
 import {
+  getMe,
   acceptThresholdSuggestion,
   listThresholdSuggestions,
   rejectThresholdSuggestion,
@@ -16,6 +17,8 @@ interface Suggestion {
   status: string
 }
 export default function ThresholdSuggestions() {
+  const account = useResource('account', getMe)
+  const canManage = account.data?.role === 'admin'
   const resource = useResource<Suggestion[]>(
     'threshold-suggestions',
     listThresholdSuggestions,
@@ -62,7 +65,7 @@ export default function ThresholdSuggestions() {
                     )[item.status] ?? item.status}
                   </Tag>
                 </Space>
-                {item.status === 'pending' && (
+                {item.status === 'pending' && canManage && (
                   <Space>
                     <Popconfirm
                       title={`将阈值从 ${item.old_value} 调整为 ${item.new_value}？`}
@@ -86,6 +89,7 @@ export default function ThresholdSuggestions() {
                   </Space>
                 )}
               </div>
+              {!canManage && item.status === 'pending' && <p className="page-meta">待管理员处理</p>}
               <p>
                 {item.old_value} → {item.new_value}
               </p>

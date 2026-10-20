@@ -1,6 +1,6 @@
+import { useSpatialNavigate } from '../../../hooks/useSpatialNavigate'
 import { useEffect, useRef, useState } from 'react'
 import { Button, Input, Tag } from 'antd'
-import { useNavigate } from 'react-router-dom'
 import { usePico } from '../core/PicoProvider'
 import { actionPath } from '../core/actions'
 import type { PicoAction, PicoMessage, PicoReference } from '../core/types'
@@ -51,7 +51,7 @@ export default function PicoPanel() {
     cancel,
     setOpen,
   } = usePico()
-  const navigate = useNavigate()
+  const navigate = useSpatialNavigate()
   const [draft, setDraft] = useState('')
   const listRef = useRef<HTMLDivElement>(null)
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button, Empty, Space } from 'antd'
-import { boundCamera, zoomAt, type Camera } from '../services/sceneCamera'
+import { boundCamera, zoomAt, pinchCamera, type Camera } from '../services/sceneCamera'
 import type { Device } from '../services/api'
 import { STATUS_META } from './BusinessUI'
 
@@ -9,38 +9,38 @@ function Machine({ type }: { type: string }) {
     <g className="machine-shape">
       <path
         d="M-67 20 5-18 70 17 0 55Z"
-        fill="#435565"
-        stroke="#7c8c96"
+        fill="var(--machine-base)"
+        stroke="var(--line)"
         strokeWidth="1.2"
       />
-      <path d="M-67 20v9L0 65v-10Z" fill="#253746" />
-      <path d="M0 55v10L70 27V17Z" fill="#344858" />
+      <path d="M-67 20v9L0 65v-10Z" fill="var(--machine-side)" />
+      <path d="M0 55v10L70 27V17Z" fill="var(--machine-front)" />
       {type === 'compressor' ? (
         <>
-          <path d="M-47-31 1-56 48-31v55L1 49-47 24Z" fill="#536b7b" />
-          <path d="M-47-31 1-6 48-31 1-56Z" fill="#8d9fa6" />
-          <path d="M1-6v55l47-25v-55Z" fill="#3b5263" />
+          <path d="M-47-31 1-56 48-31v55L1 49-47 24Z" fill="var(--machine-front)" />
+          <path d="M-47-31 1-6 48-31 1-56Z" fill="var(--machine-top)" />
+          <path d="M1-6v55l47-25v-55Z" fill="var(--machine-side)" />
           <path
             d="M-37-13-10 1M-37-4-10 10M-37 5-10 19M12 2 35-10M12 12 35 0M12 22 35 10"
-            stroke="#203747"
+            stroke="var(--machine-detail)"
             strokeWidth="4"
           />
           <path
             d="M-29-41v-20l30-16 28 15v20"
             fill="none"
-            stroke="#acb9be"
+            stroke="var(--machine-metal)"
             strokeWidth="5"
           />
         </>
       ) : (
         <>
-          <path d="M-46-19-4-41 46-14v35L4 44-46 17Z" fill="#5d7888" />
+          <path d="M-46-19-4-41 46-14v35L4 44-46 17Z" fill="var(--machine-front)" />
           <ellipse
             cx="-25"
             cy="-3"
             rx="26"
             ry="31"
-            fill="#95a6ab"
+            fill="var(--machine-top)"
             transform="rotate(-25 -25 -3)"
           />
           <ellipse
@@ -48,35 +48,35 @@ function Machine({ type }: { type: string }) {
             cy="-3"
             rx="17"
             ry="22"
-            fill="#405c6c"
+            fill="var(--machine-side)"
             transform="rotate(-25 -25 -3)"
           />
           <path
             d="M-5-35 42-10M-4-25 44 0M-3-14 44 10"
-            stroke="#a0b2b8"
+            stroke="var(--machine-metal)"
             strokeWidth="3"
           />
-          <path d="M4 15v26M19 8v25M33 1v24" stroke="#344f60" strokeWidth="4" />
+          <path d="M4 15v26M19 8v25M33 1v24" stroke="var(--machine-detail)" strokeWidth="4" />
           {type === 'pump' ? (
             <>
               <path
                 d="M-31-16v-29L-9-57 6-49v27"
-                fill="#a4b4b6"
-                stroke="#c2ccca"
+                fill="var(--machine-metal)"
+                stroke="var(--machine-top)"
               />
               <ellipse
                 cx="-25"
                 cy="-3"
                 rx="9"
                 ry="12"
-                fill="#c0cbcb"
+                fill="var(--machine-metal)"
                 transform="rotate(-25 -25 -3)"
               />
             </>
           ) : (
             <>
-              <path d="M-18-37v-14L4-63 24-52v14L3-26Z" fill="#9aaaae" />
-              <path d="M-45 11-63 20" stroke="#b7c2c3" strokeWidth="8" />
+              <path d="M-18-37v-14L4-63 24-52v14L3-26Z" fill="var(--machine-top)" />
+              <path d="M-45 11-63 20" stroke="var(--machine-metal)" strokeWidth="8" />
             </>
           )}
         </>
@@ -226,15 +226,15 @@ export default function FactoryScene({
             if (!old) return
             const next = { x: e.clientX, y: e.clientY }
             const other = [...pointers.current.entries()].find(([id]) => id !== e.pointerId)?.[1]
-            if (other) {
-              const oldDistance = Math.hypot(old.x - other.x, old.y - other.y)
-              const distance = Math.hypot(next.x - other.x, next.y - other.y)
-              if (oldDistance > 1) zoom(distance / oldDistance, localPoint((next.x + other.x) / 2, (next.y + other.y) / 2))
-            }
             const p = localPoint(old.x, old.y), q = localPoint(next.x, next.y)
             dragDistance.current += Math.hypot(next.x - old.x, next.y - old.y)
             if (dragDistance.current > 3) moved.current = true
-            move({ ...target.current, x: target.current.x + q.x - p.x, y: target.current.y + q.y - p.y }, true)
+            if (other) {
+              const anchor = localPoint(other.x, other.y)
+              move(pinchCamera(target.current, [p, anchor], [q, anchor]), true)
+            } else {
+              move({ ...target.current, x: target.current.x + q.x - p.x, y: target.current.y + q.y - p.y }, true)
+            }
             pointers.current.set(e.pointerId, next)
           }}
           onPointerUp={(e) => {
@@ -255,13 +255,13 @@ export default function FactoryScene({
               <path
                 d="M48 0H0V48"
                 fill="none"
-                stroke="#263b4b"
+                stroke="var(--scene-grid)"
                 strokeWidth="1"
               />
             </pattern>
             <radialGradient id="factory-ground">
-              <stop stopColor="#253d4a" stopOpacity=".65" />
-              <stop offset="1" stopColor="#15232e" stopOpacity="0" />
+              <stop stopColor="var(--scene-ground)" stopOpacity=".65" />
+              <stop offset="1" stopColor="var(--surface)" stopOpacity="0" />
             </radialGradient>
           </defs>
           <ellipse
@@ -277,12 +277,12 @@ export default function FactoryScene({
             <path
               d="M30 300 450 80 870 300 450 540Z"
               fill="url(#factory-grid)"
-              stroke="#304653"
+              stroke="var(--line)"
             />
             <path
               d="M30 300v20l420 220 420-220v-20M450 540v20"
               fill="none"
-              stroke="#304653"
+              stroke="var(--line)"
             />
             {slots.map(({ device, x, y }) => {
               const chosen = device.id === selected
@@ -311,8 +311,8 @@ export default function FactoryScene({
                   <path
                     className="node-platform"
                     d="M-103 19 0-35 103 19 0 74Z"
-                    fill={chosen ? '#304b56' : '#1d303d'}
-                    stroke={chosen ? '#9dc8c1' : '#3b5160'}
+                    fill={chosen ? 'var(--brand-soft)' : 'var(--surface-muted)'}
+                    stroke={chosen ? 'var(--brand)' : 'var(--line)'}
                     strokeWidth={chosen ? 2 : 1}
                   />
                   <ellipse
@@ -320,14 +320,14 @@ export default function FactoryScene({
                     cy="28"
                     rx="64"
                     ry="17"
-                    fill="#0b1821"
+                    fill="var(--machine-shadow)"
                     opacity=".6"
                   />
                   <Machine type={device.device_type} />
                   <path
                     d="M-103 19 0 74 103 19"
                     fill="none"
-                    stroke={chosen ? '#9dc8c1' : '#405766'}
+                    stroke={chosen ? 'var(--brand)' : 'var(--line)'}
                     strokeWidth="2"
                   />
                   <g transform="translate(0 111)">
@@ -336,15 +336,15 @@ export default function FactoryScene({
                       y="-16"
                       width="190"
                       height="52"
-                      rx="5"
-                      fill={chosen ? '#293f4b' : '#172a37'}
-                      stroke={chosen ? '#6c938f' : '#314654'}
+                      rx="0"
+                      fill={chosen ? 'var(--surface-raised)' : 'var(--surface)'}
+                      stroke={chosen ? 'var(--brand)' : 'var(--line)'}
                     />
                     <circle cx="-77" cy="1" r="4" fill={color} />
                     <text
                       x="-64"
                       y="6"
-                      fill="#e3e9ed"
+                      fill="var(--text)"
                       fontSize="15"
                       fontWeight="500"
                     >
@@ -352,7 +352,7 @@ export default function FactoryScene({
                         ? Array.from(device.name).slice(0, 6).join('') + '…'
                         : device.name}
                     </text>
-                    <text x="-64" y="25" fill="#9aabb7" fontSize="10">
+                    <text x="-64" y="25" fill="var(--muted)" fontSize="10">
                       {device.id}
                     </text>
                     <text

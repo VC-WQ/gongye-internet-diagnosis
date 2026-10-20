@@ -1,15 +1,14 @@
-/* Pico 2.0 基础版（Phase 2）：球形电子宠物 + 对话面板 */
 .pico-dock {
-  --pico-bg: #0f1c27;
-  --pico-bg-soft: #172938;
-  --pico-line: rgba(150, 200, 225, 0.18);
-  --pico-text: #e8f3fa;
-  --pico-muted: #8fa8b8;
-  --pico-accent: #7de3ff;
+  --pico-bg: var(--surface);
+  --pico-bg-soft: var(--surface-muted);
+  --pico-line: var(--line);
+  --pico-text: var(--text);
+  --pico-muted: var(--muted);
+  --pico-accent: var(--brand);
   position: fixed;
   right: 24px;
   bottom: 24px;
-  z-index: 1200;
+  z-index: 900;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -23,8 +22,6 @@
     sans-serif
   );
 }
-
-/* 按钮保持直角；球形外观由内部 PicoAvatar 呈现 */
 .pico-orb {
   position: relative;
   display: grid;
@@ -36,6 +33,7 @@
   border-radius: 0;
   background: transparent;
   cursor: pointer;
+  touch-action: none;
 }
 .pico-orb:focus-visible {
   outline: 2px solid var(--pico-accent);
@@ -48,7 +46,7 @@
   transform: translateX(-50%);
   font-size: 10px;
   letter-spacing: 0.08em;
-  color: rgba(232, 243, 250, 0.72);
+  color: var(--pico-muted);
   pointer-events: none;
 }
 .pico-orb__badge {
@@ -59,20 +57,18 @@
   height: 10px;
   border-radius: 50%;
   background: #ff5b6e;
-  box-shadow: 0 0 0 2px #0f1c27;
+  box-shadow: 0 0 0 2px var(--pico-bg);
 }
 
 .pico-avatar {
   display: inline-flex;
   flex: none;
-  filter: drop-shadow(0 10px 24px rgba(20, 80, 110, 0.35));
+  filter: drop-shadow(0 6px 10px rgba(35,30,24,.12));
   transition: transform 240ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 .pico-avatar canvas {
   display: block;
 }
-
-/* 展开面板 */
 .pico-panel {
   display: flex;
   flex-direction: column;
@@ -82,9 +78,9 @@
   color: var(--pico-text);
   background: var(--pico-bg);
   border: 1px solid var(--pico-line);
-  border-radius: 16px;
-  box-shadow: 0 28px 70px rgba(5, 15, 22, 0.45);
-  animation: pico-panel-in 180ms ease-out;
+  border-radius: 0;
+  box-shadow: 0 16px 50px rgba(32,28,22,.14);
+  animation: pico-panel-in 300ms cubic-bezier(.22,.8,.25,1);
 }
 @keyframes pico-panel-in {
   from {
@@ -103,7 +99,7 @@
   gap: 10px;
   padding: 12px 14px;
   border-bottom: 1px solid var(--pico-line);
-  background: linear-gradient(180deg, #142433 0%, #101d29 100%);
+  background: var(--surface-muted);
 }
 .pico-panel__title {
   display: flex;
@@ -201,7 +197,7 @@
   font-size: 13px;
   line-height: 1.6;
   background: var(--pico-bg-soft);
-  border-radius: 12px;
+  border-radius: 0;
 }
 .pico-message__bubble p {
   margin: 0;
@@ -240,10 +236,10 @@
 .pico-ref {
   padding: 2px 7px;
   font-size: 10px;
-  color: #bdefff;
-  background: rgba(125, 227, 255, 0.08);
-  border: 1px solid rgba(125, 227, 255, 0.22);
-  border-radius: 999px;
+  color: var(--muted);
+  background: var(--brand-soft);
+  border: 1px solid var(--line);
+  border-radius: 0;
 }
 .pico-message__actions {
   display: flex;
@@ -277,14 +273,14 @@
   color: var(--pico-muted);
   cursor: pointer;
   background: transparent;
-  border: 0;
+  border: 0; display:inline-flex;align-items:center;justify-content:center;min-width:32px;min-height:30px;
 }
 .pico-speak:hover {
   color: var(--pico-accent);
 }
 .pico-context-note {
   font-size: 10px;
-  color: rgba(143, 168, 184, 0.75);
+  color: var(--pico-muted);
 }
 .pico-thinking {
   display: flex;
@@ -295,16 +291,16 @@
 
 .pico-composer {
   padding: 10px 12px 12px;
-  background: #0b1620;
+  background: var(--surface-muted);
   border-top: 1px solid var(--pico-line);
 }
 .pico-composer textarea {
   color: var(--pico-text);
-  background: #12212e;
+  background: var(--surface-muted);
   border-color: var(--pico-line);
 }
 .pico-composer textarea::placeholder {
-  color: rgba(143, 168, 184, 0.7);
+  color: var(--pico-muted);
 }
 .pico-composer__buttons {
   display: flex;
@@ -315,21 +311,6 @@
 .pico-composer__buttons span {
   font-size: 10px;
   color: var(--pico-muted);
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .pico-dock:not(.is-open) .pico-avatar {
-    animation: pico-float 4.6s ease-in-out infinite;
-  }
-}
-@keyframes pico-float {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-4px);
-  }
 }
 @media (prefers-reduced-motion: reduce) {
   .pico-panel {
@@ -342,8 +323,17 @@
     right: 12px;
     bottom: 12px;
   }
+  .pico-orb { width: 56px; height: 56px; }
   .pico-panel {
     width: calc(100vw - 24px);
     max-height: 72vh;
   }
 }
+
+.pico-speech-error { color:var(--status-danger);font-size:11px;margin-bottom:8px; }
+
+.pico-dock.is-open .pico-orb { display:none; }
+
+.pico-input-hint { font-size:10px;color:var(--muted); }
+
+@media(max-width:640px) { .pico-panel { max-height:calc(100dvh - 105px); } .pico-dock { bottom:max(12px,env(safe-area-inset-bottom)); } }

@@ -2,7 +2,7 @@ import { LoadState } from './BusinessUI'
 import { errorText } from '../hooks/useResource'
 import { useEffect, useMemo, useState } from 'react'
 import { Card, Col, Empty, Row, Select, Space, Spin, Table, Tag } from 'antd'
-import ReactECharts from 'echarts-for-react'
+import ThemedChart from './ThemedChart'
 import { getRulSdePf } from '../services/api'
 import ChartNote from './ChartNote'
 import { xAxisBase, yAxisBase } from '../theme/echarts'
@@ -192,7 +192,7 @@ export default function RulSdePf() {
         <Col span={24} style={{ marginBottom: 12 }}>
           <Space size={8} wrap>
             <Tag color="cyan">SDE + PF</Tag>
-            <span style={{ color: '#6e7d8b', fontSize: 13 }}>
+            <span style={{ color: "var(--muted)", fontSize: 13 }}>
               随机微分方程（SDE）建模磨损自加速过程 + 粒子滤波在线估计退化速率 + 首达时间外推 RUL
             </span>
           </Space>
@@ -211,7 +211,7 @@ export default function RulSdePf() {
             }
           >
             {m ? (
-              <ReactECharts theme="tech-dark" option={metricOption} style={{ height: 280 }} />
+              <ThemedChart option={metricOption} style={{ height: 280 }} />
             ) : (
               <Empty description="暂无实验结果" />
             )}
@@ -242,7 +242,7 @@ export default function RulSdePf() {
             }
           >
             {curve ? (
-              <ReactECharts theme="tech-dark" option={curveOption} style={{ height: 280 }} />
+              <ThemedChart option={curveOption} style={{ height: 280 }} />
             ) : (
               <Empty description="暂无实验结果" />
             )}
@@ -262,7 +262,7 @@ export default function RulSdePf() {
             }
           >
             {data?.curves?.length ? (
-              <ReactECharts theme="tech-dark" option={perBearingOption} style={{ height: 300 }} />
+              <ThemedChart option={perBearingOption} style={{ height: 300 }} />
             ) : (
               <Empty description="暂无实验结果" />
             )}
@@ -304,7 +304,7 @@ export default function RulSdePf() {
               ]}
             />
             {m && (
-              <div style={{ marginTop: 10, fontSize: 12, color: '#6e7d8b' }}>
+              <div style={{ marginTop: 10, fontSize: 12, color: "var(--muted)" }}>
                 R² 提升 {r2Gain >= 0 ? '+' : ''}
                 {r2Gain.toFixed(3)}；基线 R² 为负，说明"健康指标指数外推"在该数据上甚至不如直接预测均值，
                 而 SDE + 粒子滤波首次把 R² 拉正。

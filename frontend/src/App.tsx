@@ -1,3 +1,4 @@
+import { useSpatialNavigate } from './hooks/useSpatialNavigate'
 import {
   Component,
   Suspense,
@@ -5,6 +6,7 @@ import {
   useEffect,
   useLayoutEffect,
   useRef,
+  useMemo,
   useState,
   type ReactNode,
 } from 'react'
@@ -22,7 +24,6 @@ import {
   Route,
   Routes,
   useLocation,
-  useNavigate,
   useNavigationType,
 } from 'react-router-dom'
 import { RealtimeProvider } from './services/realtime'
@@ -66,17 +67,20 @@ function readTheme(): UiTheme {
 export const productTheme = {
   token: {
     colorPrimary: '#c13d46',
-    colorInfo: '#376c95',
-    colorSuccess: '#348875',
-    colorWarning: '#aa751f',
+    colorInfo: '#406783',
+    colorSuccess: '#327a60',
+    colorWarning: '#946519',
     colorError: '#c13d46',
-    colorBgLayout: '#f3f4f6',
+    colorBgLayout: '#f6f5f2',
     colorBgContainer: '#ffffff',
-    colorText: '#202631',
-    colorTextSecondary: '#697381',
-    colorBorder: '#dce0e6',
-    colorBorderSecondary: '#e9ecf0',
-    borderRadius: 8,
+    colorText: '#272521',
+    colorTextSecondary: '#6b6861',
+    colorBorder: '#e4e1da',
+    colorBorderSecondary: '#eeece6',
+    borderRadius: 0,
+    borderRadiusLG: 0,
+    borderRadiusSM: 0,
+    borderRadiusXS: 0,
     controlHeight: 36,
     fontFamily:
       "-apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif",
@@ -89,7 +93,7 @@ export const productTheme = {
       defaultShadow: 'none',
       primaryShadow: 'none',
     },
-    Table: { headerBg: '#f7f8fa', cellPaddingBlock: 15 },
+    Table: { headerBg: '#f6f5f2', cellPaddingBlock: 15 },
     Card: { headerFontSize: 15 },
     Tabs: { horizontalItemGutter: 28 },
   },
@@ -100,17 +104,22 @@ const darkThemeOverrides = {
   ...productTheme,
   token: {
     ...productTheme.token,
-    colorBgLayout: '#0c141c',
-    colorBgContainer: '#131e28',
-    colorBgElevated: '#182532',
-    colorText: '#e6eef5',
-    colorTextSecondary: '#93a5b5',
-    colorBorder: 'rgba(190, 220, 240, 0.14)',
-    colorBorderSecondary: 'rgba(190, 220, 240, 0.1)',
+    colorPrimary: '#df6c73',
+    colorSuccess: '#83c4a4',
+    colorWarning: '#d6b369',
+    colorError: '#ee8b91',
+    colorInfo: '#91b5be',
+    colorBgLayout: '#191918',
+    colorBgContainer: '#232321',
+    colorBgElevated: '#2d2c29',
+    colorText: '#f2eee5',
+    colorTextSecondary: '#b4aea2',
+    colorBorder: '#3d3b35',
+    colorBorderSecondary: '#33322d',
   },
   components: {
     ...productTheme.components,
-    Table: { headerBg: '#1b2a37', cellPaddingBlock: 15 },
+    Table: { headerBg: '#2b2a27', cellPaddingBlock: 15 },
   },
 }
 class PageBoundary extends Component<
@@ -188,7 +197,7 @@ function Workspace({
   uiTheme: UiTheme
   onToggleTheme: () => void
 }) {
-  const navigate = useNavigate()
+  const navigate = useSpatialNavigate()
   const location = useLocation()
   const navigationType = useNavigationType()
   const workspace = useWorkspace()
@@ -304,7 +313,7 @@ function Workspace({
           <Button aria-label="前进" title="前进" disabled={navigationType === 'PUSH' || idx >= maxIndex.current} onClick={() => navigate(1)}>›</Button>
         </div>
         <div className="workspace-location">
-          <Dropdown trigger={['click']} menu={{
+          <Dropdown destroyOnHidden trigger={['click']} menu={{
             selectedKeys: view ? [view] : [],
             items: WORKSPACE_VIEWS.map((key) => ({ key, label: VIEW_LABELS[key] })),
             onClick: ({ key }) => goView(key as WorkspaceView),
@@ -316,7 +325,7 @@ function Workspace({
           {device && <span className="workspace-device-context" title={device}>{chosen?.name ?? device}</span>}
         </div>
         <nav className="workspace-tools" aria-label="工具与管理">
-          <Dropdown trigger={['click']} menu={{ items: [
+          <Dropdown destroyOnHidden trigger={['click']} menu={{ items: [
             { type: 'group', label: '研究与验证', children: [
               { key: '/lab', label: '算法实验室' },
               ...(user.role === 'admin' ? [{ key: '/dashboard?view=devices&tab=inject', label: '仿真测试' }] : []),
@@ -329,14 +338,14 @@ function Workspace({
           ], onClick: ({ key }) => goTool(key) }}>
             <Button type="text" aria-label="研究与运维工具">工具 <span aria-hidden>⌄</span></Button>
           </Dropdown>
-          {user.role === 'admin' && <Dropdown trigger={['click']} menu={{ items: ADMIN, onClick: ({ key }) => goTool(key) }}>
+          {user.role === 'admin' && <Dropdown destroyOnHidden trigger={['click']} menu={{ items: ADMIN, onClick: ({ key }) => goTool(key) }}>
             <Button type="text" aria-label="管理功能">管理 <span aria-hidden>⌄</span></Button>
           </Dropdown>}
         </nav>
         <div className="account">
           <span className="account-avatar" title={user.username}>{user.username.slice(0, 1).toUpperCase()}</span>
           <Button type="text" onClick={onToggleTheme} aria-label="切换深浅主题">{uiTheme === 'dark' ? '浅色' : '深色'}</Button>
-          <Dropdown trigger={['click']} menu={{ items: [{ key: 'logout', label: '退出登录' }], onClick: logout }}>
+          <Dropdown destroyOnHidden trigger={['click']} menu={{ items: [{ key: 'logout', label: '退出登录' }], onClick: logout }}>
             <Button type="text" aria-label={`账户 ${user.username}`}>账户</Button>
           </Dropdown>
         </div>
@@ -362,6 +371,22 @@ function Workspace({
 }
 export default function App() {
   const [uiTheme, setUiTheme] = useState<UiTheme>(readTheme)
+  const [reducedMotion, setReducedMotion] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches)
+  useEffect(() => {
+    const media = matchMedia('(prefers-reduced-motion: reduce)')
+    const changed = () => setReducedMotion(media.matches)
+    media.addEventListener('change', changed)
+    return () => media.removeEventListener('change', changed)
+  }, [])
+  const selectedTheme = useMemo(() => ({
+    ...(uiTheme === 'dark' ? darkThemeOverrides : productTheme),
+    token: { ...(uiTheme === 'dark' ? darkThemeOverrides : productTheme).token, motion: !reducedMotion },
+    algorithm: uiTheme === 'dark' ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
+  }), [uiTheme, reducedMotion])
+  useEffect(() => {
+    ConfigProvider.config({ holderRender: (children) => <ConfigProvider theme={selectedTheme}>{children}</ConfigProvider> })
+    return () => ConfigProvider.config({ holderRender: undefined })
+  }, [selectedTheme])
   useEffect(() => {
     document.documentElement.dataset.theme = uiTheme
     try {
@@ -374,13 +399,7 @@ export default function App() {
     setUiTheme((value) => (value === 'dark' ? 'light' : 'dark'))
   return (
     <ConfigProvider
-      theme={{
-        ...(uiTheme === 'dark' ? darkThemeOverrides : productTheme),
-        algorithm:
-          uiTheme === 'dark'
-            ? antdTheme.darkAlgorithm
-            : antdTheme.defaultAlgorithm,
-      }}
+      theme={selectedTheme}
     >
       <Suspense fallback={<Skeleton active />}>
         <Routes>

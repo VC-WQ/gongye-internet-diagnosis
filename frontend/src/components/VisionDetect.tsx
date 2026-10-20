@@ -157,23 +157,23 @@ export default function VisionDetect() {
     <LoadState loading={loading} error={loadError} onRetry={() => window.location.reload()}><Spin spinning={false}>
       <Row gutter={16}>
         <Col span={24} style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 16, fontWeight: 600, color: '#477d9e' }}>
+          <div style={{ fontSize: 16, fontWeight: 600, color: "var(--status-info)" }}>
             关键部件表面缺陷视觉检测
             <Tag color="cyan" style={{ marginLeft: 8, fontWeight: 400 }}>
               多模态协同诊断 · 视觉分支
             </Tag>
           </div>
-          <div style={{ fontSize: 12, color: '#6e7d8b', marginTop: 4, lineHeight: 1.8 }}>
+          <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 4, lineHeight: 1.8 }}>
             面向旋转机械<b>关键部件表面损伤</b>的自动识别：轴承滚道/滚动体、齿轮齿面、
             泵与空压机叶轮、密封面。适用于<b>解体检修</b>与<b>内窥镜检查</b>场景。
             检测结果作为<b>第五路证据</b>送入智能会诊，与振动诊断交叉验证
             ——振动看动态响应，视觉看表面形貌，二者判的是同一类失效的不同表现。
           </div>
-          <div style={{ fontSize: 11, color: '#6e7d8b', marginTop: 4, lineHeight: 1.8 }}>
+          <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4, lineHeight: 1.8 }}>
             模型在 <b>NEU-DET 公开基准数据集</b>（东北大学 1800 张 200×200 标注图）上训练与验证。
             该数据集的<b>点蚀、划痕、裂纹</b>三类缺陷形态与旋转部件表面损伤同源
             （轴承点蚀正是内/外圈故障的物理成因），故可将学到的表面损伤检测能力迁移应用于设备部件检测。
-            <span style={{ color: '#9a752d' }}>
+            <span style={{ color: "var(--status-warn)" }}>
               注：模型训练域为钢材表面，迁移至设备部件存在域差异，因此视觉证据在会诊中按<b>弱证据</b>参与融合。
             </span>
           </div>
@@ -213,7 +213,7 @@ export default function VisionDetect() {
                 { defect: '氧化 rolled-in', mode: '锈蚀、高温氧化层', part: '空压机、高温部件', link: '中' },
               ]}
             />
-            <div style={{ fontSize: 11, color: '#6e7d8b', marginTop: 8, lineHeight: 1.8 }}>
+            <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 8, lineHeight: 1.8 }}>
               「关联=强」的三类（点蚀/划痕/裂纹）正是旋转机械的典型失效模式，
               可与振动诊断形成直接互证；其余三类作为辅助判据。
             </div>
@@ -243,7 +243,7 @@ export default function VisionDetect() {
             )}
 
             <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 13, color: '#6e7d8b' }}>模型</span>
+              <span style={{ fontSize: 13, color: "var(--muted)" }}>模型</span>
               <Select
                 style={{ flex: 1 }}
                 options={modelOptions}
@@ -304,7 +304,7 @@ export default function VisionDetect() {
                             padding: '8px 12px',
                             marginBottom: 8,
                             background: 'rgba(250, 140, 22, 0.12)',
-                            borderRadius: 6,
+                            borderRadius: 0,
                             border: '1px solid rgba(250, 140, 22, 0.35)',
                           }}
                         >
@@ -312,7 +312,7 @@ export default function VisionDetect() {
                             <b>{d.label}</b>{' '}
                             <Tag color="red">{(d.confidence * 100).toFixed(1)}%</Tag>
                           </div>
-                          <div style={{ fontSize: 12, color: '#6e7d8b' }}>
+                          <div style={{ fontSize: 12, color: "var(--muted)" }}>
                             位置 [{d.bbox.map((v) => Math.round(v)).join(', ')}]
                           </div>
                         </div>
@@ -351,10 +351,10 @@ export default function VisionDetect() {
                         src={s.image}
                         alt={s.label}
                         width="100%"
-                        style={{ borderRadius: 6, maxHeight: 160, objectFit: 'contain' }}
+                        style={{ borderRadius: 0, maxHeight: 160, objectFit: 'contain' }}
                       />
                       <div style={{ marginTop: 6, fontSize: 13, fontWeight: 500 }}>{s.label}</div>
-                      <div style={{ fontSize: 11, color: '#6e7d8b' }}>{s.class}</div>
+                      <div style={{ fontSize: 11, color: "var(--muted)" }}>{s.class}</div>
                     </div>
                   </Col>
                 ))}
@@ -380,20 +380,20 @@ export default function VisionDetect() {
           >
             {cmpRows.length ? (
               <>
-                <div style={{ fontSize: 13, color: '#6e7d8b', marginBottom: 12, lineHeight: 1.7 }}>
+                <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 12, lineHeight: 1.7 }}>
                   RT-DETR（Transformer）精度略高，但 YOLOv8s 推理快约 4 倍、参数少约 3 倍——
-                  结论：<b style={{ color: '#477d9e' }}>边缘实时部署选 YOLOv8s，云端高精度场景选 RT-DETR</b>。
+                  结论：<b style={{ color: "var(--status-info)" }}>边缘实时部署选 YOLOv8s，云端高精度场景选 RT-DETR</b>。
                 </div>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                   <thead>
                     <tr>
-                      <th style={{ textAlign: 'left', padding: '8px 12px', borderBottom: '1px solid rgba(148,163,184,0.18)', color: '#6e7d8b', fontWeight: 500 }}>
+                      <th style={{ textAlign: 'left', padding: '8px 12px', borderBottom: "1px solid var(--line)", color: "var(--muted)", fontWeight: 500 }}>
                         指标
                       </th>
-                      <th style={{ padding: '8px 12px', borderBottom: '1px solid rgba(148,163,184,0.18)', color: '#6e7d8b', fontWeight: 600 }}>
+                      <th style={{ padding: '8px 12px', borderBottom: "1px solid var(--line)", color: "var(--muted)", fontWeight: 600 }}>
                         {MODEL_NAME.yolov8s}
                       </th>
-                      <th style={{ padding: '8px 12px', borderBottom: '1px solid rgba(148,163,184,0.18)', color: '#6e7d8b', fontWeight: 600 }}>
+                      <th style={{ padding: '8px 12px', borderBottom: "1px solid var(--line)", color: "var(--muted)", fontWeight: 600 }}>
                         {MODEL_NAME.rtdetr}
                       </th>
                     </tr>
@@ -401,16 +401,16 @@ export default function VisionDetect() {
                   <tbody>
                     {cmpRows.map((row) => (
                       <tr key={row.label}>
-                        <td style={{ padding: '8px 12px', borderBottom: '1px solid rgba(148,163,184,0.08)', color: '#6e7d8b' }}>
+                        <td style={{ padding: '8px 12px', borderBottom: "1px solid var(--line)", color: "var(--muted)" }}>
                           {row.label}
                         </td>
                         <td
                           style={{
                             padding: '8px 12px',
-                            borderBottom: '1px solid rgba(148,163,184,0.08)',
+                            borderBottom: "1px solid var(--line)",
                             textAlign: 'center',
                             fontWeight: row.winner === 'yolov8s' ? 700 : 400,
-                            color: row.winner === 'yolov8s' ? '#477d9e' : '#293543',
+                            color: row.winner === 'yolov8s' ? "var(--status-info)" : "var(--text)",
                           }}
                         >
                           {row.yolo}
@@ -418,10 +418,10 @@ export default function VisionDetect() {
                         <td
                           style={{
                             padding: '8px 12px',
-                            borderBottom: '1px solid rgba(148,163,184,0.08)',
+                            borderBottom: "1px solid var(--line)",
                             textAlign: 'center',
                             fontWeight: row.winner === 'rtdetr' ? 700 : 400,
-                            color: row.winner === 'rtdetr' ? '#477d9e' : '#293543',
+                            color: row.winner === 'rtdetr' ? "var(--status-info)" : "var(--text)",
                           }}
                         >
                           {row.rtdetr}

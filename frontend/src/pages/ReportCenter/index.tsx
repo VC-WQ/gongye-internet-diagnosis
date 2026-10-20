@@ -1,3 +1,4 @@
+import { useSpatialNavigate } from '../../hooks/useSpatialNavigate'
 import { useEffect, useRef, useState } from 'react'
 import { Button, Select, Space, message } from 'antd'
 import ReactMarkdown from 'react-markdown'
@@ -18,11 +19,10 @@ import {
   StatusTag,
 } from '../../components/BusinessUI'
 import DiagnosisSummary from '../../components/DiagnosisSummary'
-import { useNavigate } from 'react-router-dom'
 
 export default function ReportCenter() {
   const { params, update } = usePageQuery()
-  const navigate = useNavigate()
+  const navigate = useSpatialNavigate()
   const catalog = useDeviceCatalog()
   const device = params.get('device') ?? undefined
   const eventId = Number(params.get('event')) || undefined
