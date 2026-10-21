@@ -30,7 +30,7 @@ const TOOL_CARDS: ToolCard[] = [
   {
     key: 'pico',
     title: '数字伴侣',
-    description: '与右下角 Pico 共用同一会话，查询当前设备、全厂事件、诊断报告与研究资料。',
+    description: '与右下角 Pico 共用会话，查询设备、事件和研究资料，支持页面导航、主题切换与设备表单预填。',
     path: '/tools/pico',
   },
   {

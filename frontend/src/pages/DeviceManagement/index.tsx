@@ -8,6 +8,8 @@ import { deleteDevice, getDevices, type Device } from '../../services/api'
 import DeviceEditor from '../../features/management/DeviceEditor'
 import { BatchControls, BatchResult, type DeleteFailure } from '../../features/management/BatchControls'
 import { deleteSelected } from '../../features/management/batchDelete'
+import { useDeviceFormDraft } from '../../features/management/useDeviceFormDraft'
+import { deviceFormDraftChannel } from '../../features/management/deviceFormDraft'
 
 export default function DeviceManagement() {
   const resource = useResource<Device[]>('admin-devices', getDevices)
@@ -17,6 +19,7 @@ export default function DeviceManagement() {
   const status = params.get('status') ?? 'all'
   const page = Math.max(1, Number(params.get('page')) || 1)
   const [creating, setCreating] = useState(false)
+  const draft = useDeviceFormDraft('create')
   const [editing, setEditing] = useState(false)
   const [selected, setSelected] = useState<string[]>([])
   const [busy, setBusy] = useState(false)
@@ -79,7 +82,7 @@ export default function DeviceManagement() {
           ]}
         />
       </LoadState>
-      <DeviceEditor open={creating} onClose={() => setCreating(false)} onSaved={resource.refresh} />
+      <DeviceEditor open={creating || Boolean(draft)} draft={draft} onClose={() => { if (draft) deviceFormDraftChannel.release(draft.actionId); setCreating(false) }} onSaved={resource.refresh} />
     </Card>
   )
 }

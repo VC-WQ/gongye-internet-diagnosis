@@ -25,5 +25,5 @@ def pico_chat(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> PicoChatResponse:
-    """基于当前页面上下文的只读问答。"""
+    """上下文问答与受约束页面动作；不执行任何业务写入。"""
     return chat(db, user, body)

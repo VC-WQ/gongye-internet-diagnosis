@@ -101,8 +101,8 @@ export interface EventSummary {
 // ---------------------------------------------------------------------------
 export const getDevices = () => api.get<Device[]>('/devices').then((r) => r.data)
 
-export const getDevice = (id: string) =>
-  api.get<Device>(`/devices/${id}`).then((r) => r.data)
+export const getDevice = (id: string, signal?: AbortSignal) =>
+  api.get<Device>(`/devices/${id}`, { signal }).then((r) => r.data)
 
 export const getDeviceWindow = (deviceId: string) =>
   api.get(`/mqtt-pipeline/window/${deviceId}`).then((r) => r.data)
@@ -129,8 +129,8 @@ export const createEvent = (
 export const listEvents = (params?: { device_id?: string; limit?: number; offset?: number }) =>
   api.get<EventSummary[]>('/command-loop/events', { params }).then((r) => r.data)
 
-export const getEvent = (id: number) =>
-  api.get<EventSummary>(`/command-loop/events/${id}`).then((r) => r.data)
+export const getEvent = (id: number, signal?: AbortSignal) =>
+  api.get<EventSummary>(`/command-loop/events/${id}`, { signal }).then((r) => r.data)
 
 export const confirmEvent = (id: number, operator: string) =>
   api.post(`/command-loop/events/${id}/confirm`, { operator }).then((r) => r.data)
@@ -259,7 +259,7 @@ export const login = (username: string, password: string) =>
 export const register = (username: string, password: string) =>
   api.post<{ token: string; user: AuthUser }>('/auth/register', { username, password }).then((r) => r.data)
 
-export const getMe = () => api.get<AuthUser>('/auth/me').then((r) => r.data)
+export const getMe = (signal?: AbortSignal) => api.get<AuthUser>('/auth/me', { signal }).then((r) => r.data)
 
 // ---------------------------------------------------------------------------
 // 用户管理（admin）
@@ -277,7 +277,7 @@ export const deleteUser = (id: number) => api.delete(`/users/${id}`).then((r) =>
 // ---------------------------------------------------------------------------
 // 设备管理（admin）
 // ---------------------------------------------------------------------------
-export const createDevice = (data: { id: string; name: string; device_type: string }) =>
+export const createDevice = (data: { id: string; name: string; device_type: string; health_score?: number; status?: string }) =>
   api.post('/devices', data).then((r) => r.data)
 
 export const updateDevice = (id: string, data: Partial<Device>) =>

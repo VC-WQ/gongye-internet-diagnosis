@@ -54,6 +54,9 @@ def resolve_device_mention(session: Session, message: str) -> tuple[Optional[str
     devices = session.query(Device).all()
     matched: set[str] = set()
     for device in devices:
+        # The catalogue permits numeric-leading IDs and IDs without a hyphen too.
+        if re.search(r"(?<![A-Za-z0-9_-])" + re.escape(device.id) + r"(?![A-Za-z0-9_-])", message, re.I):
+            matched.add(device.id)
         name = re.sub(r"\s+", "", device.name).casefold()
         aliases = {name}
         if name.startswith("驱动电机"):

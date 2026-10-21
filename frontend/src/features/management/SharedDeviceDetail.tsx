@@ -10,6 +10,8 @@ import { useDeviceCatalog, useDeviceTelemetry } from '../../services/realtime'
 import { normalizeChannel, normalizeDetail } from '../../services/workspaceMode'
 import DeviceAnalysisPanel from '../factory/panels/DeviceAnalysisPanel'
 import DeviceEditor from './DeviceEditor'
+import { useDeviceFormDraft } from './useDeviceFormDraft'
+import { deviceFormDraftChannel } from './deviceFormDraft'
 import './management.css'
 
 export default function SharedDeviceDetail() {
@@ -22,6 +24,7 @@ export default function SharedDeviceDetail() {
   const telemetry = useDeviceTelemetry(device.data?.id)
   const events = useResource(`shared-device-events:${deviceId ?? ''}`, () => listEvents({ device_id: deviceId!, limit: 100 }), 10000, Boolean(deviceId))
   const [editing, setEditing] = useState(false)
+  const draft = useDeviceFormDraft('edit', deviceId)
   useEffect(() => { setEditing(false) }, [deviceId])
   const tab = normalizeDetail(params.get('detail'))
   const channel = normalizeChannel(params.get('channel')) ?? 'vibration'
@@ -63,7 +66,7 @@ export default function SharedDeviceDetail() {
           onSelectEvent={(id) => navigate(`/manage/records/${id}`)}
         />
       </LoadState>
-      <DeviceEditor open={editing} device={device.data} onClose={() => setEditing(false)} onSaved={() => { device.refresh(); catalog.refresh() }} />
+      <DeviceEditor open={editing || Boolean(draft && device.data)} device={device.data} draft={draft} onClose={() => { if (draft) deviceFormDraftChannel.release(draft.actionId); setEditing(false) }} onSaved={() => { device.refresh(); catalog.refresh() }} />
     </div>
   )
 }

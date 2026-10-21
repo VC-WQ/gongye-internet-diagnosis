@@ -3,7 +3,9 @@ from __future__ import annotations
 
 from typing import Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_serializer
+
+from .ui_schema import PicoUiAction
 
 
 PicoEmotion = Literal[
@@ -86,3 +88,9 @@ class PicoChatResponse(BaseModel):
     meta: PicoMeta
     context_revision: Optional[int] = None
     resolved_context: Optional[PicoResolvedContext] = None
+    ui_actions: list[PicoUiAction] = Field(default_factory=list, max_length=1)
+
+    @field_serializer("ui_actions")
+    def serialize_ui_actions(self, actions):
+        # Exact JSON objects for the frontend's runtime whitelist, without null props.
+        return [action.model_dump(exclude_none=True) for action in actions]

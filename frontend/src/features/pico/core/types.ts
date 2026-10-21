@@ -31,6 +31,33 @@ export interface PicoResolvedContext {
   event_id?: number
 }
 
+export interface PicoDeviceFields {
+  id?: string
+  name?: string
+  device_type?: 'pump' | 'motor' | 'compressor'
+  health_score?: number
+  status?: 'healthy' | 'degraded' | 'fault' | 'offline'
+}
+
+type PicoNavigateAction = { type: 'navigate'; action_id: string } & (
+  | { route_id: 'factory' | 'device_management' | 'records'; params: Record<string, never> }
+  | { route_id: 'tools'; params: { tool?: 'diagnosis' | 'events' | 'simulation' | 'vision' | 'pico' | 'evaluation' | 'settings' } }
+  | { route_id: 'research'; params: { topic_id?: string; point_id?: string } }
+  | { route_id: 'device_detail'; params: { device_id: string; tab?: 'realtime' | 'history' | 'latent' | 'acoustic' | 'phm' | 'events' | 'threshold' } }
+  | { route_id: 'event_detail' | 'report'; params: { event_id: number; device_id?: string } }
+)
+
+export type PicoUiAction =
+  | PicoNavigateAction
+  | { type: 'set_theme'; action_id: string; theme: 'light' | 'dark' }
+  | { type: 'prefill_device_form'; action_id: string; mode: 'create' | 'edit'; device_id?: string; fields: PicoDeviceFields }
+
+export interface PicoActionResult {
+  action_id: string
+  status: 'running' | 'succeeded' | 'failed' | 'cancelled' | 'rejected'
+  message: string
+}
+
 export interface PicoReference {
   kind: 'device' | 'event' | 'report' | 'telemetry' | 'research' | 'knowledge'
   id: string
@@ -65,6 +92,7 @@ export interface PicoChatResponse {
   meta: PicoMeta
   context_revision?: number | null
   resolved_context?: PicoResolvedContext | null
+  ui_actions?: PicoUiAction[]
 }
 
 export interface PicoMessage {
@@ -76,6 +104,7 @@ export interface PicoMessage {
   actions?: PicoAction[]
   meta?: PicoMeta
   contextLabel?: string
+  actionResults?: PicoActionResult[]
 }
 
 export interface PicoNotification {

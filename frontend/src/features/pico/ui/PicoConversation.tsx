@@ -344,7 +344,7 @@ export default function PicoConversation({
           <div className="pico-empty">
             <PicoFaceGlyph />
             <p>
-              我是 Pico。可以查询设备状态、事件与报告，也能查找全厂设备和研究资料。
+              我是 Pico。可以查询设备、事件和研究资料，也能按你的要求打开页面、切换主题或预填设备表单。
               {!deviceId && ' 当前没有选定设备，你可以说出设备编号，或直接查询全厂信息。'}
             </p>
             <div className="pico-suggestions">
@@ -361,6 +361,7 @@ export default function PicoConversation({
             key={message.id}
             data-message-id={message.id}
             data-message-role={message.role}
+            data-action-status={message.actionResults?.[message.actionResults.length - 1]?.status}
             className={`pico-message pico-message--${message.role}`}
           >
             <div
@@ -379,7 +380,7 @@ export default function PicoConversation({
               <span className="pico-thinking__glyph" aria-hidden>
                 &gt;···
               </span>
-              <span>正在查询真实业务数据…</span>
+              <span>正在处理你的请求…</span>
             </div>
           </div>
         )}

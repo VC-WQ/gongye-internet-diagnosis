@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from app.models import User
 from app.modules.multi_agent.llm_client import llm_client
 
-from . import tools, retrieval
+from . import tools, retrieval, ui_agent
 from .planner import ANSWER_TIMEOUT, model_plan
 from .schema import (
     PicoAction,
@@ -53,7 +53,7 @@ EVENT_STATE_LABEL = {
 def capabilities() -> dict[str, Any]:
     """Pico 能力清单（供前端显示降级状态）。"""
     return {
-        "version": "1.2",
+        "version": "1.3",
         "llm_available": llm_client.available,
         "tools": tools.READ_ONLY_TOOLS,
         "limits": {
@@ -67,6 +67,9 @@ def capabilities() -> dict[str, Any]:
             "answer_timeout_seconds": 10,
         },
         "write_tools": [],
+        "ui_actions": ["navigate", "set_theme", "prefill_device_form"],
+        "ui_actions_max": 1,
+        "ui_prefill_requires_role": "admin",
     }
 
 
@@ -609,6 +612,17 @@ def _plan_matches_entities(db: Session, plan, message: str, device_id: Optional[
 def chat(db: Session, user: User, body: PicoChatRequest) -> PicoChatResponse:
     """真实模型优先计划；工具受约束执行；无模型走有限检索/上下文兜底。"""
     revision = body.context.context_revision if body.context is not None else None
+    operation = ui_agent.plan_operation(db, user, body)
+    if operation is not None:
+        return PicoChatResponse(
+            message_id=uuid.uuid4().hex, request_id=uuid.uuid4().hex,
+            type="error" if operation.error else "answer", text=operation.text,
+            emotion="confused" if operation.error else "curious",
+            context_revision=revision,
+            resolved_context=PicoResolvedContext.model_validate(operation.focus) if operation.focus else None,
+            ui_actions=[operation.action] if operation.action else [],
+            meta=PicoMeta(data_status="missing" if operation.error else "current", source_kind="unknown", degraded=operation.planner != "live", llm=operation.planner, planner=operation.planner),
+        )
     global_query = retrieval.global_scope(body.message)
     research_query = retrieval.is_research_query(body.message)
     device_id, event_id, context_error = (None, None, None) if global_query or research_query else _resolve_context(db, body)

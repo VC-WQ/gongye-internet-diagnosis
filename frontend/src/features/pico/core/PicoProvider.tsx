@@ -16,6 +16,9 @@ import { errorText } from '../../../hooks/useResource'
 import { postPicoChat } from '../api/pico'
 import { NotificationGate } from './notificationGate'
 import { buildContextTitle } from './presentation'
+import { usePicoActionExecutor } from './usePicoActionExecutor'
+import { PicoExecutionGuard } from './uiActions'
+import { deviceFormDraftChannel } from '../../management/deviceFormDraft'
 import { buildPicoContext, canCommitPicoResponse, picoContextFingerprint, validatedPicoFocus, withPicoOverride } from './context'
 import type { PicoGesture, PicoReaction } from '../animation/controller'
 import type {
@@ -105,6 +108,7 @@ export function PicoProvider({ children }: { children: ReactNode }) {
   const busyRef = useRef(false)
   const requestRef = useRef(0)
   const abortRef = useRef<AbortController | null>(null)
+  const executionRef = useRef<PicoExecutionGuard>()
   const openRef = useRef(false)
   openRef.current = open
   const workbenchRef = useRef(false)
@@ -126,10 +130,11 @@ export function PicoProvider({ children }: { children: ReactNode }) {
     eventId: workspace.selectedEventId,
     contextRevision: workspace.contextRevision,
   })
-  const contextKey = picoContextFingerprint(snapshot)
-  const contextRef = useRef({ snapshot, key: contextKey })
+  // Local URL equality closes the render/effect revision gap. Search contents never leave this ref.
+  const contextKey = JSON.stringify([picoContextFingerprint(snapshot), location.search])
+  const contextRef = useRef({ snapshot, key: contextKey, url: location.pathname + location.search })
   // Update synchronously: a response can settle between render and the cancel effect.
-  contextRef.current = { snapshot, key: contextKey }
+  contextRef.current = { snapshot, key: contextKey, url: location.pathname + location.search }
   const focusRef = useRef<{ key: string; value: PicoResolvedContext }>()
   if (focusRef.current?.key !== contextKey) focusRef.current = undefined
 
@@ -158,6 +163,7 @@ export function PicoProvider({ children }: { children: ReactNode }) {
     [stopSpeaking, react],
   )
   const toggle = useCallback(() => setOpen(!openRef.current), [setOpen])
+  const actionExecutor = usePicoActionExecutor(contextKey, open, setOpen)
 
   const setAutoRead = useCallback(
     (value: boolean) => {
@@ -183,6 +189,8 @@ export function PicoProvider({ children }: { children: ReactNode }) {
     if (lastContext.current === contextKey) return
     lastContext.current = contextKey
     react('context')
+    // An executor's own navigation is expected; a user's different destination cancels it.
+    if (executionRef.current?.accept(contextKey, location.pathname + location.search)) return
     requestRef.current += 1
     abortRef.current?.abort()
     busyRef.current = false
@@ -197,6 +205,11 @@ export function PicoProvider({ children }: { children: ReactNode }) {
   // 路由变化时停止播报，避免跨页面残留
   useEffect(() => {
     stopSpeaking()
+    const draft = deviceFormDraftChannel.getSnapshot()
+    if (draft) {
+      const target = draft.mode === 'create' ? '/admin/devices' : `/manage/devices/${encodeURIComponent(draft.deviceId!)}`
+      if (location.pathname !== target) deviceFormDraftChannel.clear()
+    }
   }, [location.pathname, stopSpeaking])
 
   useEffect(
@@ -204,6 +217,7 @@ export function PicoProvider({ children }: { children: ReactNode }) {
       requestRef.current += 1
       abortRef.current?.abort()
       stopChineseSpeech()
+      deviceFormDraftChannel.clear()
     },
     [],
   )
@@ -361,14 +375,30 @@ export function PicoProvider({ children }: { children: ReactNode }) {
               contextLabel: snapshotLabel,
             },
           ])
-          setEmotion(response.emotion)
+          let answerText = response.text
+          let answerEmotion = response.emotion
+          if (response.ui_actions !== undefined && (!Array.isArray(response.ui_actions) || response.ui_actions.length)) {
+            const guard = new PicoExecutionGuard(captured.key, captured.url)
+            executionRef.current = guard
+            const result = Array.isArray(response.ui_actions) && response.ui_actions.length === 1
+              ? await actionExecutor.execute(response.ui_actions[0], controller.signal, guard)
+              : { action_id: 'invalid', status: 'rejected' as const, message: '单次页面操作超出允许数量，未执行。' }
+            if (executionRef.current === guard) executionRef.current = undefined
+            answerText = result.message
+            answerEmotion = result.status === 'succeeded' ? 'happy' : 'confused'
+            setMessages(previous => previous.map(message => message.id === response.message_id
+              ? { ...message, text: result.message, emotion: answerEmotion, actionResults: [result] }
+              : message))
+          }
+          if (requestRef.current !== requestId) return
+          setEmotion(answerEmotion)
           if (!openRef.current && !workbenchRef.current) setUnread(true)
           if (
             autoReadRef.current &&
             speechAvailableRef.current &&
-            response.type === 'answer'
+            response.type === 'answer' && !controller.signal.aborted
           )
-            speak(response.text, response.message_id)
+            speak(answerText, response.message_id)
         } catch (error) {
           if (requestRef.current !== requestId || contextRef.current.key !== captured.key || isCancel(error)) return
           setMessages((previous) => [
@@ -385,7 +415,7 @@ export function PicoProvider({ children }: { children: ReactNode }) {
       })()
       return userMessageId
     },
-    [messages, contextTitle, speak, react],
+    [messages, contextTitle, speak, react, actionExecutor],
   )
 
   const previewEmotion = useCallback(
