@@ -74,7 +74,17 @@ function stopFallback() {
   fallbackAnimations.clear()
 }
 
-export function notifyRouteCommitted(route: RouteIdentity) { committed = route }
+export function notifyRouteCommitted(route: RouteIdentity) {
+  committed = route
+  // A protected target can redirect here without an explicit logout click.
+  // Login has no workspace readiness signal: release the obsolete capture now,
+  // so it neither retains a private snapshot nor hides the independent A intro.
+  if (route.pathname === '/login') {
+    coordinator.cancel()
+    stopFallback()
+    lastReady = undefined
+  }
+}
 export function notifyRouteReady(route: RouteIdentity) {
   committed = route
   lastReady = route

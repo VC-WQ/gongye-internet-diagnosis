@@ -151,7 +151,13 @@ class PageBoundary extends Component<
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const location = useLocation()
-  if (!localStorage.getItem('token'))
+  const authenticated = Boolean(localStorage.getItem('token'))
+  useLayoutEffect(() => {
+    // Cancel the old workspace capture before Navigate's passive redirect and
+    // before the lazy login chunk mounts. Login's own A owns that entrance.
+    if (!authenticated) document.dispatchEvent(new Event('workspace:auth-transition'))
+  }, [authenticated, location.key])
+  if (!authenticated)
     return (
       <Navigate
         to="/login"
