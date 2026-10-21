@@ -1,8 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { Button, Empty, Space } from 'antd'
 import { boundCamera, zoomAt, pinchCamera, type Camera } from '../services/sceneCamera'
+import { createSlots, distance, focusCamera, inverse, outside, planScene, pointerIntent,
+  sampleItem, sceneView, settleScene, transform, type Geometry, type Matrix, type Point, type SceneItem, type ScenePlan } from '../services/sceneLayout'
 import type { Device } from '../services/api'
 import { STATUS_META } from './BusinessUI'
+import './sceneMotion.css'
 
 function Machine({ type }: { type: string }) {
   return (
@@ -84,321 +87,365 @@ function Machine({ type }: { type: string }) {
     </g>
   )
 }
-export default function FactoryScene({
-  devices,
-  selected,
-  onSelect,
-  onClear,
-}: {
-  devices: Device[]
-  selected?: string
-  onSelect: (id: string) => void
-  onClear?: () => void
+type Sprite = SceneItem & { device: Device; phase: string; generation: number }
+type Pointer = { start: Point; last: Point; device?: string; moved: number; touch: boolean }
+type Controller = {
+  sync: () => void; measure: () => void; reset: () => void; zoom: (factor: number) => void
+  select: (id: string) => void; focus: (id:string) => void; pan: (x: number, y: number) => void
+  down: (e: ReactPointerEvent<SVGSVGElement>) => void
+  drag: (e: ReactPointerEvent<SVGSVGElement>) => void
+  up: (e: ReactPointerEvent<SVGSVGElement>, cancelled?: boolean) => void
+}
+const HOME: Camera = { x: 0, y: 0, zoom: 1 }
+const matrixValue = (m: DOMMatrix): Matrix => ({ a:m.a, b:m.b, c:m.c, d:m.d, e:m.e, f:m.f })
+
+export default function FactoryScene({ devices, visibleIds, selected, onSelect, onClear }: {
+  devices: Device[]; visibleIds: ReadonlySet<string>; selected?: string
+  onSelect: (id: string) => void; onClear?: () => void
 }) {
-  const [camera, setCamera] = useState<Camera>({ x: 0, y: 0, zoom: 1 })
-  const current = useRef(camera)
-  const target = useRef(camera)
-  const velocity = useRef({ x: 0, y: 0, zoom: 0 })
-  const frame = useRef(0)
-  const lastTime = useRef(0)
-  const reduced = useRef(false)
-  const svg = useRef<SVGSVGElement>(null)
-  const pointers = useRef(new Map<number, { x: number; y: number }>())
-  const moved = useRef(false)
-  const dragDistance = useRef(0)
-  const [page, setPage] = useState(0)
-  const pages = Math.max(1, Math.ceil(devices.length / 6))
-  const visiblePage = Math.min(page, pages - 1)
-  const visible = devices.slice(visiblePage * 6, visiblePage * 6 + 6)
-  const columns = Math.max(2, Math.min(3, visible.length))
-  const slots = visible.map((device, index) => ({
-    device, x: 180 + (index % columns) * 255,
-    y: 210 + Math.floor(index / columns) * 280,
-  }))
-  const animate = (time: number) => {
-    const dt = Math.min((time - (lastTime.current || time - 16)) / 1000, .032)
-    lastTime.current = time
-    const next = { ...current.current }
-    let moving = false
-    for (const key of ['x', 'y', 'zoom'] as const) {
-      velocity.current[key] += ((target.current[key] - next[key]) * 190 - velocity.current[key] * 27) * dt
-      next[key] += velocity.current[key] * dt
-      if (Math.abs(target.current[key] - next[key]) > (key === 'zoom' ? .0004 : .08) || Math.abs(velocity.current[key]) > .02) moving = true
-    }
-    current.current = moving ? next : { ...target.current }
-    setCamera(current.current)
-    frame.current = moving ? requestAnimationFrame(animate) : 0
-    if (!moving) lastTime.current = 0
-  }
-  const move = (value: Camera, immediate = false) => {
-    target.current = boundCamera(value)
-    if (immediate || reduced.current) {
-      cancelAnimationFrame(frame.current)
-      frame.current = 0
-      lastTime.current = 0
-      velocity.current = { x: 0, y: 0, zoom: 0 }
-      current.current = target.current
-      setCamera(target.current)
-    } else if (!frame.current) frame.current = requestAnimationFrame(animate)
-  }
-  const reset = () => move({ x: 0, y: 0, zoom: 1 })
-  const localPoint = (x: number, y: number) => {
-    const matrix = svg.current?.getScreenCTM()
-    if (!matrix) return { x: 450, y: 330 }
-    const point = new DOMPoint(x, y).matrixTransform(matrix.inverse())
-    return { x: point.x, y: point.y }
-  }
-  const zoom = (factor: number, point = { x: 450, y: 330 }) => move(zoomAt(target.current, factor, point))
-  const focus = (slot: typeof slots[number]) => {
-    move({ x: (450 - slot.x) * 1.3, y: (330 - slot.y) * 1.3, zoom: 1.3 })
-    onSelect(slot.device.id)
-  }
+  const root = useRef<HTMLDivElement>(null), svg = useRef<SVGSVGElement>(null), cameraGroup = useRef<SVGGElement>(null)
+  const nodes = useRef(new Map<string, SVGGElement>())
+  const props = useRef({ devices, visibleIds, selected, onSelect, onClear })
+  props.current = { devices, visibleIds, selected, onSelect, onClear }
+  const controller = useRef<Controller>()
+  const [sprites, setSprites] = useState<Sprite[]>([])
+  const [view, setView] = useState({ columns: 4, width: 900, height: 660, x: 0, y: 0 })
+  const viewRef = useRef(view); viewRef.current = view
+  const [zoomLabel, setZoomLabel] = useState(100)
+  const visibleKey = [...visibleIds].sort().join('|')
+  useLayoutEffect(() => controller.current?.sync(), [devices, visibleKey])
+  useLayoutEffect(() => controller.current?.measure(), [view])
+  useLayoutEffect(() => { if(selected)controller.current?.focus(selected) }, [selected])
+
   useEffect(() => {
-    const index = devices.findIndex((d) => d.id === selected)
-    if (index >= 0) setPage(Math.floor(index / 6))
-  }, [selected, devices.map((d) => d.id).join('|')])
-  useEffect(() => {
+    const element = svg.current, group = cameraGroup.current, host = root.current
+    if (!element || !group || !host) return
+    const model = new Map<string, Sprite>(), pointers = new Map<number, Pointer>()
+    let camera = { ...HOME }, targetCamera = { ...HOME }, cameraVelocity = { x:0, y:0, zoom:0 }
+    let rootMatrix: Matrix | null = null, geometry: Geometry | null = null
+    let frame = 0, lastTime = 0, generation = 0, initialized = false, disposed = false
+    let plan: ScenePlan | null = null, basis = new Map<string, SceneItem>(), planStart = 0
+    let hiddenAt: number | null = document.hidden ? performance.now() : null
+    let geometryPauseAt: number | null = null
+    let multiple = false, nativeGesture = false, gestureScale = 1
+    let cameraDirty = false, lastProjection = 0, catalogKey = '', filterKey = ''
     const media = matchMedia('(prefers-reduced-motion: reduce)')
-    const changed = () => { reduced.current = media.matches }
-    changed()
-    media.addEventListener('change', changed)
-    return () => { media.removeEventListener('change', changed); cancelAnimationFrame(frame.current) }
-  }, [])
-  useEffect(() => {
-    const el = svg.current
-    if (!el) return
-    const wheel = (e: WheelEvent) => {
-      e.preventDefault()
-      const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? el.clientHeight : 1
-      if (e.ctrlKey || e.metaKey) zoom(Math.exp(-e.deltaY * unit * .008), localPoint(e.clientX, e.clientY))
-      else {
-        const p = localPoint(e.clientX, e.clientY)
-        const q = localPoint(e.clientX - e.deltaX * unit, e.clientY - e.deltaY * unit)
-        move({ ...target.current, x: target.current.x + q.x - p.x, y: target.current.y + q.y - p.y })
+    let reduced = media.matches
+    const clock = () => geometryPauseAt ?? hiddenAt ?? performance.now()
+    const pauseGeometry = () => {
+      if(geometryPauseAt===null)geometryPauseAt=clock()
+      host.dataset.sceneState='waiting-geometry';host.dataset.sceneRaf='idle'
+    }
+    const resumeGeometry = () => {
+      if(geometryPauseAt!==null){planStart+=(hiddenAt??performance.now())-geometryPauseAt;geometryPauseAt=null}
+    }
+    const render = () => { if (!disposed) setSprites([...model.values()].filter(s => s.present)) }
+    const cameraTransform = () => `translate(${450+camera.x} ${330+camera.y}) scale(${camera.zoom}) translate(-450 -330)`
+    const updateGeometry = () => {
+      const raw=element.getScreenCTM()
+      rootMatrix=raw&&inverse(matrixValue(raw))?matrixValue(raw):null
+      if (!rootMatrix) { geometry=null; return }
+      const r = element.getBoundingClientRect(), s = rootMatrix
+      const x = 450*(1-camera.zoom)+camera.x, y = 330*(1-camera.zoom)+camera.y
+      geometry = { matrix: { a:s.a*camera.zoom, b:s.b*camera.zoom, c:s.c*camera.zoom, d:s.d*camera.zoom,
+        e:s.a*x+s.c*y+s.e, f:s.b*x+s.d*y+s.f },
+        rect: { left:r.left, right:r.right, top:r.top, bottom:r.bottom } }
+    }
+    const paint = () => {
+      group.setAttribute('transform', cameraTransform())
+      element.dataset.camera = `${camera.x.toFixed(2)},${camera.y.toFixed(2)},${camera.zoom.toFixed(3)}`
+      for (const sprite of model.values()) {
+        const node = nodes.current.get(sprite.id)
+        if (!node) continue
+        node.setAttribute('transform', `translate(${sprite.current.x} ${sprite.current.y})`)
+        node.dataset.scenePosition = `${sprite.current.x.toFixed(3)},${sprite.current.y.toFixed(3)}`
+        node.dataset.sceneVelocity = `${sprite.velocity.x.toFixed(2)},${sprite.velocity.y.toFixed(2)}`
+        node.dataset.scenePhase = sprite.visible ? sprite.phase : 'exit'
+        node.dataset.sceneTarget = `${sprite.target.x.toFixed(2)},${sprite.target.y.toFixed(2)}`
+        node.dataset.sceneGeneration = String(sprite.generation)
+        if (sprite.edge) node.dataset.sceneExitEdge = sprite.edge
       }
     }
-    let gestureScale = 1
-    const gesture = (event: Event) => {
+    const advance = (time: number) => {
+      if (!plan) return
+      let changed = false
+      for (const sprite of model.values()) {
+        const original = basis.get(sprite.id)
+        if (!original) continue
+        const sampled = sampleItem(original, plan, time-planStart)
+        if (sprite.present !== sampled.present || sprite.phase !== sampled.phase) changed = true
+        sprite.current = sampled.point; sprite.velocity = sampled.velocity
+        sprite.present = sampled.present; sprite.phase = sampled.phase
+        if (sprite.present && !sprite.visible && geometry && outside(sprite.current, geometry)) {
+          // Once entirely out of the *current* clip, it need not finish an offscreen detour.
+          sprite.present = false
+          sprite.velocity={x:0,y:0}
+          basis.set(sprite.id,{...original,current:{...sprite.current},velocity:{x:0,y:0},present:false})
+          plan.reservations=plan.reservations.filter(r=>r.id!==sprite.id)
+          plan.duration=Math.max(0,...plan.reservations.map(r=>r.end))
+          changed = true
+        }
+      }
+      if (changed) render()
+    }
+    const snap = () => {
+      const wanted = [...model.values()].filter(s=>s.visible)
+      for (const settled of settleScene([...model.values()],createSlots(wanted.length,viewRef.current.columns))) {
+        Object.assign(model.get(settled.id)!,settled,{phase:'idle'})
+      }
+      plan=null; basis.clear(); render(); paint()
+      host.dataset.sceneDiagnostics=reduced?'reduced-motion':'initial-layout'
+      host.dataset.sceneDuration='0'
+      host.dataset.sceneState='idle';host.dataset.sceneRaf='idle'
+    }
+    const replan = (cameraOnly=false) => {
+      if (!geometry) { pauseGeometry(); return }
+      resumeGeometry();advance(clock())
+      generation++
+      if (!initialized || reduced) { initialized=true; snap(); return }
+      const items=[...model.values()].map(s=>({ id:s.id, current:{...s.current}, velocity:{...s.velocity}, target:{...s.target},
+        present:s.present, visible:s.visible, edge:s.edge }))
+      const fixed=cameraOnly?new Map(items.filter(s=>s.visible).map(s=>[s.id,s.target])):undefined
+      plan=planScene(items, createSlots(items.filter(s=>s.visible).length,viewRef.current.columns),geometry,fixed)
+      basis=new Map(items.map(s=>[s.id,s])); planStart=clock()
+      host.dataset.sceneDiagnostics=plan.diagnostics.join(';')||'direct'
+      host.dataset.sceneDuration=String(Math.round(plan.duration))
+      host.dataset.sceneGeneration=String(generation)
+      for (const sprite of model.values()) {
+        sprite.generation=generation
+        sprite.target=plan.targets.get(sprite.id)??sprite.target
+        const outgoing=plan.reservations.find(r=>r.id===sprite.id && (r.kind==='exit'||r.kind==='enter'))
+        if (outgoing?.edge) sprite.edge=outgoing.edge
+      }
+      render(); paint(); ensureFrame()
+    }
+    const sync = () => {
+      const p=props.current, nextCatalog=p.devices.map(d=>d.id).join('|'), nextFilter=[...p.visibleIds].sort().join('|')
+      const changed=nextCatalog!==catalogKey||nextFilter!==filterKey
+      // Sample BEFORE overwriting desired flags; old completion never owns the new generation.
+      advance(clock())
+      const known=new Set(p.devices.map(d=>d.id))
+      for (const sprite of model.values()) sprite.visible=known.has(sprite.id)&&p.visibleIds.has(sprite.id)
+      const slots=createSlots(p.devices.length,viewRef.current.columns)
+      p.devices.forEach((device,index)=>{
+        const existing=model.get(device.id)
+        if (existing) { existing.device=device; existing.visible=p.visibleIds.has(device.id) }
+        else model.set(device.id,{id:device.id,device,current:slots[index],target:slots[index],velocity:{x:0,y:0},
+          present:false,visible:p.visibleIds.has(device.id),phase:'idle',generation})
+      })
+      for (const [id,sprite] of model) if (!known.has(id)&&!sprite.present) model.delete(id)
+      const active=document.activeElement?.closest('[data-device]')?.getAttribute('data-device')
+      if (active&&!model.get(active)?.visible) element.focus({preventScroll:true})
+      catalogKey=nextCatalog; filterKey=nextFilter
+      host.dataset.sceneVisible=[...p.visibleIds].filter(id=>known.has(id)).sort().join(',')
+      host.dataset.sceneCatalog=String(p.devices.length)
+      if (changed||!initialized) replan()
+      else { render(); paint() }
+    }
+    const measure = () => {
+      if (disposed) return
+      const r=element.getBoundingClientRect()
+      const next=sceneView(r.width,r.height), v=viewRef.current
+      if (r.width<=0||r.height<=0) { rootMatrix=null; geometry=null; pauseGeometry();return }
+      if (next.columns!==v.columns||Math.abs(next.height-v.height)>1||next.width!==v.width) {
+        rootMatrix=null; geometry=null; pauseGeometry();setView(next); return
+      }
+      // Both CTMs must be valid. A missing/singular CTM never substitutes client units.
+      const raw=element.getScreenCTM(), cameraCTM=group.getScreenCTM()
+      rootMatrix=raw&&inverse(matrixValue(raw))&&cameraCTM&&inverse(matrixValue(cameraCTM))?matrixValue(raw):null
+      updateGeometry()
+      host.dataset.sceneColumns=String(v.columns)
+      host.dataset.sceneGeometry=geometry?'valid':'waiting'
+      replan()
+    }
+    const activeCamera = () => (['x','y','zoom'] as const).some(k=>Math.abs(targetCamera[k]-camera[k])>(k==='zoom'?.0004:.08)||Math.abs(cameraVelocity[k])>.02)
+    const animate = (time: number) => {
+      frame=0
+      if (disposed||hiddenAt!==null) return
+      const dt=Math.min((time-(lastTime||time-16))/1000,.032); lastTime=time
+      if (activeCamera()) {
+        for (const k of ['x','y','zoom'] as const) {
+          cameraVelocity[k]+=((targetCamera[k]-camera[k])*190-cameraVelocity[k]*27)*dt
+          camera[k]+=cameraVelocity[k]*dt
+        }
+        if (!activeCamera()) { camera={...targetCamera}; cameraVelocity={x:0,y:0,zoom:0}; setZoomLabel(Math.round(camera.zoom*100)) }
+        cameraDirty=true
+      }
+      updateGeometry()
+      if(!geometry){pauseGeometry();lastTime=0;return}
+      resumeGeometry();advance(time)
+      // Camera sampling is cheap; constrained planning is throttled and only for active presence.
+      if (cameraDirty&&geometry&&time-lastProjection>160&&[...model.values()].some(s=>s.present&&!s.visible||!s.present&&s.visible)) {
+        cameraDirty=false; lastProjection=time; replan(true)
+      }
+      paint()
+      const moving=activeCamera()||Boolean(plan&&time-planStart<plan.duration)
+      if (moving) ensureFrame()
+      else {
+        lastTime=0; host.dataset.sceneState=geometry?'idle':'waiting-geometry'; host.dataset.sceneRaf='idle'
+        plan=null; basis.clear()
+        const known=new Set(props.current.devices.map(d=>d.id))
+        for (const [id,sprite] of model) if (!known.has(id)&&!sprite.present) model.delete(id)
+      }
+    }
+    function ensureFrame() {
+      if (!frame&&!disposed&&hiddenAt===null&&host) { host.dataset.sceneState='moving'; host.dataset.sceneRaf='active'; frame=requestAnimationFrame(animate) }
+    }
+    const move = (value: Camera, immediate=false) => {
+      targetCamera=boundCamera(value)
+      if (immediate||reduced) {
+        camera={...targetCamera}; cameraVelocity={x:0,y:0,zoom:0}; paint(); updateGeometry()
+      }
+      cameraDirty=true; setZoomLabel(Math.round(targetCamera.zoom*100)); ensureFrame()
+    }
+    const local = (x:number,y:number) => { const inv=inverse(rootMatrix); return inv?transform({x,y},inv):null }
+    const zoom = (factor:number,anchor={x:450,y:330})=>move(zoomAt(targetCamera,factor,anchor))
+    const reset = ()=>move(HOME)
+    const focus = (id:string)=>{
+      const sprite=model.get(id)
+      if (!sprite?.visible||!props.current.devices.some(d=>d.id===id)) return
+      const v=viewRef.current
+      move(focusCamera(sprite.target,{left:v.x,right:v.x+v.width,top:v.y,bottom:v.y+v.height},v.columns<4?1.1:1.3))
+    }
+    const select = (id:string)=>{
+      if(!model.get(id)?.visible||!props.current.devices.some(d=>d.id===id))return
+      focus(id);props.current.onSelect(id)
+    }
+    const hit = (target: EventTarget|null) => {
+      const id=target instanceof Element?target.closest('[data-device]')?.getAttribute('data-device'):undefined
+      return id&&model.get(id)?.visible?id:undefined
+    }
+    const release = (e:ReactPointerEvent<SVGSVGElement>,cancelled=false) => {
+      const p=pointers.get(e.pointerId)
+      if (!p) return
+      const end=document.elementFromPoint(e.clientX,e.clientY)
+      const intent=pointerIntent(p.device,hit(end),Math.max(p.moved,distance(p.start,{x:e.clientX,y:e.clientY})),p.touch,multiple,cancelled)
+      pointers.delete(e.pointerId)
+      if (element.hasPointerCapture(e.pointerId)) element.releasePointerCapture(e.pointerId)
+      if (!pointers.size) {
+        if (intent==='select'&&p.device) select(p.device)
+        else if (intent==='clear'&&end&&element.contains(end)) { reset(); props.current.onClear?.() }
+        multiple=false
+      }
+    }
+    controller.current={sync,measure,reset,zoom,select,focus,pan:(x,y)=>move({...targetCamera,x:targetCamera.x+x,y:targetCamera.y+y}),
+      down:e=>{
+        if (e.button!==0) return
+        if (!pointers.size) multiple=false
+        else multiple=true
+        const p={x:e.clientX,y:e.clientY}
+        pointers.set(e.pointerId,{start:p,last:p,device:hit(e.target),moved:0,touch:e.pointerType==='touch'})
+        element.setPointerCapture(e.pointerId)
+      },
+      drag:e=>{
+        const p=pointers.get(e.pointerId)
+        if (!p) return
+        const next={x:e.clientX,y:e.clientY}, old=p.last
+        p.moved=Math.max(p.moved,distance(p.start,next)); p.last=next
+        if (nativeGesture) return
+        updateGeometry()
+        const other=[...pointers.entries()].find(([id])=>id!==e.pointerId)?.[1]
+        const a=local(old.x,old.y),b=local(next.x,next.y)
+        if (!a||!b) return
+        if (other) { const anchor=local(other.last.x,other.last.y); if (anchor) move(pinchCamera(targetCamera,[a,anchor],[b,anchor]),true) }
+        else if (p.moved>(p.touch?7:3)) move({...targetCamera,x:targetCamera.x+b.x-a.x,y:targetCamera.y+b.y-a.y},true)
+      },up:release}
+    const wheel = (e:WheelEvent)=>{
+      updateGeometry()
+      const p=local(e.clientX,e.clientY)
+      if (!p) return
+      e.preventDefault()
+      const unit=e.deltaMode===1?16:e.deltaMode===2?element.clientHeight:1
+      if (e.ctrlKey||e.metaKey) zoom(Math.exp(-e.deltaY*unit*.008),p)
+      else { const q=local(e.clientX-e.deltaX*unit,e.clientY-e.deltaY*unit); if (q) move({...targetCamera,x:targetCamera.x+q.x-p.x,y:targetCamera.y+q.y-p.y}) }
+    }
+    const gesture = (event:Event)=>{
       event.preventDefault()
-      const e = event as Event & { scale: number; clientX: number; clientY: number }
-      if (event.type === 'gesturestart') gestureScale = e.scale || 1
-      else { zoom(e.scale / gestureScale, localPoint(e.clientX, e.clientY)); gestureScale = e.scale }
+      updateGeometry()
+      const e=event as Event&{scale:number;clientX:number;clientY:number}
+      if (event.type==='gesturestart') { nativeGesture=true;multiple=true;gestureScale=e.scale||1 }
+      else if (event.type==='gestureend') nativeGesture=false
+      else { const anchor=local(e.clientX,e.clientY); if (anchor&&Number.isFinite(e.scale)&&e.scale>0) zoom(e.scale/gestureScale,anchor); gestureScale=e.scale||1 }
     }
-    el.addEventListener('wheel', wheel, { passive: false })
-    el.addEventListener('gesturestart', gesture, { passive: false })
-    el.addEventListener('gesturechange', gesture, { passive: false })
-    return () => {
-      el.removeEventListener('wheel', wheel)
-      el.removeEventListener('gesturestart', gesture)
-      el.removeEventListener('gesturechange', gesture)
+    const motionChanged=()=>{ reduced=media.matches; if (reduced) { camera={...targetCamera};cameraVelocity={x:0,y:0,zoom:0};replan();ensureFrame() } }
+    const visibility=()=>{
+      if (document.hidden) { hiddenAt=performance.now();advance(clock());paint();cancelAnimationFrame(frame);frame=0;lastTime=0;host.dataset.sceneRaf='hidden' }
+      else { if (hiddenAt!==null&&geometryPauseAt===null) planStart+=performance.now()-hiddenAt;hiddenAt=null;lastTime=0;measure();ensureFrame() }
     }
-  }, [devices.length > 0])
+    element.addEventListener('wheel',wheel,{passive:false})
+    for (const name of ['gesturestart','gesturechange','gestureend']) element.addEventListener(name,gesture,{passive:false})
+    document.addEventListener('visibilitychange',visibility);media.addEventListener('change',motionChanged)
+    const resize=new ResizeObserver(measure);resize.observe(element)
+    sync();measure();paint()
+    return ()=>{
+      disposed=true;cancelAnimationFrame(frame);controller.current=undefined
+      resize.disconnect();document.removeEventListener('visibilitychange',visibility);media.removeEventListener('change',motionChanged)
+      element.removeEventListener('wheel',wheel)
+      for (const name of ['gesturestart','gesturechange','gestureend']) element.removeEventListener(name,gesture)
+      for (const id of pointers.keys()) if (element.hasPointerCapture(id)) element.releasePointerCapture(id)
+      pointers.clear();nodes.current.clear();model.clear();basis.clear();plan=null
+    }
+  },[])
 
   return (
-    <div className="factory-scene">
-      {!devices.length ? (
-        <Empty description="暂无设备" />
-      ) : (
-        <svg
-          ref={svg}
-          viewBox="0 0 900 660"
-          className="factory-svg"
-          aria-label="设备交互场景，可双指平移、捏合缩放，方向键平移，Home 复位"
-          tabIndex={0}
-          data-camera={`${camera.x.toFixed(2)},${camera.y.toFixed(2)},${camera.zoom.toFixed(3)}`}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') { e.preventDefault(); reset(); onClear?.(); return }
-            if ((e.target as Element).closest('[data-device]')) return
-            const steps: Record<string, [number, number]> = { ArrowLeft: [45, 0], ArrowRight: [-45, 0], ArrowUp: [0, 45], ArrowDown: [0, -45] }
-            if (steps[e.key]) { e.preventDefault(); const [x, y] = steps[e.key]; move({ ...target.current, x: target.current.x + x, y: target.current.y + y }) }
-            if (e.key === 'Home') { e.preventDefault(); reset() }
-            if (e.key === '+' || e.key === '=') { e.preventDefault(); zoom(1.15) }
-            if (e.key === '-') { e.preventDefault(); zoom(1 / 1.15) }
-          }}
-          onPointerDown={(e) => {
-            if (e.button !== 0 || (e.target as Element).closest('[data-device]')) return
-            if (pointers.current.size === 0) { moved.current = false; dragDistance.current = 0 }
-            else moved.current = true
-            pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
-            e.currentTarget.setPointerCapture(e.pointerId)
-          }}
-          onPointerMove={(e) => {
-            const old = pointers.current.get(e.pointerId)
-            if (!old) return
-            const next = { x: e.clientX, y: e.clientY }
-            const other = [...pointers.current.entries()].find(([id]) => id !== e.pointerId)?.[1]
-            const p = localPoint(old.x, old.y), q = localPoint(next.x, next.y)
-            dragDistance.current += Math.hypot(next.x - old.x, next.y - old.y)
-            if (dragDistance.current > 3) moved.current = true
-            if (other) {
-              const anchor = localPoint(other.x, other.y)
-              move(pinchCamera(target.current, [p, anchor], [q, anchor]), true)
-            } else {
-              move({ ...target.current, x: target.current.x + q.x - p.x, y: target.current.y + q.y - p.y }, true)
-            }
-            pointers.current.set(e.pointerId, next)
-          }}
-          onPointerUp={(e) => {
-            if (!pointers.current.has(e.pointerId)) return
-            pointers.current.delete(e.pointerId)
-            if (!moved.current && pointers.current.size === 0) { reset(); onClear?.() }
-          }}
-          onPointerCancel={(e) => { pointers.current.delete(e.pointerId); moved.current = true }}
-        >
-          <defs>
-            <pattern
-              id="factory-grid"
-              width="48"
-              height="48"
-              patternUnits="userSpaceOnUse"
-              patternTransform="matrix(1 .5 -1 .5 450 90)"
-            >
-              <path
-                d="M48 0H0V48"
-                fill="none"
-                stroke="var(--scene-grid)"
-                strokeWidth="1"
-              />
-            </pattern>
-            <radialGradient id="factory-ground">
-              <stop stopColor="var(--scene-ground)" stopOpacity=".65" />
-              <stop offset="1" stopColor="var(--surface)" stopOpacity="0" />
-            </radialGradient>
-          </defs>
-          <ellipse
-            cx="450"
-            cy="365"
-            rx="425"
-            ry="280"
-            fill="url(#factory-ground)"
-          />
-          <g
-            transform={`translate(${450 + camera.x} ${330 + camera.y}) scale(${camera.zoom}) translate(-450 -330)`}
-          >
-            <path
-              d="M30 300 450 80 870 300 450 540Z"
-              fill="url(#factory-grid)"
-              stroke="var(--line)"
-            />
-            <path
-              d="M30 300v20l420 220 420-220v-20M450 540v20"
-              fill="none"
-              stroke="var(--line)"
-            />
-            {slots.map(({ device, x, y }) => {
-              const chosen = device.id === selected
-              const color = STATUS_META[device.status]?.hex ?? '#7d8997'
-              return (
-                <g
-                  key={device.id}
-                  data-device={device.id}
-                  transform={`translate(${x} ${y})`}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`${device.name}，${STATUS_META[device.status]?.label ?? device.status}`}
-                  aria-pressed={chosen}
-                  className={`factory-node ${chosen ? 'is-selected' : ''}`}
-                  onClick={() => focus({ device, x, y })}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault()
-                      focus({ device, x, y })
-                    }
-                  }}
-                >
-                  <title>
-                    {device.name} · {device.id}
-                  </title>
-                  <path
-                    className="node-platform"
-                    d="M-103 19 0-35 103 19 0 74Z"
-                    fill={chosen ? 'var(--brand-soft)' : 'var(--surface-muted)'}
-                    stroke={chosen ? 'var(--brand)' : 'var(--line)'}
-                    strokeWidth={chosen ? 2 : 1}
-                  />
-                  <ellipse
-                    cx="0"
-                    cy="28"
-                    rx="64"
-                    ry="17"
-                    fill="var(--machine-shadow)"
-                    opacity=".6"
-                  />
-                  <Machine type={device.device_type} />
-                  <path
-                    d="M-103 19 0 74 103 19"
-                    fill="none"
-                    stroke={chosen ? 'var(--brand)' : 'var(--line)'}
-                    strokeWidth="2"
-                  />
-                  <g transform="translate(0 111)">
-                    <rect
-                      x="-95"
-                      y="-16"
-                      width="190"
-                      height="40"
-                      rx="0"
-                      fill={chosen ? 'var(--surface-raised)' : 'var(--surface)'}
-                      stroke={chosen ? 'var(--brand)' : 'var(--line)'}
-                    />
-                    <circle cx="-78" cy="3" r="4" fill={color} />
-                    <text
-                      x="-65"
-                      y="8"
-                      fill="var(--text)"
-                      fontSize="15"
-                      fontWeight="500"
-                    >
-                      {Array.from(device.name).length > 8
-                        ? Array.from(device.name).slice(0, 7).join('') + '…'
-                        : device.name}
-                    </text>
-                  </g>
-                </g>
-              )
-            })}
-          </g>
-        </svg>
-      )}
+    <div ref={root} className="factory-scene factory-scene--continuous" data-scene-qa="v2.5"
+      data-route-preparing={!sprites.length&&visibleIds.size>0?'true':undefined}>
+      <svg ref={svg} viewBox={`${view.x} ${view.y} ${view.width} ${view.height}`} className="factory-svg"
+        aria-label="设备交互场景，可拖动或双指平移、捏合缩放，方向键平移，Home复位，Esc取消选择" tabIndex={0}
+        onKeyDown={e=>{
+          if (e.key==='Escape') { e.preventDefault();controller.current?.reset();onClear?.();return }
+          if ((e.target as Element).closest('[data-device]')) return
+          const steps:Record<string,[number,number]>={ArrowLeft:[45,0],ArrowRight:[-45,0],ArrowUp:[0,45],ArrowDown:[0,-45]}
+          if (steps[e.key]) { e.preventDefault();controller.current?.pan(...steps[e.key]) }
+          if (e.key==='Home') { e.preventDefault();controller.current?.reset() }
+          if (e.key==='+'||e.key==='=') { e.preventDefault();controller.current?.zoom(1.15) }
+          if (e.key==='-') { e.preventDefault();controller.current?.zoom(1/1.15) }
+        }}
+        onPointerDown={e=>controller.current?.down(e)} onPointerMove={e=>controller.current?.drag(e)}
+        onPointerUp={e=>controller.current?.up(e)} onPointerCancel={e=>controller.current?.up(e,true)}
+        onLostPointerCapture={e=>controller.current?.up(e,true)}>
+        <defs>
+          <pattern id="factory-grid" width="48" height="48" patternUnits="userSpaceOnUse" patternTransform="matrix(1 .5 -1 .5 450 90)">
+            <path d="M48 0H0V48" fill="none" stroke="var(--scene-grid)" strokeWidth="1" />
+          </pattern>
+          <radialGradient id="factory-ground"><stop stopColor="var(--scene-ground)" stopOpacity=".65" /><stop offset="1" stopColor="var(--surface)" stopOpacity="0" /></radialGradient>
+        </defs>
+        <ellipse cx="450" cy="365" rx="425" ry="280" fill="url(#factory-ground)" />
+        <g ref={cameraGroup}>
+          <path d="M30 300 450 80 870 300 450 540Z" fill="url(#factory-grid)" stroke="var(--line)" />
+          <path d="M30 300v20l420 220 420-220v-20M450 540v20" fill="none" stroke="var(--line)" />
+          {sprites.map(sprite=>{
+            const device=sprite.device,chosen=device.id===selected,color=STATUS_META[device.status]?.hex??'#7d8997'
+            return <g key={device.id} ref={node=>{if(node) nodes.current.set(device.id,node);else nodes.current.delete(device.id)}}
+              data-device={device.id} data-scene-phase={sprite.visible?sprite.phase:'exit'} data-scene-generation={sprite.generation}
+              data-scene-position={`${sprite.current.x.toFixed(3)},${sprite.current.y.toFixed(3)}`}
+              data-scene-target={`${sprite.target.x.toFixed(2)},${sprite.target.y.toFixed(2)}`}
+              data-scene-velocity={`${sprite.velocity.x.toFixed(2)},${sprite.velocity.y.toFixed(2)}`} data-scene-exit-edge={sprite.edge}
+              transform={`translate(${sprite.current.x} ${sprite.current.y})`} role="button" tabIndex={sprite.visible?0:-1}
+              aria-label={`${device.name}，${STATUS_META[device.status]?.label??device.status}`} aria-pressed={chosen} aria-hidden={!sprite.visible||undefined}
+              pointerEvents={sprite.visible?'auto':'none'} className={`factory-node ${chosen?'is-selected':''}`}
+              onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();controller.current?.select(device.id)}}}>
+              <title>{device.name} · {device.id}</title>
+              <path className="node-platform" d="M-103 19 0-35 103 19 0 74Z" fill={chosen?'var(--brand-soft)':'var(--surface-muted)'} stroke={chosen?'var(--brand)':'var(--line)'} strokeWidth={chosen?2:1} />
+              <ellipse cx="0" cy="28" rx="64" ry="17" fill="var(--machine-shadow)" opacity=".6" />
+              <Machine type={device.device_type} />
+              <path d="M-103 19 0 74 103 19" fill="none" stroke={chosen?'var(--brand)':'var(--line)'} strokeWidth="2" />
+              <g transform="translate(0 111)">
+                <rect x="-95" y="-16" width="190" height="40" rx="0" fill={chosen?'var(--surface-raised)':'var(--surface)'} stroke={chosen?'var(--brand)':'var(--line)'} />
+                <circle cx="-78" cy="3" r="4" fill={color} />
+                <text x="-65" y="8" fill="var(--text)" fontSize="15" fontWeight="500">{Array.from(device.name).length>8?Array.from(device.name).slice(0,7).join('')+'…':device.name}</text>
+              </g>
+            </g>
+          })}
+        </g>
+      </svg>
+      {!sprites.length&&(!devices.length||!visibleIds.size)&&<div className="scene-empty"><Empty description={devices.length?'没有符合筛选的设备':'暂无设备'} /></div>}
       <div className="scene-controls">
-        {pages > 1 ? (
-          <Space size={4}>
-            <Button
-              size="small"
-              aria-label="上一组设备"
-              disabled={visiblePage === 0}
-              onClick={() => { setPage(visiblePage - 1); reset() }}
-            >
-              ‹
-            </Button>
-            <span className="scene-page">
-              {visiblePage + 1} / {pages}
-            </span>
-            <Button
-              size="small"
-              aria-label="下一组设备"
-              disabled={visiblePage === pages - 1}
-              onClick={() => { setPage(visiblePage + 1); reset() }}
-            >
-              ›
-            </Button>
-          </Space>
-        ) : (
-          <span className="scene-hint">双指平移 · 捏合缩放</span>
-        )}
+        <span className="scene-hint">{visibleIds.size} 台设备 · 拖动平移 · 捏合缩放</span>
         <Space.Compact>
-          <Button aria-label="缩小场景" onClick={() => zoom(1 / 1.15)}>
-            −
-          </Button>
-          <Button
-            aria-label="重置视角"
-            onClick={reset}
-          >
-            {Math.round(camera.zoom * 100)}%
-          </Button>
-          <Button aria-label="放大场景" onClick={() => zoom(1.15)}>
-            ＋
-          </Button>
+          <Button aria-label="缩小场景" onClick={()=>controller.current?.zoom(1/1.15)}>−</Button>
+          <Button aria-label="重置视角" onClick={()=>controller.current?.reset()}>{zoomLabel}%</Button>
+          <Button aria-label="放大场景" onClick={()=>controller.current?.zoom(1.15)}>＋</Button>
         </Space.Compact>
       </div>
     </div>

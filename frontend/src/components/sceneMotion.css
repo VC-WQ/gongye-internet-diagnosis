@@ -1,0 +1,42 @@
+/* Position transforms belong exclusively to the SVG controller; hover stays on Machine. */
+.factory-scene--continuous .factory-svg {
+  position: absolute;
+  inset: 0 0 44px;
+  width: 100%;
+  height: calc(100% - 44px);
+  min-height: 0;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+.factory-scene--continuous .scene-controls {
+  position: absolute;
+  inset: auto 0 0;
+  height: 44px;
+  min-height: 44px;
+  padding: 6px 10px;
+  gap: 6px;
+  flex-wrap: nowrap;
+  justify-content: space-between;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+.factory-scene--continuous .scene-hint { display: block; white-space: nowrap; font-size: 10px; }
+.factory-scene--continuous .scene-empty {
+  position: absolute;
+  inset: 0 0 44px;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+.factory-scene--continuous .factory-node[aria-hidden="true"] { pointer-events: none; }
+.factory-scene--continuous .factory-node:focus-visible .node-platform {
+  stroke: var(--brand);
+  stroke-width: 3;
+}
+.factory-scene--continuous .factory-svg:focus-visible { outline: 1px solid var(--brand); outline-offset: -3px; }
+@media (max-width: 430px) {
+  .factory-scene--continuous .scene-controls { padding-inline: 6px; }
+  .factory-scene--continuous .scene-hint { font-size: 9px; }
+}
