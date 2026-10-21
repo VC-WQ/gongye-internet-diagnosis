@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Button, Input, Popover } from 'antd'
 import { usePico } from '../core/PicoProvider'
@@ -93,16 +93,30 @@ export default function PicoConversation({
   const nearBottom = useRef(true)
   const reduced = useRef(false)
   const pendingTimer = useRef<ReturnType<typeof setTimeout>>()
+  const flightAnimation = useRef<Animation>()
+  const answerAnimations = useRef(new Set<Animation>())
+  const clearMotion = useCallback(() => {
+    pending.current = null
+    clearTimeout(pendingTimer.current)
+    flightAnimation.current?.cancel()
+    answerAnimations.current.forEach(animation => animation.cancel())
+    answerAnimations.current.clear()
+    setFlight(undefined)
+    setFlyingId(undefined)
+  }, [])
 
   useEffect(() => {
     const media = matchMedia('(prefers-reduced-motion: reduce)')
     const update = () => {
       reduced.current = media.matches
+      if (media.matches) clearMotion()
     }
     update()
     media.addEventListener('change', update)
     return () => media.removeEventListener('change', update)
-  }, [])
+  }, [clearMotion])
+
+  useLayoutEffect(() => { if (!active) clearMotion() }, [active, clearMotion])
 
   const onScroll = () => {
     const list = listRef.current
@@ -131,7 +145,7 @@ export default function PicoConversation({
   // 用户文字：输入框 → 真实气泡；业务请求不等待动画。
   useLayoutEffect(() => {
     const current = pending.current
-    if (!current || reduced.current) {
+    if (!current || !active || reduced.current) {
       if (current) pending.current = null
       return
     }
@@ -163,7 +177,7 @@ export default function PicoConversation({
   }, [messages])
 
   useLayoutEffect(() => {
-    if (!flight) return
+    if (!flight || !active || reduced.current) return
     const ghost = ghostRef.current
     if (!ghost) {
       setFlight(undefined)
@@ -189,6 +203,7 @@ export default function PicoConversation({
       ],
       { duration: DURATION.messageFlight * 1000, easing: EASE_CSS.balanced },
     )
+    flightAnimation.current = animation
     const finish = () => {
       setFlight(undefined)
       setFlyingId(undefined)
@@ -199,8 +214,9 @@ export default function PicoConversation({
       animation.removeEventListener('finish', finish)
       animation.removeEventListener('cancel', finish)
       animation.cancel()
+      if (flightAnimation.current === animation) flightAnimation.current = undefined
     }
-  }, [flight])
+  }, [flight, active])
 
   // 助手回复：从左侧窄起点连续展开，不整块闪现。
   useLayoutEffect(() => {
@@ -214,11 +230,11 @@ export default function PicoConversation({
     for (const message of messages) {
       if (message.role !== 'assistant' || seen.current.has(message.id)) continue
       seen.current.add(message.id)
-      if (reduced.current) continue
+      if (!active || reduced.current) continue
       const bubble = list.querySelector<HTMLElement>(
         `[data-message-id="${CSS.escape(message.id)}"] .pico-message__bubble`,
       )
-      bubble?.animate(
+      const animation = bubble?.animate(
         [
           {
             clipPath: 'inset(0 100% 0 0)',
@@ -233,6 +249,10 @@ export default function PicoConversation({
         ],
         { duration: DURATION.messageAnswer * 1000, easing: EASE_CSS.outward },
       )
+      if (animation) {
+        answerAnimations.current.add(animation)
+        void animation.finished.catch(() => {}).finally(() => answerAnimations.current.delete(animation))
+      }
     }
   }, [messages])
 
@@ -240,6 +260,8 @@ export default function PicoConversation({
     () => () => {
       pending.current = null
       clearTimeout(pendingTimer.current)
+      answerAnimations.current.forEach(animation => animation.cancel())
+      answerAnimations.current.clear()
     },
     [],
   )
@@ -366,7 +388,7 @@ export default function PicoConversation({
           >
             <div
               className={`pico-message__bubble ${
-                flyingId === message.id ? 'is-flight-target' : ''
+                active && flyingId === message.id ? 'is-flight-target' : ''
               }`}
             >
               <p className="pico-message__text">{message.text}</p>
@@ -420,7 +442,7 @@ export default function PicoConversation({
           )}
         </div>
       </footer>
-      {flight &&
+      {active && flight &&
         createPortal(
           <div
             ref={ghostRef}

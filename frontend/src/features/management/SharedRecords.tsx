@@ -6,6 +6,7 @@ import { useResource } from '../../hooks/useResource'
 import { useSpatialNavigate } from '../../hooks/useSpatialNavigate'
 import { listEvents, type EventSummary } from '../../services/api'
 import { useDeviceCatalog } from '../../services/realtime'
+import { useTableMotion } from '../../motion/useTableMotion'
 import './management.css'
 
 export default function SharedRecords() {
@@ -15,6 +16,7 @@ export default function SharedRecords() {
   const page = Math.max(1, Number(params.get('page')) || 1)
   const deviceId = params.get('device') ?? undefined
   const resource = useResource(`shared-records:${deviceId ?? 'all'}:${page}`, () => listEvents({ device_id: deviceId, offset: (page - 1) * 20, limit: 21 }))
+  const tableMotion = useTableMotion((resource.data ?? []).slice(0, 20).map(item => item.id).join('|'))
   const legacyId = params.get('event') ?? params.get('record')
   if (legacyId && /^[1-9]\d*$/.test(legacyId)) {
     const next = new URLSearchParams(params)
@@ -37,7 +39,7 @@ export default function SharedRecords() {
         </div>
         <p className="management-hint">点击记录行查看详情。事件处置与报告生成统一在工具区完成。</p>
         <LoadState loading={resource.loading && !resource.data} error={resource.error} onRetry={resource.refresh}>
-          <Table<EventSummary>
+          <div ref={tableMotion}><Table<EventSummary>
             rowKey="id" dataSource={resource.data?.slice(0, 20) ?? []} pagination={false} scroll={{ x: 800 }}
             onRow={(event) => ({
               tabIndex: 0, className: 'management-row-link', 'aria-label': `查看诊断记录 ${event.id}`,
@@ -51,7 +53,7 @@ export default function SharedRecords() {
               { title: '状态', dataIndex: 'status_state', render: (value) => <StatusTag status={value} event /> },
               { title: '时间', dataIndex: 'timestamp', render: formatTime },
             ]}
-          />
+          /></div>
           <div className="management-pagination">
             <Space>
               <Button disabled={page <= 1} onClick={() => update({ page: page > 2 ? String(page - 1) : undefined })}>上一页</Button>

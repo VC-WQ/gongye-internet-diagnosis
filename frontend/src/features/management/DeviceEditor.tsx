@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Form, Input, InputNumber, Modal, Select, message } from 'antd'
 import { createDevice, updateDevice, type Device } from '../../services/api'
 import { errorText } from '../../hooks/useResource'
@@ -16,6 +16,14 @@ export default function DeviceEditor({
 }) {
   const [form] = Form.useForm()
   const [saving, setSaving] = useState(false)
+  const session = useRef(0)
+  const savingSession = useRef<number>()
+  useLayoutEffect(() => {
+    session.current += 1
+    savingSession.current = undefined
+    setSaving(false)
+    return () => { session.current += 1 }
+  }, [open, device?.id, draft?.actionId])
   useEffect(() => {
     if (!open) return
     form.resetFields()
@@ -35,16 +43,21 @@ export default function DeviceEditor({
     return () => cancelAnimationFrame(frame)
   }, [draft?.actionId, device?.id, form, open])
   const submit = async (values: { id?: string; name: string; device_type: string; health_score?: number; status?: string }) => {
+    const epoch = session.current
+    if (savingSession.current === epoch) return
+    savingSession.current = epoch
     setSaving(true)
     try {
       const data = { name: values.name.trim(), device_type: values.device_type, ...(values.health_score != null ? { health_score: values.health_score } : {}), ...(values.status ? { status: values.status } : {}) }
       if (device) await updateDevice(device.id, data)
       else await createDevice({ id: values.id!.trim(), ...data })
+      // The write may have succeeded for A; it cannot close a newer B editor.
+      if (session.current !== epoch) return
       message.success('设备已保存')
       onSaved()
       onClose()
-    } catch (error) { message.error(errorText(error)) }
-    finally { setSaving(false) }
+    } catch (error) { if (session.current === epoch) message.error(errorText(error)) }
+    finally { if (session.current === epoch) { savingSession.current = undefined; setSaving(false) } }
   }
   return (
     <Modal

@@ -13,6 +13,7 @@
 .management-row-link:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; }
 .management-row-link:hover > td { color: var(--text); }
 .management-batch { font-size: 12px; }
+.management-actions { display: inline-flex; min-height: 36px; align-items: center; }
 .management-batch-result { margin-bottom: 16px; }
 .management-batch-result ul { padding-left: 18px; margin: 4px 0 0; }
 .management-pagination { display: flex; justify-content: flex-end; margin-top: 16px; font-size: 12px; }

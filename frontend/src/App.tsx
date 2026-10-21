@@ -16,6 +16,7 @@ import {
   Result,
   Skeleton,
   theme as antdTheme,
+  type ThemeConfig,
 } from 'antd'
 import {
   Navigate,
@@ -559,6 +560,18 @@ function Workspace({ user }: { user: AuthUser }) {
   )
 }
 
+/** Ant 5.22 inserts its MotionWrapper on the first motion=false value. Prime it
+ * before paint so a later OS preference change cannot remount the workspace or
+ * a live modal form. Both roots here inherit Ant's default motion=true context. */
+function StableThemeProvider({ configuration, children }: { configuration: ThemeConfig; children: ReactNode }) {
+  const [primed, setPrimed] = useState(false)
+  useLayoutEffect(() => setPrimed(true), [])
+  const value = useMemo(() => primed ? configuration : {
+    ...configuration, token: { ...configuration.token, motion: false },
+  }, [primed, configuration])
+  return <ConfigProvider theme={value}>{children}</ConfigProvider>
+}
+
 function ThemedApp() {
   const location = useLocation()
   const { theme, reducedMotion } = useUiPreferences()
@@ -577,13 +590,13 @@ function ThemedApp() {
   useEffect(() => {
     ConfigProvider.config({
       holderRender: (children) => (
-        <ConfigProvider theme={selectedTheme}>{children}</ConfigProvider>
+        <StableThemeProvider configuration={selectedTheme}>{children}</StableThemeProvider>
       ),
     })
     return () => ConfigProvider.config({ holderRender: undefined })
   }, [selectedTheme])
   return (
-    <ConfigProvider theme={selectedTheme}>
+    <StableThemeProvider configuration={selectedTheme}>
       <LoginTransitionProvider>
         <Suspense key={location.pathname === '/login' ? 'login' : 'workspace'} fallback={<Skeleton active />}>
           <Routes>
@@ -595,7 +608,7 @@ function ThemedApp() {
           </Routes>
         </Suspense>
       </LoginTransitionProvider>
-    </ConfigProvider>
+    </StableThemeProvider>
   )
 }
 

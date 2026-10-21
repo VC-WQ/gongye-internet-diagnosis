@@ -93,7 +93,7 @@ export default function RulSdePf() {
       legend: { top: 0 },
       grid: { left: 55, right: 20, top: 36, bottom: 55 },
       xAxis: xAxisBase({ type: 'value', name: '全寿命进度 (%)', min: 0, max: 100, nameLocation: 'middle', nameGap: 30 }),
-      yAxis: yAxisBase({ type: 'value', name: '剩余寿命 RUL (0–1)', min: 0, max: 1 }),
+      yAxis: yAxisBase({ type: 'value', name: '剩余寿命 RUL (0–1)', nameLocation: 'middle', nameGap: 36, min: 0, max: 1 }),
       series: [
         {
           name: '真实 RUL',

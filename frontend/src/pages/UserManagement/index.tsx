@@ -6,6 +6,7 @@ import { LoadState } from '../../components/BusinessUI'
 import { createUser, deleteUser, getMe, listUsers, updateUser, type AuthUser } from '../../services/api'
 import { BatchControls, BatchResult, type DeleteFailure } from '../../features/management/BatchControls'
 import { deleteSelected } from '../../features/management/batchDelete'
+import { useTableMotion } from '../../motion/useTableMotion'
 
 export default function UserManagement() {
   const resource = useResource<AuthUser[]>('admin-users', listUsers)
@@ -26,6 +27,7 @@ export default function UserManagement() {
   const users = useMemo(() => (resource.data ?? []).filter((user) =>
     user.username.toLowerCase().includes(keyword.trim().toLowerCase()) && (role === 'all' || user.role === role),
   ), [keyword, resource.data, role])
+  const tableMotion = useTableMotion(`${editingList}:${users.slice((page - 1) * 10, page * 10).map(item => item.id).join('|')}`)
   useEffect(() => {
     const lastPage = Math.max(1, Math.ceil(users.length / 10))
     if (resource.data && !resource.loading && page > lastPage)
@@ -76,7 +78,7 @@ export default function UserManagement() {
       <p className="management-hint">{editingList ? '当前登录账号不能删除。批量选择与单用户编辑独立。' : '点击用户行查看并编辑角色、启停状态或密码。'}</p>
       <BatchResult {...result} />
       <LoadState loading={resource.loading && !resource.data} error={resource.error} onRetry={resource.refresh}>
-        <Table<AuthUser>
+        <div ref={tableMotion}><Table<AuthUser>
           rowKey="id" dataSource={users} scroll={{ x: 550 }} loading={busy}
           rowSelection={editingList ? {
             selectedRowKeys: selected, preserveSelectedRowKeys: true,
@@ -95,7 +97,7 @@ export default function UserManagement() {
             { title: '角色', dataIndex: 'role', render: (value) => <Tag color={value === 'admin' ? 'red' : 'blue'}>{value === 'admin' ? '管理员' : '普通用户'}</Tag> },
             { title: '状态', dataIndex: 'is_active', render: (value) => <Tag color={value ? 'success' : 'default'}>{value ? '启用' : '停用'}</Tag> },
           ]}
-        />
+        /></div>
       </LoadState>
       <Modal
         title={creating ? '新增用户' : `用户详情 · ${selectedUser?.username ?? selectedId ?? ''}`}

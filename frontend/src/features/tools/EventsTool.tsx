@@ -5,7 +5,7 @@ import { usePageQuery } from '../../hooks/usePageQuery'
 import { useToolContext } from './useToolContext'
 import '../factory/factory.css'
 export default function EventsTool() {
-  const { workspace, catalog, device, eventId, selected, event, events, refresh } = useToolContext()
+  const { workspace, catalog, device, eventId, selected, event, events, refresh } = useToolContext({ telemetry: false })
   const { params, update } = usePageQuery()
   const section = params.get('section') === 'report' ? 'report' : 'event'
   return <section className="surface task-workspace">

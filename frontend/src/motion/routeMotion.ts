@@ -1,5 +1,6 @@
 import { flushSync } from 'react-dom'
 import { MotionCoordinator, type NativeTransition } from './coordinator'
+import { MOTION, EASE_CSS } from './tokens'
 
 interface RouteIdentity { key: string; pathname: string; search: string; index?: number }
 type TransitionDocument = { startViewTransition?: (update: () => Promise<void>) => NativeTransition }
@@ -63,7 +64,7 @@ function playFallback() {
     const animation = node.animate([
       { opacity: .25, clipPath: 'inset(100% 0 0 0)', transform: 'translateY(8px)' },
       { opacity: 1, clipPath: 'inset(0 0 0 0)', transform: 'none' },
-    ], { duration: 330, delay: index * 24, easing: 'cubic-bezier(.16,1,.3,1)' })
+    ], { duration: MOTION.routeModule.enter, delay: index * MOTION.routeModule.stagger, easing: EASE_CSS.outward })
     fallbackAnimations.add(animation)
     void animation.finished.catch(() => {}).finally(() => fallbackAnimations.delete(animation))
   })
@@ -114,8 +115,8 @@ export function transitionRoute(commit: () => void, from: RouteIdentity, targetP
   const sheet = () => {
     style.textContent = [...names].map(name => `
 ::view-transition-group(${name}){animation:none;}
-::view-transition-old(${name}){animation:route-module-fold-out 170ms cubic-bezier(.45,0,.9,.45) both;}
-::view-transition-new(${name}){animation:route-module-fold-in 330ms cubic-bezier(.16,1,.3,1) both;animation-delay:${Number(name.substring(name.lastIndexOf('-') + 1)) * 24}ms;}
+::view-transition-old(${name}){animation:route-module-fold-out ${MOTION.routeModule.exit}ms cubic-bezier(.45,0,.9,.45) both;}
+::view-transition-new(${name}){animation:route-module-fold-in ${MOTION.routeModule.enter}ms ${EASE_CSS.outward} both;animation-delay:${Number(name.substring(name.lastIndexOf('-') + 1)) * MOTION.routeModule.stagger}ms;}
 `).join('')
     if (!style.isConnected) document.head.append(style)
   }

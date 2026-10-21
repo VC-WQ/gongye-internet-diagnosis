@@ -9,6 +9,7 @@ import { useDeviceCatalog } from '../../services/realtime'
 import { formatTime, LoadState, numberText, StatusTag } from '../../components/BusinessUI'
 import { BatchControls, BatchResult, type DeleteFailure } from '../../features/management/BatchControls'
 import { deleteSelected } from '../../features/management/batchDelete'
+import { useTableMotion } from '../../motion/useTableMotion'
 
 interface RecordItem {
   id: number
@@ -32,6 +33,7 @@ export default function RecordManagement() {
   const [selected, setSelected] = useState<number[]>([])
   const [busy, setBusy] = useState(false)
   const [result, setResult] = useState<{ deleted: number; failed: DeleteFailure[] }>({ deleted: 0, failed: [] })
+  const tableMotion = useTableMotion(`${editing}:${((data.data?.items ?? []) as RecordItem[]).map(item => item.id).join('|')}`)
   useEffect(() => {
     const lastPage = Math.max(1, Math.ceil((data.data?.total ?? 0) / 10))
     if (data.data && !data.loading && page > lastPage)
@@ -71,7 +73,7 @@ export default function RecordManagement() {
       <p className="management-hint">{editing ? '仅删除选中记录；失败项保留以便重试。' : '点击记录行查看完整报告、智能体结论与事件时间线。'}</p>
       <BatchResult {...result} />
       <LoadState loading={data.loading && !data.data} error={data.error} onRetry={data.refresh}>
-        <Table<RecordItem>
+        <div ref={tableMotion}><Table<RecordItem>
           rowKey="id" dataSource={(data.data?.items ?? []) as RecordItem[]} scroll={{ x: 800 }} loading={busy}
           rowSelection={editing ? { selectedRowKeys: selected, onChange: (keys) => setSelected(keys.map(Number)), preserveSelectedRowKeys: true } : undefined}
           onRow={(record) => ({
@@ -89,7 +91,7 @@ export default function RecordManagement() {
             { title: '状态', dataIndex: 'status_state', render: (value) => <StatusTag status={value} event /> },
             { title: '时间', dataIndex: 'timestamp', render: formatTime },
           ]}
-        />
+        /></div>
       </LoadState>
     </Card>
   )

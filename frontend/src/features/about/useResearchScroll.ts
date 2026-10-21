@@ -9,7 +9,7 @@ import { EASE_CSS, MOTION } from '../../motion/tokens'
 const TITLE_ACK_MS = MOTION.researchTitle.duration
 const SCROLL_SETTLE_MS = 180
 const SCROLL_LIMIT_MS = 4200
-const storageKey = (key: string) => `research:scroll:${key}`
+const storageKey = (key: string) => `research:root-scroll:${key}`
 function savedPosition(key: string): number | undefined {
   try {
     const value = sessionStorage.getItem(storageKey(key))
@@ -145,6 +145,9 @@ export function useResearchScroll(root: RefObject<HTMLElement>, topicId?: string
     const keyboard = (event: KeyboardEvent) => { if (SCROLL_KEYS.has(event.key)) interrupt() }
     let saveTimer: ReturnType<typeof setTimeout> | undefined
     const persist = () => {
+      // Full document loads may reuse Router's "default" key. A legacy/hash
+      // entry must not seed an unrelated fresh /research overview restoration.
+      if (location.pathname !== '/research' || location.hash) return
       try { sessionStorage.setItem(storageKey(location.key), String(position.current.get(location.key) ?? window.scrollY)) } catch { /* memory-only fallback */ }
     }
     const save = () => {

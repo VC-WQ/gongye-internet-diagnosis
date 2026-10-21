@@ -1,5 +1,7 @@
 import { Alert, Button, Modal, Space } from 'antd'
 import { errorText } from '../../hooks/useResource'
+import FlipContent from '../../motion/FlipContent'
+import FlipText from '../../motion/FlipText'
 
 export interface DeleteFailure {
   id: string | number
@@ -16,10 +18,10 @@ export function BatchControls({
   onCancel: () => void
   onDelete: () => Promise<void>
 }) {
-  if (!editing) return <Button onClick={onEdit}>编辑列表</Button>
-  return (
+  return <FlipContent identity={editing ? 'batch' : 'browse'} className="management-actions">
+    {!editing ? <Button onClick={onEdit}>编辑列表</Button> : (
     <Space wrap className="management-batch" aria-label="批量操作">
-      <span>已选择 {count} 项</span>
+      <span role="status" aria-live="polite" aria-atomic="true">已选择 <FlipText value={String(count)} /> 项</span>
       <Button
         danger disabled={!count || busy} loading={busy}
         onClick={() => Modal.confirm({
@@ -31,7 +33,8 @@ export function BatchControls({
       >批量删除</Button>
       <Button disabled={busy} onClick={onCancel}>取消编辑</Button>
     </Space>
-  )
+    )}
+  </FlipContent>
 }
 
 export function BatchResult({ deleted, failed }: { deleted: number; failed: DeleteFailure[] }) {

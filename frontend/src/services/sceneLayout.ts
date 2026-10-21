@@ -1,4 +1,5 @@
 /** Pure scene geometry and bounded reservation planning. No DOM, timers or React. */
+import { MOTION } from '../motion/tokens'
 export type Point = { x: number; y: number }
 export type Rect = { left: number; right: number; top: number; bottom: number }
 export type Matrix = { a: number; b: number; c: number; d: number; e: number; f: number }
@@ -187,7 +188,8 @@ export type Leg = { from: Point; to: Point; velocity: Point; duration: number }
 export type Route = { legs: Leg[]; duration: number }
 export function createRoute(points: Point[], initialVelocity = zero()): Route {
   const legs = points.slice(1).map((to, i) => {
-    const from = points[i], length = distance(from, to), duration = Math.max(180, Math.min(800, length / .85))
+    const from = points[i], length = distance(from, to), travel = MOTION.sceneReflow
+    const duration = Math.max(travel.min, Math.min(travel.max, length / travel.worldUnitsPerMs))
     let velocity = i === 0 ? { ...initialVelocity } : zero()
     const speed = Math.hypot(velocity.x, velocity.y), limit = length / (duration / 1000) * 1.5
     if (speed > limit) velocity = { x: velocity.x * limit / speed, y: velocity.y * limit / speed }

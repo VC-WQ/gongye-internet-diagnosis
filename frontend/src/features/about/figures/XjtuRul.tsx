@@ -34,7 +34,7 @@ export default function XjtuRul() {
         nameLocation: 'middle',
         nameGap: 30,
       }),
-      yAxis: yAxisBase({ type: 'value', name: '指标值（0–1）', min: 0, max: 1 }),
+      yAxis: yAxisBase({ type: 'value', name: '指标值（0–1）', nameLocation: 'middle', nameGap: 36, min: 0, max: 1 }),
       series: [
         {
           name: '健康指标 HI',

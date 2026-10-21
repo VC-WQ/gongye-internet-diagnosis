@@ -3,7 +3,10 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import ts from 'typescript'
 const source=await readFile(new URL('../src/services/sceneLayout.ts',import.meta.url),'utf8')
-const {outputText}=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ES2022,target:ts.ScriptTarget.ES2020}})
+const tokensSource=await readFile(new URL('../src/motion/tokens.ts',import.meta.url),'utf8')
+const compiledTokens=ts.transpileModule(tokensSource,{compilerOptions:{module:ts.ModuleKind.ES2022,target:ts.ScriptTarget.ES2020}}).outputText
+const {outputText:compiledScene}=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ES2022,target:ts.ScriptTarget.ES2020}})
+const outputText=compiledScene.replace("'../motion/tokens'", `'data:text/javascript;base64,${Buffer.from(compiledTokens).toString('base64')}'`)
 const scene=await import(`data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`)
 const {MACHINE_BOX,SCENE_GAP,createSlots,assignSlots,sceneView,focusCamera,projectBox,transform,inverse,
   edgeCandidates,outside,boxesOverlap,sweptOverlap,safePath,createRoute,sampleRoute,planScene,sampleItem,settleScene,pointerIntent}=scene

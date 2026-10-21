@@ -5,11 +5,11 @@ import { useDeviceCatalog, useDeviceTelemetry } from '../../services/realtime'
 import { useWorkspace } from '../../services/workspace'
 
 /** Task state stays in the URL; event identity is authoritative on deep links. */
-export function useToolContext() {
+export function useToolContext({ telemetry: needsTelemetry = true } = {}) {
   const workspace = useWorkspace()
   const catalog = useDeviceCatalog()
   const device = catalog.data?.find(item => item.id === workspace.selectedDeviceId)
-  const telemetry = useDeviceTelemetry(device?.id)
+  const telemetry = useDeviceTelemetry(device?.id, needsTelemetry)
   const eventId = workspace.selectedEventId
   const selected = useResource(`tool-event:${eventId ?? ''}`, () => getEvent(eventId!), 5000, Boolean(eventId))
   const events = useResource(`tool-events:${workspace.selectedDeviceId ?? 'all'}:${workspace.searchFilters.page ?? 1}`, () => listEvents({ device_id: workspace.selectedDeviceId, limit: 20, offset: ((workspace.searchFilters.page ?? 1) - 1) * 20 }), 10000)

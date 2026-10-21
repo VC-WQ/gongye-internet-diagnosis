@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { reconcileRows, type PresenceRow } from './presenceState'
-import { prefersReducedMotion } from './tokens'
+import { MOTION, prefersReducedMotion } from './tokens'
 
 export function useRowPresence<T>(items: T[], getId: (item: T) => string) {
   const identity = items.map(getId).join('|')
@@ -17,7 +17,7 @@ export function useRowPresence<T>(items: T[], getId: (item: T) => string) {
     if (reduced) return
     const timer = setTimeout(() => {
       if (generation.current === epoch) setRows(old => old.filter(row => !row.exiting).map(row => ({ ...row, entering: false })))
-    }, 180)
+    }, MOTION.rowPresence.duration)
     return () => clearTimeout(timer)
   }, [identity])
   const current = new Map(items.map(item => [getId(item), item]))

@@ -1,10 +1,11 @@
 import { LoadState } from './BusinessUI'
 import { errorText } from '../hooks/useResource'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Card, Col, Empty, Image, Row, Select, Spin, Table, Tag, Upload, message } from 'antd'
 import { InboxOutlined, ThunderboltOutlined } from '@ant-design/icons'
 import { detectVision, getVisionComparison, getVisionModels, getVisionSamples } from '../services/api'
 import ChartNote from './ChartNote'
+import { VisionSession } from '../services/visionSession'
 
 const cardBodyStyle = { padding: 12 }
 
@@ -60,11 +61,36 @@ export default function VisionDetect() {
   const [samples, setSamples] = useState<SampleItem[]>([])
   const [comparison, setComparison] = useState<ComparisonModel[]>([])
   const [file, setFile] = useState<File>()
-  const [preview, setPreview] = useState<string>()
-  const [result, setResult] = useState<DetectResult>()
+  const [previewFrame, setPreviewFrame] = useState<{ revision: number; value: string }>()
+  const [resultFrame, setResultFrame] = useState<{ revision: number; value: DetectResult }>()
   const [detecting, setDetecting] = useState(false)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
+  const session = useRef(new VisionSession())
+  const readerRef = useRef<FileReader>()
+  const modelRef = useRef(model)
+  const preview = previewFrame?.revision === session.current.fileRevision ? previewFrame.value : undefined
+  const result = resultFrame?.revision === session.current.revision ? resultFrame.value : undefined
+  const releaseReader = () => {
+    const reader = readerRef.current
+    readerRef.current = undefined
+    if (!reader) return
+    reader.onload = reader.onerror = reader.onabort = null
+    if (reader.readyState === 1) reader.abort()
+  }
+  const changeModel = (value: string) => {
+    if (modelRef.current !== value) {
+      session.current.replaceModel()
+      setResultFrame(undefined)
+      setDetecting(false)
+    }
+    modelRef.current = value
+    setModel(value)
+  }
+  useEffect(() => {
+    session.current.activate()
+    return () => { session.current.dispose(); releaseReader() }
+  }, [])
 
   // 加载可用模型 + 样例图
   useEffect(() => {
@@ -74,7 +100,7 @@ export default function VisionDetect() {
         if (!active) return
         const ms = d?.models ?? []
         setModels(ms)
-        setModel(ms[0]?.name ?? 'yolov8s')
+        changeModel(ms[0]?.name ?? 'yolov8s')
       })
       .catch((e) => { if (active) setLoadError(errorText(e)) })
     getVisionSamples('yolov8s')
@@ -96,11 +122,27 @@ export default function VisionDetect() {
   }, [])
 
   const beforeUpload = (f: File) => {
+    releaseReader()
+    const revision = session.current.replaceFile()
     setFile(f)
-    setResult(undefined)
+    setResultFrame(undefined)
+    setPreviewFrame(undefined)
+    setDetecting(false)
     const reader = new FileReader()
-    reader.onload = () => setPreview(reader.result as string)
-    reader.readAsDataURL(f)
+    readerRef.current = reader
+    const ownsRead = () => readerRef.current === reader && session.current.acceptsFile(revision)
+    reader.onload = () => {
+      if (!ownsRead()) return
+      if (typeof reader.result === 'string') setPreviewFrame({ revision, value: reader.result })
+      releaseReader()
+    }
+    reader.onerror = () => {
+      if (!ownsRead()) return
+      message.error('图片读取失败，请重新上传')
+      releaseReader()
+    }
+    try { reader.readAsDataURL(f) }
+    catch { if (ownsRead()) { message.error('图片读取失败，请重新上传'); releaseReader() } }
     return false // 阻止自动上传，手动触发检测
   }
 
@@ -109,15 +151,19 @@ export default function VisionDetect() {
       message.warning('请先上传一张缺陷图片')
       return
     }
+    if (detecting) return
+    const request = session.current.begin()
+    const requestModel = modelRef.current
     setDetecting(true)
     try {
-      const r = await detectVision(file, model)
-      setResult(r)
+      const r = await detectVision(file, requestModel)
+      if (!session.current.accepts(request)) return
+      setResultFrame({ revision: request.input, value: r })
       if (r?.count === 0) message.info('未检测到缺陷（可能不是目标缺陷类型）')
     } catch (e) {
-      message.error('检测失败，请稍后重试')
+      if (session.current.accepts(request)) message.error('检测失败，请稍后重试')
     } finally {
-      setDetecting(false)
+      if (session.current.accepts(request)) setDetecting(false)
     }
   }
 
@@ -189,6 +235,7 @@ export default function VisionDetect() {
             <Table
               size="small"
               pagination={false}
+              scroll={{ x: 660 }}
               rowKey="defect"
               columns={[
                 { title: 'NEU-DET 缺陷', dataIndex: 'defect', key: 'defect', width: 130 },
@@ -245,13 +292,11 @@ export default function VisionDetect() {
             <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ fontSize: 13, color: "var(--muted)" }}>模型</span>
               <Select
+                aria-label="视觉检测模型"
                 style={{ flex: 1 }}
                 options={modelOptions}
                 value={model}
-                onChange={(v) => {
-                  setModel(v)
-                  setResult(undefined)
-                }}
+                onChange={changeModel}
               />
             </div>
 
@@ -260,11 +305,13 @@ export default function VisionDetect() {
               block
               icon={<ThunderboltOutlined />}
               loading={detecting}
+              disabled={!file || !models.some(item => item.name === model)}
               onClick={runDetect}
               style={{ marginTop: 12 }}
             >
               开始检测{model ? `（${model}）` : ''}
             </Button>
+            {!models.length && <p role="status" style={{ marginTop: 10, marginBottom: 0, color: 'var(--muted)', fontSize: 12, lineHeight: 1.8 }}>当前没有可用的检测模型；仍可查看既有实验对照和检测样例。</p>}
           </Card>
         </Col>
 
