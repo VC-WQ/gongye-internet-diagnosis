@@ -15,7 +15,7 @@ export default function CurrentDevicePanel({ device, devices, outsideFilter, onA
         <div className="current-device__health"><strong><FlipValue value={String(devices.length)} /></strong><span>台登记设备</span></div>
         <p className="factory-note">状态数量来自设备目录；未将缺失采样当作正常运行。</p></>
       : <><div className="current-device__name"><FlipText value={device.name} /></div>
-        <FlipContent identity={device.id}><div className="current-device__meta">{device.id} · {TYPE_LABEL[device.device_type] ?? device.device_type}</div></FlipContent>
+        <FlipContent identity={device.id} className="current-device__meta" snapshot={`${device.id} · ${TYPE_LABEL[device.device_type] ?? device.device_type}`} />
         <div className="current-device__health"><strong style={{ color: STATUS_META[device.status]?.hex }}><FlipValue value={numberText(device.health_score, 0)} /></strong><span>/ 100 · 目录健康评分</span></div>
         <p className="current-device__updated">目录更新 {formatTime(device.last_updated)}</p>
         {outsideFilter && <p className="factory-note">当前设备不在筛选结果中，已保留选中状态。</p>}

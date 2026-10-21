@@ -197,8 +197,9 @@
   border: 0;
   border-top: 1px solid var(--line);
   border-radius: 0;
+  transition: background-color var(--motion-fast) var(--ease), color var(--motion-fast) var(--ease);
 }
-.device-nav__item:hover {
+.device-nav__item:hover:not(:disabled):not([aria-disabled="true"]) {
   background: var(--surface-muted);
 }
 .device-nav__item.is-selected {
@@ -210,7 +211,10 @@
   align-items: center;
   gap: 7px;
   min-width: 0;
+  transition: transform var(--motion-fast) var(--ease);
 }
+.device-nav__item:active:not(:disabled):not([aria-disabled="true"]) .device-nav__identity { transform: translateY(1px); }
+.device-nav__item:focus-visible { outline-offset: -2px; }
 .device-nav__identity i {
   width: 6px;
   height: 6px;
@@ -309,15 +313,21 @@
   border-top: 1px solid var(--line);
   border-radius: 0;
 }
-.event-brief__item:hover {
+.event-brief__item.event-presence-row {
+  transition: background-color var(--motion-fast) var(--ease), color var(--motion-fast) var(--ease), opacity var(--motion-fast) var(--ease);
+}
+.event-brief__item:hover:not(:disabled):not([aria-disabled="true"]) {
   background: var(--surface-muted);
 }
+.event-brief__item:active:not(:disabled):not([aria-disabled="true"]) .event-brief__main { transform: translateY(1px); }
+.event-brief__item:focus-visible { outline-offset: -2px; }
 .event-brief__item.is-selected {
   background: var(--brand-soft);
   box-shadow: none;
 }
 .event-brief__main {
   min-width: 0;
+  transition: transform var(--motion-fast) var(--ease);
 }
 .event-brief__main b {
   display: block;
@@ -622,9 +632,15 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .status-filter {
+  .status-filter,
+  .device-nav__item,
+  .device-nav__identity,
+  .event-brief__item.event-presence-row,
+  .event-brief__main {
     transition: none;
   }
+  .device-nav__item:active:not(:disabled):not([aria-disabled="true"]) .device-nav__identity,
+  .event-brief__item:active:not(:disabled):not([aria-disabled="true"]) .event-brief__main { transform: none; }
 }
 @media print {
   .factory-statusbar,

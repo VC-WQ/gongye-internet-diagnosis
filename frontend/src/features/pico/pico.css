@@ -208,8 +208,9 @@
   background: transparent;
   border: 0;
   border-radius: 0;
+  transition: color var(--motion-fast) var(--ease), background-color var(--motion-fast) var(--ease), transform var(--motion-fast) var(--ease);
 }
-.pico-icon-button:hover:not(:disabled) {
+.pico-icon-button:hover:not(:disabled):not([aria-disabled="true"]) {
   color: var(--text);
   background: var(--surface);
 }
@@ -291,8 +292,9 @@
   background: transparent;
   border: 1px solid var(--line);
   border-radius: 0;
+  transition: color var(--motion-fast) var(--ease), border-color var(--motion-fast) var(--ease), background-color var(--motion-fast) var(--ease), transform var(--motion-fast) var(--ease);
 }
-.pico-suggestions button:hover {
+.pico-suggestions button:hover:not(:disabled):not([aria-disabled="true"]) {
   color: var(--brand);
   border-color: var(--brand);
 }
@@ -380,11 +382,17 @@
   background: transparent;
   border: 0;
   border-radius: 0;
+  transition: color var(--motion-fast) var(--ease), background-color var(--motion-fast) var(--ease), transform var(--motion-fast) var(--ease);
 }
-.pico-speak:hover,
-.pico-meta-button:hover {
+.pico-speak:hover:not(:disabled):not([aria-disabled="true"]),
+.pico-meta-button:hover:not(:disabled):not([aria-disabled="true"]) {
   color: var(--brand);
 }
+.pico-speak[aria-pressed="true"] { color: var(--brand); background: var(--brand-soft); }
+.pico-icon-button:active:not(:disabled):not([aria-disabled="true"]),
+.pico-suggestions button:active:not(:disabled):not([aria-disabled="true"]),
+.pico-speak:active:not(:disabled):not([aria-disabled="true"]),
+.pico-meta-button:active:not(:disabled):not([aria-disabled="true"]) { transform: translateY(1px); background: var(--brand-soft); }
 .pico-meta-details {
   max-width: 260px;
   margin: 0;
@@ -492,6 +500,11 @@
   .pico-empty-glyph span:last-child {
     animation: none;
   }
+  .pico-icon-button, .pico-suggestions button, .pico-speak, .pico-meta-button { transition: none; }
+  .pico-icon-button:active:not(:disabled):not([aria-disabled="true"]),
+  .pico-suggestions button:active:not(:disabled):not([aria-disabled="true"]),
+  .pico-speak:active:not(:disabled):not([aria-disabled="true"]),
+  .pico-meta-button:active:not(:disabled):not([aria-disabled="true"]) { transform: none; }
 }
 
 @media (max-width: 640px) {

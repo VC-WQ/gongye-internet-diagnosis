@@ -1,8 +1,17 @@
 import { useRef, type ReactNode } from 'react'
 import { useContentTransition } from './useContentTransition'
-/** One live subtree: the curtain belongs to the semantic identity, not samples. */
-export default function FlipContent({ identity, children, className = '' }: { identity: string; children: ReactNode; className?: string }) {
+import FlipText from './FlipText'
+/**
+ * Pure-text snapshots opt into a complete vertical handoff. Complex children
+ * remain one live subtree with a local entrance, never an inert DOM clone or a
+ * second chart/form/provider. Do not claim that entrance is a two-sided handoff.
+ */
+export default function FlipContent({ identity, children, snapshot, className = '' }: {
+  identity: string; children?: ReactNode; snapshot?: string; className?: string
+}) {
   const ref = useRef<HTMLDivElement>(null)
-  useContentTransition(identity, ref)
-  return <div ref={ref} className={`flip-content ${className}`}>{children}</div>
+  useContentTransition(snapshot === undefined ? identity : '', ref)
+  return <div ref={ref} className={`flip-content ${className}`} data-handoff-mode={snapshot === undefined ? 'single-live' : 'text'}>
+    {snapshot === undefined ? children : <FlipText value={snapshot} />}
+  </div>
 }
