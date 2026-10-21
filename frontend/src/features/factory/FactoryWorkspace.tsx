@@ -49,7 +49,7 @@ export default function FactoryWorkspace() {
   }
   return (
     <div ref={root} className="factory-workspace" data-route-preparing={catalog.loading && !catalog.data ? 'true' : undefined}>
-      <div data-factory-entry="status">
+      <div data-factory-entry="status" data-route-module="factory-status">
         <StatusOverview counts={counts} filter={workspace.statusFilter}
           onFilter={status => workspace.setStatusFilter(workspace.statusFilter === status ? 'all' : status)}
           connection={telemetry.status} fullscreen={fullscreen} onFullscreen={toggleFullscreen} />
@@ -57,24 +57,24 @@ export default function FactoryWorkspace() {
       {(catalog.error || fullError) && <Alert type="warning" showIcon message={catalog.error ?? fullError}
         action={<Button onClick={() => { catalog.refresh(); setFullError('') }}>重试</Button>} />}
       <div className="factory-board">
-        <aside className="factory-board__devices" data-factory-entry="devices">
+        <aside className="factory-board__devices" data-factory-entry="devices" data-route-module="factory-devices">
           <DeviceNavigator devices={filtered} total={devices.length} selectedId={workspace.selectedDeviceId}
             keyword={workspace.searchFilters.q ?? ''} onKeyword={value => workspace.setFilters({ q: value })}
             onSelect={id => workspace.setDevice(id)} selectedOutsideFilter={outsideFilter} />
         </aside>
-        <aside className="factory-board__monitor" data-factory-entry="monitor">
+        <aside className="factory-board__monitor" data-factory-entry="monitor" data-route-module="factory-monitor">
           <LiveMonitorPanel device={selected} telemetry={telemetry} channel={workspace.channel ?? 'vibration'} onChannel={workspace.setChannel} />
         </aside>
-        <section className="factory-board__scene" aria-label="工厂设备场景" data-factory-entry="scene">
+        <section className="factory-board__scene" aria-label="工厂设备场景" data-factory-entry="scene" data-route-module="factory-scene">
           {catalog.loading && !catalog.data ? <div className="factory-panel factory-scene-loading"><Skeleton active paragraph={{ rows: 8 }} /></div>
             : <FactoryScene devices={filtered} selected={workspace.selectedDeviceId} onSelect={id => workspace.setDevice(id)} onClear={() => workspace.setDevice(undefined)} />}
         </section>
-        <aside className="factory-board__current" data-factory-entry="current">
+        <aside className="factory-board__current" data-factory-entry="current" data-route-module="factory-current">
           <CurrentDevicePanel device={selected} devices={devices} outsideFilter={outsideFilter}
             onAnalyze={() => navigate(deviceDetailPath(selected?.id))}
             onDiagnose={() => navigate(toolPath('diagnosis', selected?.id))} />
         </aside>
-        <aside className="factory-board__events" data-factory-entry="events">
+        <aside className="factory-board__events" data-factory-entry="events" data-route-module="factory-events">
           <EventReportPanel device={selected} events={events.data ?? []} loading={events.loading} error={events.error}
             onSelect={id => navigate(recordDetailPath(id))} onRefresh={events.refresh}
             onAll={() => navigate(`/manage/records${selected ? `?device=${encodeURIComponent(selected.id)}` : ''}`)} />

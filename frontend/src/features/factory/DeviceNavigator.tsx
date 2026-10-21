@@ -1,5 +1,7 @@
 import { Empty, Input } from 'antd'
-import { numberText, STATUS_META } from '../../components/BusinessUI'
+import { useRef } from 'react'
+import FlipSelection from '../../motion/FlipSelection'
+import { STATUS_META } from '../../components/BusinessUI'
 import type { Device } from '../../services/api'
 
 export default function DeviceNavigator({
@@ -19,6 +21,7 @@ export default function DeviceNavigator({
   onSelect: (id: string) => void
   selectedOutsideFilter: boolean
 }) {
+  const list = useRef<HTMLDivElement>(null)
   return (
     <section className="factory-panel factory-panel--devices" aria-label="设备导航">
       <header className="factory-panel__head">
@@ -38,7 +41,8 @@ export default function DeviceNavigator({
       {selectedOutsideFilter && (
         <p className="factory-note">当前选中不在筛选结果中</p>
       )}
-      <div className="device-nav" role="listbox" aria-label="设备列表">
+      <div ref={list} className="device-nav" role="listbox" aria-label="设备列表">
+        <FlipSelection container={list} identity={`${selectedId ?? "none"}:${devices.map(d => d.id).join("|")}`} />
         {!devices.length ? (
           <Empty
             image={Empty.PRESENTED_IMAGE_SIMPLE}
@@ -62,9 +66,7 @@ export default function DeviceNavigator({
                 />
                 <span className="device-nav__name">{device.name}</span>
               </span>
-              <span className="device-nav__score">
-                {numberText(device.health_score, 0)}
-              </span>
+
             </button>
           ))
         )}

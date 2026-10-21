@@ -29,7 +29,10 @@ export default function SensorChart({
     <ThemedChart
       style={{ height }}
       option={{
-        animation: false,
+        animation: true,
+        animationDuration: 240,
+        animationDurationUpdate: 220,
+        animationEasingUpdate: 'cubicOut',
         tooltip: {
           trigger: 'axis',
           valueFormatter: (v: number) => `${v.toFixed(3)} ${meta?.unit ?? ''}`,

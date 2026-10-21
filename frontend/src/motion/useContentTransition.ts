@@ -17,14 +17,14 @@ export function useContentTransition<T>(
     // Only cancel this hook's animation. Child/chart motion has another owner.
     const interrupted = ownedAnimation.current?.playState === 'running'
     const current = interrupted ? getComputedStyle(node) : undefined
-    const from = current ? { opacity: current.opacity, transform: current.transform }
-      : { opacity: 0.7, transform: 'translateY(6px)' }
+    const from = current ? { opacity: current.opacity, clipPath: current.clipPath }
+      : { opacity: 0.65, clipPath: 'inset(100% 0 0 0)' }
     ownedAnimation.current?.cancel()
     if (prefersReducedMotion()) return
     const animation = node.animate(
       [
         from,
-        { opacity: 1, transform: 'none' },
+        { opacity: 1, clipPath: 'inset(0% 0 0 0)' },
       ],
       {
         duration: DURATION.content * 1000,

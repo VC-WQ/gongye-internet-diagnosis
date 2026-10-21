@@ -1,0 +1,22 @@
+.motion-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.mechanical-text { position: relative; display: inline-block; max-width: 100%; vertical-align: baseline; perspective: 550px; line-height: inherit; }
+.mechanical-text__track { position: relative; display: inline-block; }
+.mechanical-text__new { display: inline-block; }
+.mechanical-text__old { position: absolute; inset: 0 auto auto 0; white-space: nowrap; }
+.mechanical-text.is-folding .mechanical-text__old { transform-origin: 50% 0%; animation: hinge-old var(--motion-flip) cubic-bezier(.4,0,.7,1) both; }
+.mechanical-text.is-folding .mechanical-text__new { transform-origin: 50% 100%; animation: hinge-new var(--motion-flip) var(--ease) both; }
+.flip-value { font-variant-numeric: tabular-nums; }
+@keyframes hinge-old { from { transform: var(--hinge-out-from, none); opacity: var(--hinge-out-opacity, 1); } to { transform: translateY(-48%) rotateX(78deg); opacity: 0; } }
+@keyframes hinge-new { from { transform: translateY(48%) rotateX(-78deg); opacity: 0; } to { transform: translateY(0) rotateX(0); opacity: 1; } }
+.flip-content { min-width: 0; }
+.selection-rail { position: absolute; left: 0; top: 0; width: 2px; background: var(--brand); pointer-events: none; z-index: 1; }
+.event-presence-row { transition: opacity 180ms var(--ease); }
+.event-presence-row.is-exiting { animation: event-row-out 180ms var(--ease) both; pointer-events: none; }
+.event-presence-row.is-entering { animation: event-row-in 180ms var(--ease) both; }
+@keyframes event-row-out { to { opacity: 0; transform: translateY(-8px); } }
+@keyframes event-row-in { from { opacity: 0; transform: translateY(8px); } }
+@media (prefers-reduced-motion: reduce) {
+  .mechanical-text.is-folding .mechanical-text__old { display: none; animation: none; }
+  .mechanical-text.is-folding .mechanical-text__new { animation: none; }
+  .event-presence-row { transition: none; animation: none!important; }
+}

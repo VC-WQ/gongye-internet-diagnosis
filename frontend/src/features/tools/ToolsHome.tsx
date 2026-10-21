@@ -69,10 +69,10 @@ export default function ToolsHome() {
   }
   return (
     <>
-      <PageHeading title="工具" />
+      <div data-route-module="tools-heading"><PageHeading title="工具" /></div>
       <div className="tool-grid">
         {tools.map((tool) => (
-          <button type="button" className="tool-card" key={tool.key} onClick={() => navigate(link(tool.path))}>
+          <button type="button" className="tool-card" data-route-module={`tool-card-${tool.key}`} key={tool.key} onClick={() => navigate(link(tool.path))}>
             <div className="tool-card__body">
               <h2>{tool.title}</h2>
               <p>{tool.description}</p>

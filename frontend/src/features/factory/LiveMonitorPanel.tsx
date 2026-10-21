@@ -1,4 +1,6 @@
 import { Empty, Select } from 'antd'
+import FlipText from '../../motion/FlipText'
+import FlipContent from '../../motion/FlipContent'
 import SensorChart from '../../components/SensorChart'
 import { formatTime, SourceTag } from '../../components/BusinessUI'
 import { CHANNELS, type useDeviceTelemetry } from '../../services/realtime'
@@ -18,7 +20,7 @@ export default function LiveMonitorPanel({
   return (
     <section className="factory-panel factory-panel--monitor" aria-label="实时监测">
       <header className="factory-panel__head">
-        <h2>实时监测</h2>
+        <h2><FlipText value={device ? `${CHANNELS[channel]?.name ?? channel}监测` : "实时监测"} /></h2>
         <div className="factory-panel__head-actions">
           <Select
             size="small"
@@ -39,7 +41,7 @@ export default function LiveMonitorPanel({
       ) : telemetry.error ? (
         <p className="factory-note factory-note--error">{telemetry.error}</p>
       ) : (
-        <>
+        <FlipContent identity={`${device.id}:${channel}`}>
           <SensorChart
             samples={telemetry.samples}
             channel={channel}
@@ -57,7 +59,7 @@ export default function LiveMonitorPanel({
             </span>
             <span><SourceTag source={telemetry.source} /> · {telemetry.samples.length} 点</span>
           </div>
-        </>
+        </FlipContent>
       )}
     </section>
   )

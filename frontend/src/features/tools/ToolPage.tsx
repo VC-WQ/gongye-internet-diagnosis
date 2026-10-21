@@ -29,8 +29,8 @@ export default function ToolPage({ tool }: { tool: ToolKey }) {
     )
   return (
     <>
-      <PageHeading title={TOOL_LABELS[tool]} meta={META[tool]} />
-      {content}
+      <div data-route-module="tool-heading"><PageHeading title={TOOL_LABELS[tool]} meta={META[tool]} /></div>
+      <div data-route-module-scope={`tool-${tool}`}>{content}</div>
     </>
   )
 }

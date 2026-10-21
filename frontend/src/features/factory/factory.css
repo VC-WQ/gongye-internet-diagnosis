@@ -176,6 +176,7 @@
   margin-bottom: 2px;
 }
 .device-nav {
+  position: relative;
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
@@ -202,7 +203,7 @@
 }
 .device-nav__item.is-selected {
   background: var(--brand-soft);
-  box-shadow: inset 2px 0 var(--brand);
+  box-shadow: none;
 }
 .device-nav__identity {
   display: flex;
@@ -228,16 +229,6 @@
   color: var(--muted);
   white-space: nowrap;
 }
-.device-nav__score {
-  font-size: 13px;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-  flex: none;
-}
-.device-nav__item.is-selected .device-nav__score {
-  color: var(--brand);
-}
-
 /* 当前设备 */
 .current-device__body {
   display: flex;
@@ -323,7 +314,7 @@
 }
 .event-brief__item.is-selected {
   background: var(--brand-soft);
-  box-shadow: inset 2px 0 var(--brand);
+  box-shadow: none;
 }
 .event-brief__main {
   min-width: 0;

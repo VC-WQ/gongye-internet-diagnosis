@@ -164,7 +164,7 @@ function RequireAuth({ children }: { children: ReactNode }) {
 
 function loading() {
   return (
-    <div className="loading-state">
+    <div className="loading-state" data-route-preparing="true">
       <Skeleton active paragraph={{ rows: 5 }} />
     </div>
   )
@@ -240,7 +240,7 @@ function ToolRoute({ user }: { user: AuthUser }) {
 }
 
 function LoginRoute() {
-  return <Login />
+  return <><Login /><RouteReady /></>
 }
 
 /** Research APIs are already public; operational data and writes remain protected. */
@@ -263,6 +263,7 @@ function PublicResearchLayout() {
         <Route path="/research/:topicId?/:pointId?" element={<AboutPage />} />
         <Route path="*" element={<LegacyOrNotFound />} />
       </Routes></Suspense></PageBoundary>
+      <RouteReady />
     </main>
   </div>
 }
@@ -543,9 +544,9 @@ function Workspace({ user }: { user: AuthUser }) {
               />
               <Route path="*" element={<LegacyOrNotFound />} />
             </Routes>
-            <RouteReady />
           </Suspense>
         </PageBoundary>
+        <RouteReady />
       </main>
       <PicoDock />
     </div>

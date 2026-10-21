@@ -323,6 +323,7 @@ img {
 }
 .history-actions .ant-btn {
   border: 0;
+  background: transparent;
   box-shadow: none;
   width: 28px;
   height: 28px;
@@ -330,6 +331,17 @@ img {
   font-size: 24px;
   font-weight: 300;
 }
+.history-actions .ant-btn:disabled,
+.history-actions .ant-btn.ant-btn-disabled,
+.history-actions .ant-btn:disabled:hover {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--muted);
+  opacity: .42;
+  cursor: default;
+}
+.history-actions .ant-btn:not(:disabled):hover { background:transparent; }
 .ant-btn { transition: background var(--motion-fast) var(--ease), border-color var(--motion-fast) var(--ease), box-shadow var(--motion-fast) var(--ease), transform 120ms var(--ease); }
 .ant-btn:active:not(:disabled) { transform:translateY(1px); }
 .record-item, .risk-device { transition: background var(--motion-fast) var(--ease), color var(--motion-fast) var(--ease); }
@@ -346,11 +358,20 @@ img {
 .pico-dock { view-transition-name:pico-dock; }
 ::view-transition { pointer-events:none; }
 ::view-transition-old(root), ::view-transition-new(root) { animation:none; }
-::view-transition-group(workspace-header), ::view-transition-group(device-context) { animation-duration:var(--motion);animation-timing-function:var(--ease); }
-::view-transition-old(workspace-content) { animation:workspace-away 160ms ease-out both; }
-::view-transition-new(workspace-content) { animation:workspace-arrive var(--motion-route) var(--ease) both; }
-@keyframes workspace-away { to { opacity:0; transform:translateX(calc(var(--navigation-direction,1) * -16px)) scale(.995); } }
-@keyframes workspace-arrive { from { opacity:.35; transform:translateX(calc(var(--navigation-direction,1) * 22px)) scale(.992); } to { opacity:1; transform:none; } }
+::view-transition-group(workspace-header), ::view-transition-group(device-context), ::view-transition-group(pico-dock),
+::view-transition-old(workspace-header), ::view-transition-new(workspace-header),
+::view-transition-old(device-context), ::view-transition-new(device-context),
+::view-transition-old(pico-dock), ::view-transition-new(pico-dock) { animation:none; mix-blend-mode:normal; }
+/* Each module has its own flat mechanical shutter. Canvas coordinates and
+   editable controls are never rotated into a distorted 3D back face. */
+@keyframes route-module-fold-out {
+  from { opacity:1; clip-path:inset(0 0 0 0); transform:translateY(0); }
+  to { opacity:.05; clip-path:inset(0 0 100% 0); transform:translateY(-8px); }
+}
+@keyframes route-module-fold-in {
+  from { opacity:.15; clip-path:inset(100% 0 0 0); transform:translateY(8px); }
+  to { opacity:1; clip-path:inset(0 0 0 0); transform:none; }
+}
 @media (prefers-reduced-motion: reduce) { ::view-transition-group(*),::view-transition-old(*),::view-transition-new(*) { animation:none!important; } }
 .business-content {
   max-width: 1600px;
@@ -360,9 +381,7 @@ img {
   background: var(--bg);
   color: var(--text);
 }
-.workspace-route-content {
-  view-transition-name: workspace-content;
-}
+.workspace-route-content { view-transition-name: none; }
 .factory-content {
   background: var(--bg);
   min-height: calc(100dvh - 72px);
@@ -1457,42 +1476,6 @@ img {
   .factory-node:hover .machine-shape {
     transform: none;
   }
-}
-.flip-value {
-  display: inline-block;
-  overflow: hidden;
-  vertical-align: top;
-  line-height: 1.05;
-}
-.flip-value__track {
-  position: relative;
-  display: inline-block;
-}
-.flip-value__layer {
-  display: block;
-}
-.flip-value.is-flipping .flip-value__current {
-  animation: flip-value-in var(--motion-flip) var(--ease) both;
-}
-.flip-value__old {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-}
-.flip-value.is-flipping .flip-value__old {
-  animation: flip-value-out var(--motion-flip) cubic-bezier(0.4, 0, 0.2, 1) both;
-}
-@keyframes flip-value-in {
-  from { transform: translateY(55%); opacity: 0; }
-  to { transform: none; opacity: 1; }
-}
-@keyframes flip-value-out {
-  from { transform: none; opacity: 1; }
-  to { transform: translateY(-55%); opacity: 0; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .flip-value.is-flipping .flip-value__current,
-  .flip-value.is-flipping .flip-value__old { animation: none; }
 }
 @media print {
   .workspace-header,

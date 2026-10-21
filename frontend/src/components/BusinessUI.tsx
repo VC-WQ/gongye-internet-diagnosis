@@ -1,5 +1,6 @@
 import { Alert, Button, Empty, Skeleton, Tag, Tooltip } from 'antd'
 import type { ReactNode } from 'react'
+import FlipText from '../motion/FlipText'
 
 export const TYPE_LABEL: Record<string, string> = {
   pump: '离心泵',
@@ -29,12 +30,15 @@ export const EVENT_META: Record<string, { label: string; color: string }> = {
 export function StatusTag({
   status,
   event = false,
+  animated = false,
 }: {
   status?: string | null
   event?: boolean
+  animated?: boolean
 }) {
   const meta = (event ? EVENT_META : STATUS_META)[status ?? '']
-  return <Tag color={meta?.color}>{meta?.label ?? status ?? '状态未知'}</Tag>
+  const label = meta?.label ?? status ?? '状态未知'
+  return <Tag color={meta?.color}>{animated ? <FlipText value={label} /> : label}</Tag>
 }
 export function PageHeading({
   title,

@@ -23,8 +23,8 @@ export default function AdminShell({
   const active = location.pathname.split('/')[2] ?? 'users'
   return (
     <div className="admin-shell">
-      <PageHeading title={title} meta={<span>后台管理</span>} />
-      <nav className="admin-nav" aria-label="管理页面">
+      <div data-route-module="admin-heading"><PageHeading title={title} meta={<span>后台管理</span>} /></div>
+      <nav className="admin-nav" data-route-module="admin-navigation" aria-label="管理页面">
         {PAGES.map((page) => (
           <button
             key={page.key}
@@ -37,7 +37,7 @@ export default function AdminShell({
           </button>
         ))}
       </nav>
-      {children}
+      <div data-route-module="admin-content">{children}</div>
     </div>
   )
 }
