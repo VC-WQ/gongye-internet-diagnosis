@@ -4,7 +4,7 @@ import ThemedChart from '../../../components/ThemedChart'
 import ChartNote from '../../../components/ChartNote'
 import { LoadState } from '../../../components/BusinessUI'
 import { getClassification } from '../../../services/api'
-import { useResource } from '../../../hooks/useResource'
+import { useResearchSource } from '../ResearchDataContext'
 import { xAxisBase, yAxisBase } from '../../../theme/echarts'
 
 interface ModelMetric {
@@ -83,7 +83,7 @@ const columns = [
 ]
 
 export default function ClassificationResearch() {
-  const resource = useResource('viz-classification', getClassification)
+  const resource = useResearchSource('classification', getClassification)
   const datasets: Dataset[] = resource.data?.datasets ?? []
   const rocOption = useMemo(() => {
     if (!datasets.length) return {}

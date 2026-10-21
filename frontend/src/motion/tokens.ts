@@ -1,15 +1,31 @@
-/** 全站运动令牌。时间用秒；几何时间线的节点由这里明确声明。 */
+/** Semantic families use milliseconds; geometry retains distance-dependent travel. */
+const sceneTravel = { min: 180, max: 800, worldUnitsPerMs: 0.85 } as const
+export const MOTION = {
+  mechanicalText: { duration: 220 },
+  mechanicalContent: { duration: 320 },
+  rowPresence: { duration: 180 },
+  tableReflow: { duration: 260 },
+  routeModule: { exit: 170, enter: 330, stagger: 24 },
+  sceneExit: sceneTravel,
+  sceneReflow: sceneTravel,
+  researchReveal: { duration: 520 },
+  researchTitle: { duration: 460 },
+  researchChart: { update: 240 },
+  logoutReturn: { duration: 980 },
+} as const
+
+/** Compatibility durations are in seconds; all new callers use semantic families. */
 export const DURATION = {
   hover: 0.18,
   selection: 0.3,
-  flip: 0.22,
-  content: 0.32,
+  flip: MOTION.mechanicalText.duration / 1000,
+  content: MOTION.mechanicalContent.duration / 1000,
   panel: 0.42,
   route: 0.42,
   camera: 0.72,
   loginReveal: 1.1,
   loginSuccess: 1.05,
-  logoutReturn: 0.98,
+  logoutReturn: MOTION.logoutReturn.duration / 1000,
   picoMorph: 0.42,
   picoReveal: 0.38,
   messageFlight: 0.42,

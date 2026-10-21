@@ -1,6 +1,6 @@
 import { LoadState } from './BusinessUI'
-import { errorText } from '../hooks/useResource'
-import { useEffect, useMemo, useState } from 'react'
+import { useResearchSource } from '../features/about/ResearchDataContext'
+import { useMemo } from 'react'
 import { Card, Col, Empty, Row, Space, Spin, Table, Tag } from 'antd'
 import ThemedChart from './ThemedChart'
 import { getFpCnnCompare } from '../services/api'
@@ -58,24 +58,7 @@ const BAND_LABEL: Record<string, string> = {
  *          ③ 可解释性（学到的频带是否收敛到理论频率附近）
  */
 export default function FPCnnCompare() {
-  const [data, setData] = useState<FpCnnData>()
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState('')
-
-  useEffect(() => {
-    let active = true
-    getFpCnnCompare()
-      .then((d) => {
-        if (active) setData(d)
-      })
-      .catch((e) => { if (active) setLoadError(errorText(e)) })
-      .finally(() => {
-        if (active) setLoading(false)
-      })
-    return () => {
-      active = false
-    }
-  }, [])
+  const { data, loading, error: loadError } = useResearchSource<FpCnnData>('fpcnn-compare', getFpCnnCompare)
 
   // ① 少样本对比
   const fewShotOption = useMemo(() => {

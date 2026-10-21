@@ -1,6 +1,6 @@
 import { LoadState } from './BusinessUI'
-import { errorText } from '../hooks/useResource'
-import { useEffect, useMemo, useState } from 'react'
+import { useResearchSource } from '../features/about/ResearchDataContext'
+import { useMemo } from 'react'
 import { Card, Col, Empty, Row, Space, Spin, Statistic } from 'antd'
 import ThemedChart from './ThemedChart'
 import { getCwruSignal } from '../services/api'
@@ -46,24 +46,7 @@ interface CwruSignal {
  * 结论落点：从时域→频域→特征空间，论证「振动信号即可诊断轴承故障」。
  */
 export default function CwruSignal() {
-  const [data, setData] = useState<CwruSignal>()
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState('')
-
-  useEffect(() => {
-    let active = true
-    getCwruSignal()
-      .then((d) => {
-        if (active) setData(d)
-      })
-      .catch((e) => { if (active) setLoadError(errorText(e)) })
-      .finally(() => {
-        if (active) setLoading(false)
-      })
-    return () => {
-      active = false
-    }
-  }, [])
+  const { data, loading, error: loadError } = useResearchSource<CwruSignal>('cwru-signal', getCwruSignal)
 
   // -----------------------------------------------------------------------
   // ① 时域波形 2×2 子图

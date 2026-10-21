@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   getClassification, getCwruSignal, getDatasetRegistry, getDomainAdapt, getFpCnnCompare,
   getPumpPhm, getRulSdePf, getSelfEvalLoops, getSmartFactory, getSteamAnalysis,
@@ -6,6 +6,7 @@ import {
 } from '../../services/api'
 import { errorText } from '../../hooks/useResource'
 import { inspectEvidence, type EvidenceMap } from './dataContract'
+import { ResearchRequestCache, researchSources } from './researchRequests'
 
 const LOADERS = {
   'dataset-registry': getDatasetRegistry, 'cwru-signal': getCwruSignal,
@@ -14,21 +15,28 @@ const LOADERS = {
   'self-evolution-loop': getSelfEvalLoops, 'smart-factory': getSmartFactory,
   classification: getClassification, steam: getSteamMl, 'steam-analysis': getSteamAnalysis, vision: getVisionComparison,
 }
-export function useResearchData() {
-  const [evidence, setEvidence] = useState<EvidenceMap>({})
+export function useResearchData(includeRuntime = false) {
+  // No global payload cache: public and authenticated article instances never share data.
+  const scope = includeRuntime ? localStorage.getItem('token') ?? 'public' : 'public'
+  const cache = useMemo(() => new ResearchRequestCache(), [scope])
+  const [state, setState] = useState<{ scope: string; evidence: EvidenceMap }>({ scope, evidence: {} })
   const [version, setVersion] = useState(0)
   useEffect(() => {
     let active = true
-    // Resolve each source independently: missing vision assets or login-only runtime metrics must not hide public experiments.
-    for (const [key, load] of Object.entries(LOADERS)) {
-      const source = key as keyof typeof LOADERS
-      setEvidence(current => ({ ...current, [source]: { ...current[source], status: 'loading' } }))
-      void load().then(
-        payload => { if (active) setEvidence(current => ({ ...current, [source]: inspectEvidence(source, payload) })) },
-        error => { if (active) setEvidence(current => ({ ...current, [source]: { status: 'error', message: errorText(error) } })) },
-      )
+    const sources = researchSources(includeRuntime)
+    const initial: EvidenceMap = Object.fromEntries(sources.map(source => [source, { status: 'loading' }]))
+    if (!includeRuntime) initial['self-evolution-loop'] = { status: 'missing', message: '运行统计需登录后查看；公开文章仅提供机制说明。' }
+    setState({ scope, evidence: initial })
+    for (const source of sources) {
+      void cache.read(source, async () => {
+        try { return inspectEvidence(source, await LOADERS[source]()) }
+        catch (error) { return { status: 'error', message: errorText(error) } }
+      }).then(entry => {
+        if (active) setState(current => ({ scope, evidence: { ...current.evidence, [source]: entry } }))
+      })
     }
     return () => { active = false }
-  }, [version])
-  return { evidence, refresh: () => setVersion(value => value + 1) }
+  }, [version, scope, cache, includeRuntime])
+  const refresh = useCallback(() => { cache.clear(); setVersion(value => value + 1) }, [cache])
+  return { evidence: state.scope === scope ? state.evidence : {}, refresh }
 }

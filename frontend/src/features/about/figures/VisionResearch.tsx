@@ -2,7 +2,7 @@ import { Button, Card, Table } from 'antd'
 import ChartNote from '../../../components/ChartNote'
 import { LoadState } from '../../../components/BusinessUI'
 import { getVisionComparison } from '../../../services/api'
-import { useResource } from '../../../hooks/useResource'
+import { useResearchSource } from '../ResearchDataContext'
 import { useSpatialNavigate } from '../../../hooks/useSpatialNavigate'
 
 interface VisionModel {
@@ -23,7 +23,7 @@ const NAME: Record<string, string> = {
 
 export default function VisionResearch() {
   const navigate = useSpatialNavigate()
-  const resource = useResource('viz-vision-comparison', getVisionComparison)
+  const resource = useResearchSource('vision', getVisionComparison)
   const models: VisionModel[] = resource.data?.models ?? []
   return (
     <LoadState

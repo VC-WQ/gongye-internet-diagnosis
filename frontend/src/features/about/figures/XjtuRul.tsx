@@ -1,10 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { Card, Empty, Select, Space } from 'antd'
 import ThemedChart from '../../../components/ThemedChart'
 import ChartNote from '../../../components/ChartNote'
 import { LoadState } from '../../../components/BusinessUI'
 import { getXjtuRul } from '../../../services/api'
-import { useResource } from '../../../hooks/useResource'
+import { useResearchSource, useResearchChoice } from '../ResearchDataContext'
 import { xAxisBase, yAxisBase } from '../../../theme/echarts'
 
 interface Bearing {
@@ -15,9 +15,9 @@ interface Bearing {
 }
 
 export default function XjtuRul() {
-  const resource = useResource('viz-xjtu-rul', getXjtuRul)
+  const resource = useResearchSource('xjtu-rul', getXjtuRul)
   const bearings: Bearing[] = resource.data?.bearings ?? []
-  const [bearingId, setBearingId] = useState<string>()
+  const [bearingId, setBearingId] = useResearchChoice('xjtu-bearing')
   const selectedId = bearingId ?? bearings[0]?.id
   const bearing = bearings.find((item) => item.id === selectedId)
 

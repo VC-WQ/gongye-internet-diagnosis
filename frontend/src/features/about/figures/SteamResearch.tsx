@@ -4,7 +4,7 @@ import ThemedChart from '../../../components/ThemedChart'
 import ChartNote from '../../../components/ChartNote'
 import { LoadState } from '../../../components/BusinessUI'
 import { getSteamAnalysis, getSteamMl } from '../../../services/api'
-import { useResource } from '../../../hooks/useResource'
+import { useResearchSource } from '../ResearchDataContext'
 import { xAxisBase, yAxisBase } from '../../../theme/echarts'
 
 interface SteamMethod {
@@ -34,8 +34,8 @@ const COLORS: Record<string, string> = {
 }
 
 export default function SteamResearch() {
-  const ml = useResource('viz-steam-ml', getSteamMl)
-  const analysis = useResource('viz-steam', getSteamAnalysis)
+  const ml = useResearchSource('steam', getSteamMl)
+  const analysis = useResearchSource('steam-analysis', getSteamAnalysis)
   const data: SteamMlData | undefined = ml.data
   const correlation: Correlation | undefined = analysis.data?.correlation
   const scatterOption = useMemo(() => {

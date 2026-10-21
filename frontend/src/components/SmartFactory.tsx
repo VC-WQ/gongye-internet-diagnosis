@@ -1,6 +1,6 @@
 import { LoadState } from './BusinessUI'
-import { errorText } from '../hooks/useResource'
-import { useEffect, useMemo, useState } from 'react'
+import { useResearchSource } from '../features/about/ResearchDataContext'
+import { useMemo } from 'react'
 import { Card, Col, Empty, Row, Spin, Statistic } from 'antd'
 import ThemedChart from './ThemedChart'
 import { getSmartFactory } from '../services/api'
@@ -36,24 +36,7 @@ interface SmartFactoryData {
  * 结论落点：从单机诊断上升到产线级态势感知，体现系统治理视角。
  */
 export default function SmartFactory() {
-  const [data, setData] = useState<SmartFactoryData>()
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState('')
-
-  useEffect(() => {
-    let active = true
-    getSmartFactory()
-      .then((d) => {
-        if (active) setData(d)
-      })
-      .catch((e) => { if (active) setLoadError(errorText(e)) })
-      .finally(() => {
-        if (active) setLoading(false)
-      })
-    return () => {
-      active = false
-    }
-  }, [])
+  const { data, loading, error: loadError } = useResearchSource<SmartFactoryData>('smart-factory', getSmartFactory)
 
   // -----------------------------------------------------------------------
   // ① 工段故障率玫瑰图

@@ -1,6 +1,6 @@
 import { LoadState } from './BusinessUI'
-import { errorText } from '../hooks/useResource'
-import { useEffect, useMemo, useState } from 'react'
+import { useResearchSource } from '../features/about/ResearchDataContext'
+import { useMemo } from 'react'
 import { Card, Col, Empty, Row, Space, Spin, Table, Tag } from 'antd'
 import ThemedChart from './ThemedChart'
 import { getDomainAdapt } from '../services/api'
@@ -61,24 +61,7 @@ const VARIANT_COLOR: Record<string, string> = {
  * 全程不需要目标域标签 —— 这是工程落地的关键前提。
  */
 export default function DomainAdapt() {
-  const [data, setData] = useState<DomainAdaptData>()
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState('')
-
-  useEffect(() => {
-    let active = true
-    getDomainAdapt()
-      .then((d) => {
-        if (active) setData(d)
-      })
-      .catch((e) => { if (active) setLoadError(errorText(e)) })
-      .finally(() => {
-        if (active) setLoading(false)
-      })
-    return () => {
-      active = false
-    }
-  }, [])
+  const { data, loading, error: loadError } = useResearchSource<DomainAdaptData>('domain-adapt', getDomainAdapt)
 
   const devIds = useMemo(() => Object.keys(data?.target_domains ?? {}), [data])
   const results = data?.results ?? []

@@ -1,6 +1,6 @@
 import { LoadState } from './BusinessUI'
-import { errorText } from '../hooks/useResource'
-import { useEffect, useMemo, useState } from 'react'
+import { useResearchSource } from '../features/about/ResearchDataContext'
+import { useMemo } from 'react'
 import { Card, Col, Empty, Row, Space, Spin, Statistic } from 'antd'
 import ThemedChart from './ThemedChart'
 import { getPumpPhm } from '../services/api'
@@ -53,24 +53,7 @@ const FAULT_TYPE_LABEL: Record<string, string> = {
  * 结论落点：数字孪生 = 物理信号 + 数据驱动预测，提前干预换回可量化回报。
  */
 export default function DigitalTwinPhm() {
-  const [data, setData] = useState<PumpPhm>()
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState('')
-
-  useEffect(() => {
-    let active = true
-    getPumpPhm()
-      .then((d) => {
-        if (active) setData(d)
-      })
-      .catch((e) => { if (active) setLoadError(errorText(e)) })
-      .finally(() => {
-        if (active) setLoading(false)
-      })
-    return () => {
-      active = false
-    }
-  }, [])
+  const { data, loading, error: loadError } = useResearchSource<PumpPhm>('digital-twin-phm', getPumpPhm)
 
   // -----------------------------------------------------------------------
   // ① 退化轨迹：hazard / 故障概率 / 振动（归一化）随运行小时演化

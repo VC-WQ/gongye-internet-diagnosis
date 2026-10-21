@@ -1,6 +1,6 @@
 import { LoadState } from './BusinessUI'
-import { errorText } from '../hooks/useResource'
-import { useEffect, useMemo, useState } from 'react'
+import { useResearchSource } from '../features/about/ResearchDataContext'
+import { useMemo } from 'react'
 import { Card, Col, Empty, Row, Spin, Tag } from 'antd'
 import ThemedChart from './ThemedChart'
 import { getDatasetRegistry } from '../services/api'
@@ -57,24 +57,7 @@ function fmt(n: number): string {
  *   - 8 数据集目录卡片（名称/规模/维度/类别/任务/来源）
  */
 export default function DataAssetRegistry() {
-  const [data, setData] = useState<RegistryData>()
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState('')
-
-  useEffect(() => {
-    let active = true
-    getDatasetRegistry()
-      .then((d) => {
-        if (active) setData(d)
-      })
-      .catch((e) => { if (active) setLoadError(errorText(e)) })
-      .finally(() => {
-        if (active) setLoading(false)
-      })
-    return () => {
-      active = false
-    }
-  }, [])
+  const { data, loading, error: loadError } = useResearchSource<RegistryData>('dataset-registry', getDatasetRegistry)
 
   const taskOption = useMemo(() => {
     const dist = data?.summary?.task_dist ?? []

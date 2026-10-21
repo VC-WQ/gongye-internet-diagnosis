@@ -1,6 +1,6 @@
 import { LoadState } from './BusinessUI'
-import { errorText } from '../hooks/useResource'
-import { useEffect, useMemo, useState } from 'react'
+import { useResearchSource, useResearchChoice } from '../features/about/ResearchDataContext'
+import { useMemo } from 'react'
 import { Card, Col, Empty, Row, Select, Space, Spin, Table, Tag } from 'antd'
 import ThemedChart from './ThemedChart'
 import { getRulSdePf } from '../services/api'
@@ -44,30 +44,11 @@ interface RulSdePfData {
  * 展示三块证据：① 精度指标对比 ② 单根轴承全寿命预测轨迹 ③ 15 根轴承误差分布
  */
 export default function RulSdePf() {
-  const [data, setData] = useState<RulSdePfData>()
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState('')
-  const [curveId, setCurveId] = useState<string>()
-
-  useEffect(() => {
-    let active = true
-    getRulSdePf()
-      .then((d) => {
-        if (!active) return
-        setData(d)
-        setCurveId((p) => p ?? d?.curves?.[0]?.id)
-      })
-      .catch((e) => { if (active) setLoadError(errorText(e)) })
-      .finally(() => {
-        if (active) setLoading(false)
-      })
-    return () => {
-      active = false
-    }
-  }, [])
+  const { data, loading, error: loadError } = useResearchSource<RulSdePfData>('rul-sde-pf', getRulSdePf)
+  const [curveId, setCurveId] = useResearchChoice('rul-curve')
 
   const curve = useMemo(
-    () => data?.curves?.find((c) => c.id === curveId),
+    () => data?.curves?.find((c) => c.id === (curveId ?? data?.curves?.[0]?.id)),
     [data, curveId],
   )
 
@@ -231,7 +212,7 @@ export default function RulSdePf() {
                   <Select
                     size="small"
                     style={{ width: 170 }}
-                    value={curveId}
+                    value={curve?.id}
                     onChange={setCurveId}
                     options={data.curves.map((c) => ({ value: c.id, label: `${c.id}（${c.condition}）` }))}
                   />

@@ -1,32 +1,27 @@
-import { Link } from 'react-router-dom'
+import { useState } from 'react'
 import { RESEARCH_TOPICS } from './research'
+import ResearchLink from './ResearchLink'
+import { OVERVIEW_ANCHOR, pointAnchor, topicAnchor } from './researchNavigation'
 
-/** This navigation stays mounted while the research article identity changes. */
-export default function ResearchTree({ topicId, pointId }: { topicId?: string; pointId?: string }) {
-  return (
-    <nav className="research-tree" aria-label="研究目录" data-research-tree>
-      <Link to="/research" className={`research-tree__root ${!topicId ? 'is-active' : ''}`} aria-current={!topicId ? 'page' : undefined}>
-        研究总览
-      </Link>
-      {RESEARCH_TOPICS.map(topic => {
-        const active = topic.id === topicId
-        return (
-          <div className="research-tree__topic" key={topic.id}>
-            <Link to={`/research/${topic.id}`} className={`research-tree__topic-title ${active && !pointId ? 'is-active' : ''}`} aria-current={active && !pointId ? 'page' : undefined}>
-              <span>{topic.index}</span>{topic.title}<small>{topic.points.length}</small>
-            </Link>
-            <ul className={`research-tree__points ${active ? 'is-expanded' : ''}`}>
-              {topic.points.map(point => (
-                <li key={point.id}>
-                  <Link to={`/research/${topic.id}/${point.id}`} className={point.id === pointId && active ? 'is-active' : ''} aria-current={point.id === pointId && active ? 'page' : undefined}>
-                    {point.title}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )
-      })}
-    </nav>
-  )
+/** Same-document navigation; scroll observations never write browser history. */
+export default function ResearchTree({ active }: { active: string }) {
+  const [open, setOpen] = useState(false)
+  const current = RESEARCH_TOPICS.flatMap(topic => [
+    { id: topicAnchor(topic.id), title: topic.title },
+    ...topic.points.map(point => ({ id: pointAnchor(topic.id, point.id), title: point.title })),
+  ]).find(item => item.id === active)?.title ?? '研究全景'
+  return <nav className={`research-tree ${open ? 'is-open' : ''}`} aria-label="研究目录" data-research-tree data-route-module="research-toc"
+    onClick={event => { if ((event.target as HTMLElement).closest('a')) setOpen(false) }}>
+    <button className="research-tree__toggle" type="button" aria-expanded={open} aria-controls="research-toc-links" onClick={() => setOpen(value => !value)}>章节目录<span>{current}</span><i aria-hidden="true">{open ? '−' : '+'}</i></button>
+    <div id="research-toc-links" className="research-tree__links">
+      <ResearchLink anchor={OVERVIEW_ANCHOR} className={`research-tree__root ${active === OVERVIEW_ANCHOR ? 'is-active' : ''}`} aria-current={active === OVERVIEW_ANCHOR ? 'location' : undefined}>研究全景<span>00</span></ResearchLink>
+      {RESEARCH_TOPICS.map(topic => <div className={`research-tree__topic ${active.startsWith(topicAnchor(topic.id)) ? 'is-current' : ''}`} key={topic.id}>
+        <ResearchLink anchor={topicAnchor(topic.id)} className={`research-tree__topic-title ${active === topicAnchor(topic.id) ? 'is-active' : ''}`} aria-current={active === topicAnchor(topic.id) ? 'location' : undefined}><span>{topic.index}</span>{topic.title}<small>{topic.points.length}</small></ResearchLink>
+        <ul className="research-tree__points">{topic.points.map((point, index) => {
+          const id = pointAnchor(topic.id, point.id)
+          return <li key={point.id}><ResearchLink anchor={id} className={id === active ? 'is-active' : ''} aria-current={id === active ? 'location' : undefined}><span>{topic.index}.{index + 1}</span>{point.title}</ResearchLink></li>
+        })}</ul>
+      </div>)}
+    </div>
+  </nav>
 }

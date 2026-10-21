@@ -1,5 +1,5 @@
 import { LoadState } from './BusinessUI'
-import { useResource } from '../hooks/useResource'
+import { useResearchSource } from '../features/about/ResearchDataContext'
 import { Card, Col, Empty, Row, Space, Spin, Statistic, Tag } from 'antd'
 import { getSelfEvalLoops } from '../services/api'
 import ChartNote from './ChartNote'
@@ -105,7 +105,7 @@ function NodeChain({ nodes }: { nodes: Array<{ t: string; d: string; c: string }
  * 关键点：内闭环让系统"自己发现问题"，外闭环让"人的判断沉淀成系统能力"。
  */
 export default function SelfEvolutionLoop() {
-  const resource = useResource('research-self-evolution-loops', getSelfEvalLoops)
+  const resource = useResearchSource('self-evolution-loop', getSelfEvalLoops)
   const data: LoopData | undefined = resource.data
 
   const inner = data?.inner_loop
