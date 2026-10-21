@@ -1,13 +1,14 @@
-import { DURATION, FACTORY_ENTRANCE, LOGIN_SEQUENCE } from './tokens'
+import { DURATION, FACTORY_ENTRANCE, LOGIN_SEQUENCE, LOGOUT_SEQUENCE } from './tokens'
 
 export const clamp = (value: number, min = 0, max = 1) =>
-  Math.min(max, Math.max(min, value))
+  Number.isNaN(value) ? min : Math.min(max, Math.max(min, value))
 export function smooth(value: number): number {
   const x = clamp(value)
   return x * x * (3 - 2 * x)
 }
 const progressAt = (elapsed: number, start: number, duration: number) =>
   clamp((elapsed - start) / duration)
+const safeLength = (value: number) => Number.isFinite(value) ? Math.max(1, value) : 1
 
 /** A moves one intact object; the static brand surface remains underneath. */
 export function sampleA(progress: number) {
@@ -29,20 +30,51 @@ export function createBTimeline(geometry: LoginGeometry) {
   // smooth(.5) === .5: this is exactly the panel's half-collapse instant.
   const paperStart = panelPrepare + (panelEnd - panelPrepare) / 2
   const paperDuration = total - paperStart
-  const viewport = Math.max(1, geometry.viewportWidth)
-  const redTravel = Math.max(1, geometry.redTravel)
-  // Shorter paths get shorter durations. This guarantees red's average px/ms
-  // is at least paper's, even when responsive layouts change the brand width.
-  const redDuration = Math.min(
-    LOGIN_SEQUENCE.redEnd - LOGIN_SEQUENCE.redEarliestStart,
-    paperDuration * redTravel / viewport * 0.95,
-  )
+  const viewport = safeLength(geometry.viewportWidth)
+  const redTravel = safeLength(geometry.redTravel)
+  // Keep the measured short path, but give red enough local time to read as a
+  // deliberate movement on narrow layouts rather than a fast linear swipe.
+  const ratio = clamp(redTravel / viewport, .1, 1)
+  const redDuration = Math.max(285, Math.min(
+    500, LOGIN_SEQUENCE.redEnd - LOGIN_SEQUENCE.redEarliestStart,
+    paperDuration * ratio * 1.1,
+  ))
   const redStart = LOGIN_SEQUENCE.redEnd - redDuration
   return {
     total, panelStart, panelPrepare, panelEnd,
     redStart, redDuration, redEnd: LOGIN_SEQUENCE.redEnd,
     paperStart, paperDuration, paperEnd: total,
     redTravel, paperTravel: viewport,
+  }
+}
+
+export function createCTimeline(geometry: LoginGeometry) {
+  return {
+    total: DURATION.logoutReturn * 1000,
+    paperStart: 0, paperEnd: LOGOUT_SEQUENCE.paperEnd,
+    redStart: LOGOUT_SEQUENCE.redStart, redEnd: LOGOUT_SEQUENCE.redEnd,
+    panelStart: LOGOUT_SEQUENCE.panelStart, panelEnd: DURATION.logoutReturn * 1000,
+    redTravel: safeLength(geometry.redTravel),
+    paperTravel: safeLength(geometry.viewportWidth) * .12,
+  }
+}
+
+/** C restores the brand and then the new, empty login form over neutral paper. */
+export function sampleC(elapsed: number, geometry: LoginGeometry) {
+  const t = createCTimeline(geometry)
+  const paperProgress = smooth(progressAt(elapsed, t.paperStart, t.paperEnd - t.paperStart))
+  const redProgress = smooth(progressAt(elapsed, t.redStart, t.redEnd - t.redStart))
+  const panelProgress = smooth(progressAt(elapsed, t.panelStart, t.panelEnd - t.panelStart))
+  return {
+    paperProgress, paperX: t.paperTravel * (1 - paperProgress),
+    redProgress, redX: -t.redTravel * (1 - redProgress) || 0,
+    panelProgress, panelScale: .78 + .22 * panelProgress,
+    panelOpacity: panelProgress,
+    panelRadius: 50 * (1 - panelProgress),
+    paperDone: elapsed >= t.paperEnd,
+    redDone: elapsed >= t.redEnd,
+    panelDone: elapsed >= t.panelEnd,
+    done: elapsed >= t.total,
   }
 }
 

@@ -13,7 +13,7 @@ async function load(path) {
   }
   return import(`data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`)
 }
-const { sampleA, sampleB, createBTimeline, panelInsets, sampleFactoryEntrance } = await load('../src/motion/loginTimeline.ts')
+const { sampleA, sampleB, sampleC, createBTimeline, createCTimeline, panelInsets, sampleFactoryEntrance } = await load('../src/motion/loginTimeline.ts')
 const { DURATION, EASING, FACTORY_ENTRANCE } = await load('../src/motion/tokens.ts')
 const geometry = { viewportWidth: 1440, redTravel: 1440 * .545 }
 
@@ -42,7 +42,7 @@ test('B has three independent clocks and panel, red, paper finish in that order'
   const time = createBTimeline(geometry)
   assert.ok(time.panelEnd < time.redEnd && time.redEnd < time.paperEnd)
   assert.ok(time.panelEnd / time.total < .35)
-  assert.ok(time.redEnd / time.total >= .45 && time.redEnd / time.total <= .5)
+  assert.ok(time.redEnd / time.total >= .55 && time.redEnd / time.total <= .65)
   const panelEnd = sampleB(time.panelEnd, geometry)
   assert.equal(panelEnd.panelDone, true)
   assert.equal(panelEnd.panelScale, 0)
@@ -55,17 +55,58 @@ test('B has three independent clocks and panel, red, paper finish in that order'
   assert.ok(redEnd.paperProgress > 0 && redEnd.paperProgress < 1)
   assert.equal(sampleB(time.total, geometry).paperDone, true)
 })
-test('red measured short path has no slower average speed than the full viewport paper across responsive ratios', () => {
+test('red keeps its actual short path with a readable bounded duration across responsive ratios', () => {
   for (const viewportWidth of [320, 390, 768, 1280, 1440, 2560]) {
     for (const ratio of [.2, .4, .545, .7, 1]) {
       const g = { viewportWidth, redTravel: viewportWidth * ratio }
       const time = createBTimeline(g)
-      assert.ok(time.redTravel / time.redDuration >= time.paperTravel / time.paperDuration)
+      assert.ok(time.redDuration >= 285 && time.redDuration <= 500)
+      assert.ok(time.redStart >= 0 && time.redStart < time.redEnd)
       assert.ok(time.panelEnd < time.redEnd && time.redEnd < time.paperEnd)
       assert.equal(sampleB(time.redEnd, g).redX, -g.redTravel)
       assert.equal(sampleB(time.total, g).paperX, -viewportWidth)
     }
   }
+})
+test('invalid B/C geometry stays finite, bounded and reaches the final state', () => {
+  for (const viewportWidth of [0, -10, NaN, Infinity]) {
+    for (const redTravel of [0, -100, NaN, Infinity]) {
+      const g = { viewportWidth, redTravel }
+      for (const value of Object.values(createBTimeline(g))) assert.ok(Number.isFinite(value))
+      for (const value of Object.values(createCTimeline(g))) assert.ok(Number.isFinite(value))
+      for (const sample of [sampleB(0, g), sampleB(2000, g), sampleC(0, g), sampleC(2000, g)]) {
+        for (const value of Object.values(sample)) if (typeof value === 'number') assert.ok(Number.isFinite(value))
+      }
+      assert.equal(sampleB(2000, g).paperDone, true)
+      assert.equal(sampleC(2000, g).done, true)
+    }
+  }
+})
+test('C independently restores paper, brand and form in order rather than reversing B', () => {
+  const time = createCTimeline(geometry)
+  assert.ok(time.paperEnd < time.redEnd && time.redEnd < time.panelEnd)
+  assert.ok(time.redStart < time.paperEnd)
+  assert.ok(time.panelStart > time.paperEnd && time.panelStart < time.redEnd)
+  const first = sampleC(0, geometry)
+  assert.equal(first.panelOpacity, 0)
+  assert.equal(first.redX, -geometry.redTravel)
+  let previous = first
+  for (let elapsed = 1; elapsed <= time.total + 50; elapsed++) {
+    const frame = sampleC(elapsed, geometry)
+    assert.ok(frame.redX >= previous.redX && frame.redX <= 0)
+    assert.ok(frame.paperX <= previous.paperX && frame.paperX >= 0)
+    assert.ok(frame.panelOpacity >= previous.panelOpacity && frame.panelOpacity <= 1)
+    assert.ok(frame.panelScale >= previous.panelScale && frame.panelScale <= 1)
+    previous = frame
+  }
+  assert.equal(previous.done, true)
+  assert.equal(previous.panelOpacity, 1)
+  assert.equal(previous.panelScale, 1)
+  assert.equal(previous.redX, 0)
+  assert.equal(previous.paperX, 0)
+  const middle = sampleC(time.total / 2, geometry)
+  const reversed = sampleB(createBTimeline(geometry).total / 2, geometry)
+  assert.notEqual(middle.panelOpacity, reversed.panelOpacity)
 })
 test('paper starts at the exact half-collapse instant while the panel still exists', () => {
   const time = createBTimeline(geometry)

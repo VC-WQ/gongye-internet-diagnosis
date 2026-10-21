@@ -29,7 +29,7 @@ import { RealtimeProvider } from './services/realtime'
 import { WorkspaceProvider, useWorkspace } from './services/workspace'
 import { PicoProvider } from './features/pico/core/PicoProvider'
 import PicoDock from './features/pico/ui/PicoDock'
-import { getMe, type AuthUser } from './services/api'
+import { cancelAuthenticatedRequests, getMe, type AuthUser } from './services/api'
 import { useResource } from './hooks/useResource'
 import {
   areaFromPath,
@@ -48,7 +48,7 @@ import {
   UiPreferencesProvider,
   useUiPreferences,
 } from './services/uiPrefs'
-import { LoginTransitionProvider } from './motion/LoginTransition'
+import { LoginTransitionProvider, useLoginTransition } from './motion/LoginTransition'
 import RouteReady from './motion/RouteReady'
 
 const FactoryWorkspace = lazy(() => import('./features/factory/FactoryWorkspace'))
@@ -298,6 +298,7 @@ function MainLayout() {
 
 function Workspace({ user }: { user: AuthUser }) {
   const navigate = useSpatialNavigate()
+  const { beginLogout } = useLoginTransition()
   const location = useLocation()
   const navigationType = useNavigationType()
   const workspace = useWorkspace()
@@ -396,14 +397,16 @@ function Workspace({ user }: { user: AuthUser }) {
   const withContext = (path: string) => navigationContextPath(path, workspace.selectedDeviceId, workspace.selectedEventId)
 
   const logout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
-    Object.keys(sessionStorage)
-      .filter(
-        (key) => key.startsWith('workspace:') || key.startsWith('factory:'),
-      )
-      .forEach((key) => sessionStorage.removeItem(key))
-    navigate('/login', { replace: true })
+    beginLogout(() => {
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      cancelAuthenticatedRequests()
+      Object.keys(sessionStorage)
+        .filter(
+          (key) => key.startsWith('workspace:') || key.startsWith('factory:'),
+        )
+        .forEach((key) => sessionStorage.removeItem(key))
+    })
   }
 
   const navItems = [
@@ -550,6 +553,7 @@ function Workspace({ user }: { user: AuthUser }) {
 }
 
 function ThemedApp() {
+  const location = useLocation()
   const { theme, reducedMotion } = useUiPreferences()
   const selectedTheme = useMemo(
     () => ({
@@ -574,7 +578,7 @@ function ThemedApp() {
   return (
     <ConfigProvider theme={selectedTheme}>
       <LoginTransitionProvider>
-        <Suspense fallback={<Skeleton active />}>
+        <Suspense key={location.pathname === '/login' ? 'login' : 'workspace'} fallback={<Skeleton active />}>
           <Routes>
             <Route path="/login" element={<LoginRoute />} />
             <Route

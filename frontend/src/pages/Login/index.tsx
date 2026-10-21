@@ -12,6 +12,9 @@ export default function Login() {
   const [showPasswordHelp, setShowPasswordHelp] = useState(false)
 
   useLayoutEffect(() => {
+    // A is skipped only for the live provider-owned C. Refreshing this history
+    // entry mounts a fresh provider, so ordinary login entrances still play A.
+    if (transition.prepareLogoutReturn()) return
     transition.resetForLogin()
     const frame = requestAnimationFrame(() => transition.playIntro())
     return () => {

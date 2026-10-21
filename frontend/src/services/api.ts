@@ -1,4 +1,4 @@
-import axios from 'axios'
+import axios, { type InternalAxiosRequestConfig } from 'axios'
 
 // Axios 实例：统一请求封装
 // 开发环境由 vite 代理将 /api 转发到后端 http://localhost:8000
@@ -7,18 +7,64 @@ const api = axios.create({
   timeout: 20000,
 })
 
+interface AuthenticatedRequest {
+  token: string
+  generation: number
+  controller: AbortController
+  release: () => void
+}
+let authenticationGeneration = 0
+const authenticatedRequests = new Set<AuthenticatedRequest>()
+const requestIdentity = new WeakMap<InternalAxiosRequestConfig, AuthenticatedRequest>()
+
+/** Stops transport owned by the old local session, preserving caller signals. */
+export function cancelAuthenticatedRequests() {
+  authenticationGeneration += 1
+  for (const request of authenticatedRequests) {
+    request.controller.abort()
+    request.release()
+  }
+}
+
+function finishAuthenticatedRequest(config?: InternalAxiosRequestConfig) {
+  const request = config ? requestIdentity.get(config) : undefined
+  request?.release()
+  if (config) requestIdentity.delete(config)
+  return request
+}
+
 // 请求拦截器：附加认证 token
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token')
-  if (token) config.headers.Authorization = `Bearer ${token}`
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+    const callerSignal = config.signal as AbortSignal | undefined
+    const controller = new AbortController()
+    const abort = () => controller.abort()
+    if (callerSignal?.aborted) abort()
+    else callerSignal?.addEventListener('abort', abort, { once: true })
+    const request: AuthenticatedRequest = {
+      token, generation: authenticationGeneration, controller,
+      release: () => {
+        callerSignal?.removeEventListener('abort', abort)
+        authenticatedRequests.delete(request)
+      },
+    }
+    config.signal = controller.signal
+    authenticatedRequests.add(request)
+    requestIdentity.set(config, request)
+  }
   return config
 })
 
 // 响应拦截器：401 跳转登录
 api.interceptors.response.use(
-  (response) => response,
+  (response) => { finishAuthenticatedRequest(response.config); return response },
   (error) => {
-    if (error?.response?.status === 401 && window.location.pathname !== '/login') {
+    const request = finishAuthenticatedRequest(error?.config)
+    const currentSession = request && request.generation === authenticationGeneration &&
+      request.token === localStorage.getItem('token')
+    if (error?.response?.status === 401 && currentSession && window.location.pathname !== '/login') {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
       const next = window.location.pathname + window.location.search

@@ -4,6 +4,14 @@ import { useLocation, useNavigate, type NavigateFunction, type NavigateOptions, 
 
 type Transition = { ready: Promise<void>; finished: Promise<void>; skipTransition: () => void }
 let active: Transition | undefined
+let epoch = 0
+// Authentication owns its own neutral cover. Never retain a private route's
+// native snapshot, or let a deferred transition commit after logout.
+document.addEventListener('workspace:auth-transition', () => {
+  epoch += 1
+  active?.skipTransition()
+  active = undefined
+})
 
 /** Native shared-element snapshots keep the header/device anchor continuous across modes. */
 export function useSpatialNavigate(): NavigateFunction {
@@ -14,12 +22,14 @@ export function useSpatialNavigate(): NavigateFunction {
     const doc = document as Document & { startViewTransition?: (update: () => void | Promise<void>) => Transition }
     document.documentElement.style.setProperty('--navigation-direction', to === -1 ? '-1' : '1')
     active?.skipTransition()
+    const generation = ++epoch
     const research = (path: string) => /^\/research(?:\/|$)/.test(path)
     const target = typeof to === 'number' ? location.pathname : typeof to === 'string' ? to.split('?')[0] || location.pathname : to.pathname ?? location.pathname
     // The stable research shell animates its article. A second full-page snapshot
     // would fade the tree and charts again and make navigation look like a reload.
     if ((research(location.pathname) && research(target)) || !doc.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) { run(); return }
     const next = doc.startViewTransition(() => {
+      if (generation !== epoch) return
       if (typeof to !== 'number') { flushSync(run); return }
       // History traversal commits on popstate, after navigate() has returned.
       return new Promise<void>((resolve) => {

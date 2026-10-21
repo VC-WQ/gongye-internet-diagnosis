@@ -8,7 +8,8 @@ export const DURATION = {
   route: 0.42,
   camera: 0.72,
   loginReveal: 1.1,
-  loginSuccess: 1.15,
+  loginSuccess: 1.05,
+  logoutReturn: 0.98,
   picoMorph: 0.42,
   picoReveal: 0.38,
   messageFlight: 0.42,
@@ -19,9 +20,17 @@ export const LOGIN_SEQUENCE = {
   panelPrepare: 55,
   panelEnd: 350,
   redEarliestStart: 65,
-  redEnd: 540,
+  redEnd: 620,
   waitingNotice: 1500,
   waitingHelp: 8000,
+} as const
+
+/** C has its own return choreography; it never samples B backwards. */
+export const LOGOUT_SEQUENCE = {
+  paperEnd: 300,
+  redStart: 150,
+  redEnd: 650,
+  panelStart: 460,
 } as const
 
 /** Spatial origins belong to the surrounding layout, never to random cards. */

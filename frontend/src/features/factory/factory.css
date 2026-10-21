@@ -8,8 +8,9 @@
 .factory-statusbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 14px;
   padding: 10px 0 12px;
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
@@ -17,6 +18,7 @@
 }
 .factory-statusbar__filters {
   display: flex;
+  flex: 0 1 auto;
   align-items: stretch;
   gap: 0;
   flex-wrap: wrap;
@@ -583,12 +585,11 @@
     padding: 10px 10px 90px;
   }
   .factory-statusbar {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
+    align-items: flex-start;
+    gap: 8px 12px;
   }
   .factory-statusbar__tools {
-    justify-content: space-between;
+    justify-content: flex-start;
   }
   .status-filter {
     padding: 6px 8px;

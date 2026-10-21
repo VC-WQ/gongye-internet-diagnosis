@@ -6,10 +6,10 @@ import { flushSync } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useUiPreferences } from '../services/uiPrefs'
 import { DURATION, LOGIN_SEQUENCE } from './tokens'
-import { panelInsets, sampleA, sampleB } from './loginTimeline'
+import { panelInsets, sampleA, sampleB, sampleC } from './loginTimeline'
 import './login.css'
 
-type Phase = 'boot' | 'intro' | 'ready' | 'auth-pending' | 'auth-success' | 'committed' | 'idle'
+type Phase = 'boot' | 'intro' | 'ready' | 'auth-pending' | 'auth-success' | 'committed' | 'logout-preparing' | 'logout-return' | 'idle'
 interface Rect { left: number; top: number; width: number; height: number }
 interface Snapshot { html: string; rect: Rect; brandHtml: string; brandRect: Rect; viewportWidth: number }
 type EntranceClient = (elapsed: number) => void
@@ -20,6 +20,8 @@ interface LoginTransitionValue {
   playIntro: () => void
   cancelIntro: () => void
   beginSuccess: (target: string) => void
+  beginLogout: (invalidateSession: () => void) => void
+  prepareLogoutReturn: () => boolean
   resetForLogin: () => void
   markTargetReady: () => void
   /** -1 means prepared beneath the cover; elapsed ms comes from the cover's RAF. */
@@ -66,13 +68,18 @@ export function LoginTransitionProvider({ children }: { children: ReactNode }) {
   const [introDone, setIntroDone] = useState(false)
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null)
   const [overlayVisible, setOverlayVisible] = useState(false)
+  const [logoutMode, setLogoutMode] = useState(false)
   const [waiting, setWaiting] = useState<'quiet' | 'loading' | 'help'>('quiet')
   const introStarted = useRef(false)
   const beginStarted = useRef(false)
   const introEpoch = useRef(0)
   const successEpoch = useRef(0)
+  const logoutEpoch = useRef(0)
+  const logoutStarted = useRef(false)
+  const logoutSkipAnimation = useRef(false)
   const introRaf = useRef(0)
   const successRaf = useRef(0)
+  const logoutRaf = useRef(0)
   const preparationFrames = useRef(new Set<number>())
   const timers = useRef(new Set<ReturnType<typeof setTimeout>>())
   const targetReady = useRef<(() => void) | null>(null)
@@ -138,6 +145,9 @@ export function LoginTransitionProvider({ children }: { children: ReactNode }) {
     cancelIntro()
     successEpoch.current += 1
     cancelAnimationFrame(successRaf.current)
+    logoutEpoch.current += 1
+    cancelAnimationFrame(logoutRaf.current)
+    logoutStarted.current = false
     clearTimers()
     unlockBody()
     targetReady.current = null
@@ -146,6 +156,7 @@ export function LoginTransitionProvider({ children }: { children: ReactNode }) {
     elapsedRef.current = undefined
     setIntroDone(false)
     setOverlayVisible(false)
+    setLogoutMode(false)
     setSnapshot(null)
     setWaiting('quiet')
     stage('boot')
@@ -212,6 +223,7 @@ export function LoginTransitionProvider({ children }: { children: ReactNode }) {
     }
     // Commit the protective snapshot before replacing the login route.
     flushSync(() => {
+      setLogoutMode(false)
       setSnapshot(captured)
       setOverlayVisible(true)
       setWaiting('quiet')
@@ -274,6 +286,110 @@ export function LoginTransitionProvider({ children }: { children: ReactNode }) {
       successRaf.current = requestAnimationFrame(step)
     })()
   }, [cancelIntro, clearTimers, finishSuccess, lockBody, navigate, nextFrame, publish, stage])
+
+  const finishLogout = useCallback(() => {
+    cancelAnimationFrame(logoutRaf.current)
+    clearTimers()
+    unlockBody()
+    introStarted.current = true
+    beginStarted.current = false
+    setIntroDone(true)
+    setOverlayVisible(false)
+    setLogoutMode(false)
+    setSnapshot(null)
+    setWaiting('quiet')
+    stage('ready')
+    document.querySelector<HTMLInputElement>('.login-form-inner input')?.focus({ preventScroll: true })
+  }, [clearTimers, stage, unlockBody])
+
+  const prepareLogoutReturn = useCallback(() => {
+    if (phaseRef.current !== 'logout-preparing' && phaseRef.current !== 'logout-return') return false
+    // Login's layout effect can run twice in StrictMode. Only one C owns the DOM.
+    if (logoutStarted.current) return true
+    const captured = captureForm()
+    if (!captured) return true
+    logoutStarted.current = true
+    const epoch = logoutEpoch.current
+    clearTimers()
+    setSnapshot(captured)
+    setWaiting('quiet')
+    void (async () => {
+      await nextFrame()
+      if (epoch !== logoutEpoch.current) return
+      if (reducedRef.current || logoutSkipAnimation.current) { finishLogout(); return }
+      const geometry = {
+        viewportWidth: captured.viewportWidth,
+        redTravel: captured.brandRect.left + captured.brandRect.width,
+      }
+      const start = performance.now()
+      stage('logout-return')
+      const step = (now: number) => {
+        if (epoch !== logoutEpoch.current) return
+        if (reducedRef.current || logoutSkipAnimation.current) { finishLogout(); return }
+        const elapsed = Math.min(DURATION.logoutReturn * 1000, now - start)
+        const frame = sampleC(elapsed, geometry)
+        if (paperRef.current) {
+          paperRef.current.style.transform = `translateX(${frame.paperX}px)`
+          paperRef.current.dataset.loginProgress = frame.paperProgress.toFixed(4)
+        }
+        if (coverRef.current) {
+          coverRef.current.style.transform = `translateX(${frame.redX}px)`
+          coverRef.current.style.visibility = 'visible'
+          coverRef.current.dataset.loginProgress = frame.redProgress.toFixed(4)
+        }
+        if (panelRef.current) {
+          const inset = panelInsets(1 - frame.panelProgress, captured.rect.width, captured.rect.height)
+          panelRef.current.style.transform = `scale(${frame.panelScale})`
+          panelRef.current.style.clipPath = `inset(${inset.y}% ${inset.x}% round ${frame.panelRadius}%)`
+          panelRef.current.style.opacity = String(frame.panelOpacity)
+          panelRef.current.style.visibility = 'visible'
+          panelRef.current.dataset.loginProgress = frame.panelProgress.toFixed(4)
+        }
+        if (!frame.done) logoutRaf.current = requestAnimationFrame(step)
+        else finishLogout()
+      }
+      logoutRaf.current = requestAnimationFrame(step)
+    })()
+    return true
+  }, [clearTimers, finishLogout, nextFrame, stage])
+
+  const beginLogout = useCallback((invalidateSession: () => void) => {
+    if (phaseRef.current === 'logout-preparing' || phaseRef.current === 'logout-return') return
+    // Auth has priority over any private-page browser snapshot. The one global
+    // document coordinator consumes this event and invalidates old visual work.
+    document.dispatchEvent(new Event('workspace:auth-transition'))
+    cancelIntro()
+    successEpoch.current += 1
+    logoutEpoch.current += 1
+    cancelAnimationFrame(successRaf.current)
+    cancelAnimationFrame(logoutRaf.current)
+    clearTimers()
+    targetReady.current = null
+    logoutStarted.current = false
+    logoutSkipAnimation.current = reducedRef.current
+    elapsedRef.current = undefined
+    lockBody()
+    // This cover contains only brand colours. No protected DOM is cloned.
+    flushSync(() => {
+      setSnapshot(null)
+      setLogoutMode(true)
+      setOverlayVisible(true)
+      setIntroDone(false)
+      setWaiting('quiet')
+      stage('logout-preparing')
+    })
+    invalidateSession()
+    // Raw Router navigation deliberately bypasses page snapshot transitions.
+    flushSync(() => navigate('/login', { replace: true, state: { logoutReturn: true } }))
+    const epoch = logoutEpoch.current
+    for (const [duration, state] of [[LOGIN_SEQUENCE.waitingNotice, 'loading'], [LOGIN_SEQUENCE.waitingHelp, 'help']] as const) {
+      const timer = setTimeout(() => {
+        timers.current.delete(timer)
+        if (epoch === logoutEpoch.current && phaseRef.current === 'logout-preparing') setWaiting(state)
+      }, duration)
+      timers.current.add(timer)
+    }
+  }, [cancelIntro, clearTimers, lockBody, navigate, stage])
   const markTargetReady = useCallback(() => { targetReady.current?.(); targetReady.current = null }, [])
   const returnToLogin = () => {
     resetForLogin()
@@ -282,17 +398,36 @@ export function LoginTransitionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (reducedMotion && phaseRef.current === 'intro') finishIntro()
     if (reducedMotion && phaseRef.current === 'auth-success') finishSuccess()
-  }, [reducedMotion, finishIntro, finishSuccess])
+    if (reducedMotion && phaseRef.current === 'logout-preparing') logoutSkipAnimation.current = true
+    if (reducedMotion && phaseRef.current === 'logout-return') finishLogout()
+  }, [reducedMotion, finishIntro, finishSuccess, finishLogout])
   useEffect(() => {
-    const resized = () => { if (phaseRef.current === 'auth-success') finishSuccess() }
+    const resized = () => {
+      if (phaseRef.current === 'auth-success') finishSuccess()
+      if (phaseRef.current === 'logout-preparing') logoutSkipAnimation.current = true
+      if (phaseRef.current === 'logout-return') finishLogout()
+    }
     window.addEventListener('resize', resized)
     return () => window.removeEventListener('resize', resized)
-  }, [finishSuccess])
+  }, [finishSuccess, finishLogout])
+  useEffect(() => {
+    if (location.pathname === '/login' || !['logout-preparing', 'logout-return'].includes(phaseRef.current)) return
+    logoutEpoch.current += 1
+    cancelAnimationFrame(logoutRaf.current)
+    clearTimers()
+    unlockBody()
+    setOverlayVisible(false)
+    setLogoutMode(false)
+    setSnapshot(null)
+    stage('idle')
+  }, [location.key, location.pathname, clearTimers, stage, unlockBody])
   useEffect(() => () => {
     introEpoch.current += 1
     successEpoch.current += 1
+    logoutEpoch.current += 1
     cancelAnimationFrame(introRaf.current)
     cancelAnimationFrame(successRaf.current)
+    cancelAnimationFrame(logoutRaf.current)
     preparationFrames.current.forEach(cancelAnimationFrame)
     preparationFrames.current.clear()
     clearTimers()
@@ -300,26 +435,27 @@ export function LoginTransitionProvider({ children }: { children: ReactNode }) {
     delete document.documentElement.dataset.loginTransition
   }, [clearTimers, unlockBody])
   const value = useMemo<LoginTransitionValue>(() => ({
-    phase, introDone, reducedMotion, playIntro, cancelIntro, beginSuccess,
+    phase, introDone, reducedMotion, playIntro, cancelIntro, beginSuccess, beginLogout, prepareLogoutReturn,
     resetForLogin, markTargetReady, subscribeEntrance,
-  }), [phase, introDone, reducedMotion, playIntro, cancelIntro, beginSuccess, resetForLogin, markTargetReady, subscribeEntrance])
+  }), [phase, introDone, reducedMotion, playIntro, cancelIntro, beginSuccess, beginLogout, prepareLogoutReturn, resetForLogin, markTargetReady, subscribeEntrance])
   return (
     <LoginTransitionContext.Provider value={value}>
       {children}
-      {snapshot && overlayVisible && (
-        <div className="login-transition" data-login-success={phase}>
+      {overlayVisible && (snapshot || logoutMode) && (
+        <div className={`login-transition${logoutMode ? ' login-transition--logout' : ''}`}
+          data-login-success={!logoutMode ? phase : undefined} data-login-logout={logoutMode ? phase : undefined}>
           <div className="login-transition__visual" aria-hidden="true">
             <div ref={paperRef} className="login-paper" />
-            <div ref={coverRef} className="login-red-block" style={{
+            {snapshot && <><div ref={coverRef} className="login-red-block" style={{
               left: snapshot.brandRect.left, top: snapshot.brandRect.top,
               width: snapshot.brandRect.width, height: snapshot.brandRect.height,
             }} dangerouslySetInnerHTML={{ __html: snapshot.brandHtml }} />
             <div ref={panelRef} className="login-panel-layer" style={snapshot.rect}
-              dangerouslySetInnerHTML={{ __html: snapshot.html }} />
+              dangerouslySetInnerHTML={{ __html: snapshot.html }} /></>}
           </div>
           {waiting !== 'quiet' && (
             <div className="login-transition__waiting" role="status">
-              <p>{waiting === 'help' ? '目标页面暂未准备完成，可重试或返回登录。' : '登录已验证，正在准备工作空间…'}</p>
+              <p>{waiting === 'help' ? '目标页面暂未准备完成，可重试或返回登录。' : logoutMode ? '身份已退出，正在准备登录页面…' : '登录已验证，正在准备工作空间…'}</p>
               {waiting === 'help' && <div>
                 <button type="button" onClick={() => window.location.reload()}>重试目标页面</button>
                 <button type="button" onClick={returnToLogin}>返回登录</button>
