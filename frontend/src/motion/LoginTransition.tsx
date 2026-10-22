@@ -7,6 +7,8 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { useUiPreferences } from '../services/uiPrefs'
 import { DURATION, LOGIN_SEQUENCE } from './tokens'
 import { panelInsets, sampleA, sampleB, sampleC } from './loginTimeline'
+import { IntroProgressChannel, type SubscribeIntro } from './loginIntro'
+import { cloneSafe } from './loginSnapshot'
 import './login.css'
 
 type Phase = 'boot' | 'intro' | 'ready' | 'auth-pending' | 'auth-success' | 'committed' | 'logout-preparing' | 'logout-return' | 'idle'
@@ -26,23 +28,11 @@ interface LoginTransitionValue {
   markTargetReady: () => void
   /** -1 means prepared beneath the cover; elapsed ms comes from the cover's RAF. */
   subscribeEntrance: (client: EntranceClient) => () => void
+  /** Read-only A frames. This channel never drives the B target-page entrance. */
+  subscribeIntroProgress: SubscribeIntro
 }
 const LoginTransitionContext = createContext<LoginTransitionValue | null>(null)
 
-function cloneSafe(node: HTMLElement): string {
-  const clone = node.cloneNode(true) as HTMLElement
-  const inputs = Array.from(node.querySelectorAll('input'))
-  clone.querySelectorAll('input').forEach((input, index) => {
-    const original = inputs[index]
-    if (original) input.setAttribute('value', original.type === 'password' ? '••••••••' : original.value)
-  })
-  clone.removeAttribute('id')
-  clone.querySelectorAll<HTMLElement>('[id]').forEach((item) => item.removeAttribute('id'))
-  clone.querySelectorAll<HTMLElement>('button, a, input, [tabindex]').forEach((item) => item.setAttribute('tabindex', '-1'))
-  clone.setAttribute('aria-hidden', 'true')
-  clone.setAttribute('inert', '')
-  return clone.outerHTML
-}
 function rectOf(node: HTMLElement): Rect {
   const { left, top, width, height } = node.getBoundingClientRect()
   return { left, top, width, height }
@@ -89,6 +79,8 @@ export function LoginTransitionProvider({ children }: { children: ReactNode }) {
   const bodyStyle = useRef<{ overflow: string; padding: string } | null>(null)
   const clients = useRef(new Set<EntranceClient>())
   const elapsedRef = useRef<number | undefined>()
+  const introChannel = useMemo(() => new IntroProgressChannel(), [])
+  const subscribeIntroProgress = introChannel.subscribe
 
   const stage = useCallback((next: Phase) => {
     phaseRef.current = next
@@ -132,6 +124,7 @@ export function LoginTransitionProvider({ children }: { children: ReactNode }) {
   }, [])
   const finishIntro = useCallback(() => {
     cancelAnimationFrame(introRaf.current)
+    introChannel.finish(introEpoch.current)
     const cover = document.querySelector<HTMLElement>('[data-login-intro-cover]')
     if (cover) { cover.style.transform = 'translateX(-100vw)'; cover.style.visibility = 'hidden' }
     for (const selector of ['.login-form', '.login-form-inner']) {
@@ -140,11 +133,12 @@ export function LoginTransitionProvider({ children }: { children: ReactNode }) {
     }
     setIntroDone(true)
     stage('ready')
-  }, [stage])
+  }, [introChannel, stage])
   const cancelIntro = useCallback(() => {
     introEpoch.current += 1
     cancelAnimationFrame(introRaf.current)
-  }, [])
+    introChannel.cancel(introEpoch.current)
+  }, [introChannel])
   const resetForLogin = useCallback(() => {
     cancelIntro()
     successEpoch.current += 1
@@ -158,17 +152,19 @@ export function LoginTransitionProvider({ children }: { children: ReactNode }) {
     beginStarted.current = false
     introStarted.current = false
     elapsedRef.current = undefined
+    introChannel.begin(introEpoch.current)
     setIntroDone(false)
     setOverlayVisible(false)
     setLogoutMode(false)
     setSnapshot(null)
     setWaiting('quiet')
     stage('boot')
-  }, [cancelIntro, clearTimers, stage, unlockBody])
+  }, [cancelIntro, clearTimers, introChannel, stage, unlockBody])
   const playIntro = useCallback(() => {
     if (introStarted.current) return
     introStarted.current = true
     const epoch = ++introEpoch.current
+    introChannel.begin(epoch)
     if (reducedRef.current) { finishIntro(); return }
     stage('intro')
     const cover = document.querySelector<HTMLElement>('[data-login-intro-cover]')
@@ -202,12 +198,13 @@ export function LoginTransitionProvider({ children }: { children: ReactNode }) {
           panel.style.opacity = String(frame.panelOpacity)
         }
         cover.dataset.loginProgress = frame.progress.toFixed(4)
+        introChannel.publish(epoch, frame.progress)
         if (!frame.done) introRaf.current = requestAnimationFrame(step)
         else finishIntro()
       }
       introRaf.current = requestAnimationFrame(step)
     })()
-  }, [delay, finishIntro, nextFrame, stage])
+  }, [delay, finishIntro, introChannel, nextFrame, stage])
 
   const finishSuccess = useCallback(() => {
     cancelAnimationFrame(successRaf.current)
@@ -434,6 +431,8 @@ export function LoginTransitionProvider({ children }: { children: ReactNode }) {
   }, [location.key, location.pathname, clearTimers, stage, unlockBody])
   useEffect(() => () => {
     introEpoch.current += 1
+    introChannel.cancel(introEpoch.current)
+    introChannel.clear()
     successEpoch.current += 1
     logoutEpoch.current += 1
     cancelAnimationFrame(introRaf.current)
@@ -444,11 +443,11 @@ export function LoginTransitionProvider({ children }: { children: ReactNode }) {
     clearTimers()
     unlockBody()
     delete document.documentElement.dataset.loginTransition
-  }, [clearTimers, unlockBody])
+  }, [clearTimers, introChannel, unlockBody])
   const value = useMemo<LoginTransitionValue>(() => ({
     phase, introDone, reducedMotion, playIntro, cancelIntro, beginSuccess, beginLogout, prepareLogoutReturn,
-    resetForLogin, markTargetReady, subscribeEntrance,
-  }), [phase, introDone, reducedMotion, playIntro, cancelIntro, beginSuccess, beginLogout, prepareLogoutReturn, resetForLogin, markTargetReady, subscribeEntrance])
+    resetForLogin, markTargetReady, subscribeEntrance, subscribeIntroProgress,
+  }), [phase, introDone, reducedMotion, playIntro, cancelIntro, beginSuccess, beginLogout, prepareLogoutReturn, resetForLogin, markTargetReady, subscribeEntrance, subscribeIntroProgress])
   return (
     <LoginTransitionContext.Provider value={value}>
       {children}

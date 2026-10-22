@@ -33,10 +33,25 @@
 .login-graphic i:nth-child(2) { top: 34%; border-color: rgba(255,255,255,.22); }
 .login-graphic i:nth-child(3) { top: 40%; border-color: rgba(255,255,255,.16); }
 .login-form { position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; padding: 48px 40px; background: var(--surface); transform-origin:left center; }
-.login-form-inner { width: 100%; max-width: 360px; background: var(--surface); }
-.login-form-inner h2 { margin: 0 0 28px; font-size: 26px; font-weight: 600; }
+.login-form-inner { width: 100%; min-width: 0; max-width: 420px; background: var(--surface); }
+.login-panel-heading { margin-bottom: 30px; }
+.login-form-inner h2 { margin: 0; font-size: clamp(30px, 2.7vw, 40px); line-height: 1.3; font-weight: 600; letter-spacing: -.8px; }
+.login-heading-line { display: block; overflow: hidden; padding: 2px 0 6px; }
+.login-heading-line > span { display: block; }
+.login-panel-heading p { margin: 10px 0 0; color: var(--muted); font-size: 14px; line-height: 1.8; text-wrap: pretty; }
 .login-form-inner .ant-tabs { width: 100%; }
-.login-footer { display: flex; justify-content: space-between; gap: 20px; margin-top: 26px; font-size: 12px; color: var(--muted); }
+.login-form-inner .ant-tabs-nav { margin-bottom: 24px; }
+.login-form-inner .ant-tabs-tab { padding-top: 0; padding-bottom: 12px; font-weight: 500; }
+.login-form-inner .ant-form-item { margin-bottom: 24px; }
+.login-form-inner .ant-form-item-label { padding-bottom: 9px; }
+.login-form-inner .ant-form-item-label > label { color: var(--text); font-size: 13px; font-weight: 500; }
+.login-form-inner .ant-input, .login-form-inner .ant-input-affix-wrapper { min-height: 50px; padding: 11px 14px; font-size: 15px; }
+.login-form-inner .ant-input-affix-wrapper > .ant-input { min-height: 0; padding: 0; }
+.login-form-inner .ant-btn-primary { min-height: 50px; border-radius: 0; font-size: 15px; font-weight: 500; letter-spacing: 1px; }
+.login-tab-form { animation: login-tab-arrive 160ms ease-out; }
+@keyframes login-tab-arrive { from { opacity: .6; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.login-form-inner[data-login-snapshot] .login-tab-form { animation: none; }
+.login-footer { display: flex; justify-content: space-between; gap: 20px; margin-top: 28px; padding-top: 22px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
 .login-footer a, .login-footer button { padding: 0; color: var(--muted); border: 0; background: none; cursor: pointer; font: inherit; }
 .login-footer a:hover, .login-footer button:hover { color: var(--brand); }
 .login-footer a:focus-visible, .login-footer button:focus-visible { outline: 2px solid var(--brand); outline-offset: 5px; }
@@ -65,10 +80,13 @@
   .login-brand h1 { font-size: 26px; line-height: 1.35; }
   .login-brand small { grid-column: 1 / -1; font-size: 10px; letter-spacing: 2px; }
   .login-graphic { display: none; }
-  .login-form { min-height: 430px; padding: 36px 28px; }
-  .login-form-inner h2 { margin-bottom: 20px; font-size: 24px; }
+  .login-form { min-height: 480px; padding: 36px 28px 40px; }
+  .login-panel-heading { margin-bottom: 26px; }
+  .login-form-inner h2 { font-size: clamp(28px, 8vw, 34px); }
+  .login-panel-heading p { font-size: 13px; }
   .login-transition__waiting { right: 20px; bottom: 20px; max-width: calc(100vw - 40px); }
 }
 @media (prefers-reduced-motion: reduce) {
   .login-intro-cover, .login-paper, .login-red-block, .login-panel-layer { will-change: auto; }
+  .login-tab-form { animation: none; }
 }

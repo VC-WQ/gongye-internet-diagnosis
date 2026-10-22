@@ -1,15 +1,19 @@
-import { useLayoutEffect, useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { Button, Form, Input, Tabs, message } from 'antd'
 import { Link, useLocation } from 'react-router-dom'
 import { login, register } from '../../services/api'
 import { errorText } from '../../hooks/useResource'
 import { useLoginTransition } from '../../motion/LoginTransition'
+import { useLoginPanelEntrance } from '../../motion/useLoginPanelEntrance'
 
 export default function Login() {
   const location = useLocation()
   const transition = useLoginTransition()
   const [loading, setLoading] = useState(false)
   const [showPasswordHelp, setShowPasswordHelp] = useState(false)
+  const [mode, setMode] = useState('login')
+  const panelRef = useRef<HTMLDivElement>(null)
+  useLoginPanelEntrance(panelRef, transition, mode)
 
   useLayoutEffect(() => {
     // A is skipped only for the live provider-owned C. Refreshing this history
@@ -58,33 +62,39 @@ export default function Login() {
   }
 
   const form = (isRegister: boolean) => (
-    <Form layout="vertical" onFinish={(values) => submit(values, isRegister)}>
-      <Form.Item
-        name="username"
-        label="用户名"
-        rules={[{ required: true, min: 3, message: '用户名至少 3 位' }]}
-      >
-        <Input autoComplete="username" placeholder="请输入用户名" />
-      </Form.Item>
-      <Form.Item
-        name="password"
-        label="密码"
-        rules={[{ required: true, min: 6, message: '密码至少 6 位' }]}
-      >
-        <Input.Password
-          autoComplete={isRegister ? 'new-password' : 'current-password'}
-          placeholder="请输入密码"
-        />
-      </Form.Item>
-      <Button
-        type="primary"
-        htmlType="submit"
-        block
-        loading={loading}
-        disabled={!transition.introDone}
-      >
-        {isRegister ? '注册并登录' : '登录'}
-      </Button>
+    <Form className="login-tab-form" layout="vertical" onFinish={(values) => submit(values, isRegister)}>
+      <div data-login-entry="username">
+        <Form.Item
+          name="username"
+          label="用户名"
+          rules={[{ required: true, min: 3, message: '用户名至少 3 位' }]}
+        >
+          <Input autoComplete="username" placeholder="请输入用户名" />
+        </Form.Item>
+      </div>
+      <div data-login-entry="password" data-login-sensitive>
+        <Form.Item
+          name="password"
+          label="密码"
+          rules={[{ required: true, min: 6, message: '密码至少 6 位' }]}
+        >
+          <Input.Password
+            autoComplete={isRegister ? 'new-password' : 'current-password'}
+            placeholder="请输入密码"
+          />
+        </Form.Item>
+      </div>
+      <div data-login-entry="action">
+        <Button
+          type="primary"
+          htmlType="submit"
+          block
+          loading={loading}
+          disabled={!transition.introDone}
+        >
+          {isRegister ? '注册并登录' : '登录'}
+        </Button>
+      </div>
     </Form>
   )
 
@@ -118,16 +128,21 @@ export default function Login() {
         </div>
       </section>
       <section className="login-form">
-        <div className="login-form-inner">
-          <h2>登录工作空间</h2>
+        <div ref={panelRef} className="login-form-inner">
+          <header className="login-panel-heading">
+            <h2><span className="login-heading-line"><span data-login-entry="heading">登录工作空间</span></span></h2>
+            <p data-login-entry="support">使用账号进入工业设备智能诊断平台</p>
+          </header>
           <Tabs
             destroyOnHidden
+            onChange={setMode}
+            renderTabBar={(props, DefaultTabBar) => <div data-login-entry="switch"><DefaultTabBar {...props} /></div>}
             items={[
               { key: 'login', label: '登录', children: form(false) },
               { key: 'register', label: '注册', children: form(true) },
             ]}
           />
-          <div className="login-footer">
+          <div className="login-footer" data-login-entry="footer">
             <button type="button" aria-expanded={showPasswordHelp} aria-controls="login-password-help"
               onClick={() => setShowPasswordHelp((value) => !value)}>忘记密码</button>
             <Link to="/research">研究</Link>
