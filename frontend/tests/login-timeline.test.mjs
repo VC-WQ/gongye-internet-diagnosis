@@ -24,19 +24,16 @@ test('motion tokens remain positive and easing curves valid', () => {
     values.forEach((value) => assert.ok(value >= 0 && value <= 1, key))
   }
 })
-test('A translates an intact object monotonically left, with acceleration and deceleration and no overshoot', () => {
-  assert.deepEqual(sampleA(0), { progress: 0, redX: 0, done: false })
-  let previous = 0
-  for (let i = 0; i <= 200; i++) {
-    const frame = sampleA(i / 200)
-    assert.ok(frame.redX <= previous && frame.redX >= -1)
-    previous = frame.redX
-  }
-  assert.equal(sampleA(1).redX, -1)
-  assert.equal(sampleA(1).done, true)
-  assert.ok(Math.abs(sampleA(.01).redX) < .01)
-  assert.ok(Math.abs(sampleA(.99).redX + 1) < .01)
-  assert.equal('rightInset' in sampleA(.5), false, 'the cover must move, not shrink its clip')
+test('A has distinct bounded red, paper and form overshoots and exact landing', () => {
+  const frames=Array.from({length:201},(_,i)=>sampleA(i/200))
+  assert.equal(frames[0].redX,0);assert.equal(frames[0].panelOpacity,0)
+  assert.ok(Math.min(...frames.map(f=>f.redX)) < -1.03)
+  assert.ok(Math.min(...frames.map(f=>f.redX)) >= -1.046)
+  assert.ok(Math.max(...frames.map(f=>f.paperScale)) > 1.002)
+  assert.ok(Math.min(...frames.map(f=>f.panelY)) < -2)
+  assert.notEqual(frames.findIndex(f=>f.redX < -1),frames.findIndex(f=>f.panelY < 0))
+  const end=sampleA(1);assert.equal(end.redX,-1);assert.equal(end.paperScale,1);assert.equal(end.panelY,0);assert.equal(end.panelScale,1);assert.equal(end.done,true)
+  assert.equal('rightInset' in sampleA(.5),false)
 })
 test('B has three independent clocks and panel, red, paper finish in that order', () => {
   const time = createBTimeline(geometry)
@@ -93,17 +90,19 @@ test('C independently restores paper, brand and form in order rather than revers
   let previous = first
   for (let elapsed = 1; elapsed <= time.total + 50; elapsed++) {
     const frame = sampleC(elapsed, geometry)
-    assert.ok(frame.redX >= previous.redX && frame.redX <= 0)
-    assert.ok(frame.paperX <= previous.paperX && frame.paperX >= 0)
+    assert.ok(frame.redX >= -geometry.redTravel && frame.redX <= geometry.redTravel * .046)
+    assert.equal(frame.paperX,0); assert.ok(frame.paperScale >= 0 && frame.paperScale <= 1.026)
     assert.ok(frame.panelOpacity >= previous.panelOpacity && frame.panelOpacity <= 1)
-    assert.ok(frame.panelScale >= previous.panelScale && frame.panelScale <= 1)
+    assert.ok(frame.panelScale >= .78 && frame.panelScale <= 1.013)
     previous = frame
   }
   assert.equal(previous.done, true)
   assert.equal(previous.panelOpacity, 1)
   assert.equal(previous.panelScale, 1)
   assert.equal(previous.redX, 0)
-  assert.equal(previous.paperX, 0)
+  assert.equal(previous.paperX, 0); assert.equal(previous.paperScale,1)
+  assert.ok(sampleC(80,geometry).paperScale>0);assert.equal(sampleC(80,geometry).redProgress,0)
+  assert.ok(Array.from({length:1000},(_,i)=>sampleC(i,geometry)).some(f=>f.redX>0 && f.paperScale===1))
   const middle = sampleC(time.total / 2, geometry)
   const reversed = sampleB(createBTimeline(geometry).total / 2, geometry)
   assert.notEqual(middle.panelOpacity, reversed.panelOpacity)
@@ -117,20 +116,14 @@ test('paper starts at the exact half-collapse instant while the panel still exis
   assert.ok(sampleB(time.paperStart + 1, geometry).paperProgress > 0)
   assert.ok(sampleB(time.paperStart - 1, geometry).panelProgress < .5)
 })
-test('panel prepares briefly then collapses and fades without a tail rebound; red and paper never reverse', () => {
-  const time = createBTimeline(geometry)
-  let previous = sampleB(time.panelPrepare, geometry)
-  assert.equal(previous.panelScale, 1.025)
-  for (let ms = time.panelPrepare + 1; ms <= time.total + 100; ms++) {
-    const frame = sampleB(ms, geometry)
-    for (const key of ['panelScale', 'panelOpacity', 'redX', 'paperX']) {
-      assert.ok(frame[key] <= previous[key] + 1e-12, `${key} must not reverse at ${ms}`)
-    }
-    assert.ok(frame.panelScale >= 0 && frame.panelRadius >= 0 && frame.panelRadius <= 50)
-    previous = frame
-  }
-  const insets = panelInsets(1, 360, 420)
-  assert.ok(Math.abs(420 * (1 - insets.y * 2 / 100) - 360) < 1e-10, 'final crop is square before scaling')
+test('B prepares and collapses the form while independent brand/paper have bounded settle', () => {
+  const time=createBTimeline(geometry);assert.equal(sampleB(time.panelPrepare,geometry).panelScale,1.025)
+  const frames=Array.from({length:time.total+100},(_,i)=>sampleB(i,geometry))
+  assert.ok(Math.min(...frames.map(f=>f.redX)) < -geometry.redTravel)
+  assert.ok(Math.min(...frames.map(f=>f.paperX)) < -geometry.viewportWidth)
+  for(const f of frames){assert.ok(f.panelScale>=0&&f.panelScale<=1.026);assert.ok(f.panelOpacity>=0&&f.panelOpacity<=1);assert.ok(f.panelRadius>=0&&f.panelRadius<=50)}
+  const end=frames.at(-1);assert.equal(end.panelScale,0);assert.equal(end.redX,-geometry.redTravel);assert.equal(end.paperX,-geometry.viewportWidth)
+  const insets=panelInsets(1,360,420);assert.ok(Math.abs(420*(1-insets.y*2/100)-360)<1e-10)
 })
 test('six factory groups have distinct spatial origins and finish before paper leaves', () => {
   const total = createBTimeline(geometry).total
@@ -147,4 +140,5 @@ test('six factory groups have distinct spatial origins and finish before paper l
     assert.equal(final.done, true)
   }
   assert.equal(starts.size, 6)
+  for(const entry of Object.keys(FACTORY_ENTRANCE)){const spec=FACTORY_ENTRANCE[entry];const peak=sampleFactoryEntrance(spec.start+spec.duration*.72,entry);assert.ok(peak.x*spec.x+peak.y*spec.y<0,entry+' overshoots opposite its origin')}
 })

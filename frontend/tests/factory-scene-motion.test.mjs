@@ -186,3 +186,20 @@ test('device and blank pointer sessions distinguish click, drag, pinch and cance
   assert.equal(pointerIntent(undefined,undefined,0,true,true,false),'gesture')
   assert.equal(pointerIntent(undefined,undefined,0,true,false,true),'gesture')
 })
+
+test('curved Hermite routes retain endpoint velocity and bow into real space',()=>{
+ const route=createRoute([{x:100,y:100},{x:500,y:100}],{x:20,y:0},36)
+ const start=sampleRoute(route,0),mid=sampleRoute(route,route.duration/2),end=sampleRoute(route,route.duration)
+ close(start.point,{x:100,y:100});close(start.velocity,{x:20,y:0});close(end.point,{x:500,y:100});close(end.velocity,{x:0,y:0})
+ assert.ok(mid.point.y>130 && mid.point.y<140)
+})
+test('bowed filter plans keep full machine envelopes separate at two millisecond samples',()=>{
+ for(const columns of [2,4]){
+  const input=initial(8,columns).map((s,i)=>({...s,visible:i%3===0}))
+  const plan=planScene(input,createSlots(input.filter(s=>s.visible).length,columns),geometry)
+  for(let t=0;t<=plan.duration;t+=2){
+   const states=input.map(i=>sampleItem(i,plan,t)).filter(s=>s.present)
+   for(let i=0;i<states.length;i++)for(let j=0;j<i;j++)assert.equal(boxesOverlap(states[i].point,states[j].point,SCENE_GAP-1),false,`dense collision ${t}`)
+  }
+ }
+})

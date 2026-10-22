@@ -7,6 +7,7 @@ export type Edge = 'left' | 'right' | 'top' | 'bottom'
 export type Geometry = { matrix: Matrix; rect: Rect }
 export const MACHINE_BOX: Rect = { left: -103, right: 103, top: -77, bottom: 151 }
 export const SCENE_GAP = 14
+const TEMPORAL_GAP = SCENE_GAP + 3
 const EPS = .001
 const zero = (): Point => ({ x: 0, y: 0 })
 export const distance = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y)
@@ -158,7 +159,7 @@ export function sweptOverlap(a0: Point, a1: Point, b0: Point, b1: Point, gap = S
 /** A small visibility graph around Minkowski-expanded stationary machines. */
 export function safePath(from: Point, to: Point, obstacles: Point[]): Point[] | null {
   if (obstacles.some(p => boxesOverlap(to, p))) return null
-  const rects = obstacles.map(p => ({ left: p.x - 220, right: p.x + 220, top: p.y - 242, bottom: p.y + 242 }))
+  const rects = obstacles.map(p => ({ left: p.x - 206 - TEMPORAL_GAP, right: p.x + 206 + TEMPORAL_GAP, top: p.y - 228 - TEMPORAL_GAP, bottom: p.y + 228 + TEMPORAL_GAP }))
   const clear = (a: Point, b: Point) => !rects.some(r => segmentRect(a, b, r))
   if (clear(from, to)) return [from, to]
   const nodes = [from, to, ...rects.flatMap(r => [
@@ -184,16 +185,16 @@ export function safePath(from: Point, to: Point, obstacles: Point[]): Point[] | 
   }
   return null
 }
-export type Leg = { from: Point; to: Point; velocity: Point; duration: number }
+export type Leg = { from: Point; to: Point; velocity: Point; duration: number; bow: number }
 export type Route = { legs: Leg[]; duration: number }
-export function createRoute(points: Point[], initialVelocity = zero()): Route {
+export function createRoute(points: Point[], initialVelocity = zero(), bow = 0): Route {
   const legs = points.slice(1).map((to, i) => {
     const from = points[i], length = distance(from, to), travel = MOTION.sceneReflow
     const duration = Math.max(travel.min, Math.min(travel.max, length / travel.worldUnitsPerMs))
     let velocity = i === 0 ? { ...initialVelocity } : zero()
     const speed = Math.hypot(velocity.x, velocity.y), limit = length / (duration / 1000) * 1.5
     if (speed > limit) velocity = { x: velocity.x * limit / speed, y: velocity.y * limit / speed }
-    return { from, to, velocity, duration }
+    return { from, to, velocity, duration, bow: Math.sign(bow)*Math.min(Math.abs(bow),length*.16,48) }
   })
   return { legs, duration: legs.reduce((sum, l) => sum + l.duration, 0) }
 }
@@ -207,6 +208,14 @@ export function sampleRoute(route: Route, elapsed: number): { point: Point; velo
       for (const k of ['x', 'y'] as const) {
         point[k] = (2*u3-3*u2+1)*leg.from[k] + (u3-2*u2+u)*seconds*leg.velocity[k] + (-2*u3+3*u2)*leg.to[k]
         velocity[k] = ((6*u2-6*u)*leg.from[k] + (3*u2-4*u+1)*seconds*leg.velocity[k] + (-6*u2+6*u)*leg.to[k]) / seconds
+      }
+      const length=distance(leg.from,leg.to)
+      if(length>EPS&&leg.bow){
+        const normal={x:-(leg.to.y-leg.from.y)/length,y:(leg.to.x-leg.from.x)/length}
+        const arc=16*u2*(1-u)*(1-u)*leg.bow
+        const speed=32*u*(1-u)*(1-2*u)*leg.bow/seconds
+        point.x+=normal.x*arc;point.y+=normal.y*arc
+        velocity.x+=normal.x*speed;velocity.y+=normal.y*speed
       }
       return { point, velocity, done: false }
     }
@@ -234,18 +243,20 @@ function at(item: SceneItem, plans: Reservation[], t: number): Point | null {
 }
 function temporalSafe(item: SceneItem, route: Route, start: number, items: SceneItem[], plans: Reservation[]): boolean {
   const end = Math.max(start + route.duration, ...plans.map(p => p.end), 0)
-  for (let t = start; t < end; t += 20) {
-    const next = Math.min(end, t + 20), a0 = sampleRoute(route, t-start).point, a1 = sampleRoute(route, next-start).point
+  for (let t = start; t < end; t += 10) {
+    const next = Math.min(end, t + 10), a0 = sampleRoute(route, t-start).point, a1 = sampleRoute(route, next-start).point
     for (const other of items) if (other.id !== item.id) {
       // A reservation can disappear in this interval; inspect the occupied instant
       // just before its end rather than treating the whole final interval as empty.
       const b0 = at(other, plans, t), b1 = at(other, plans, next-1e-6)
-      if (b0 && b1 && sweptOverlap(a0, a1, b0, b1)) return false
+      // Extra world-space envelope covers the bounded curve's deviation from
+      // the 10ms swept chord, in addition to the full machine box and base gap.
+      if (b0 && b1 && sweptOverlap(a0, a1, b0, b1,TEMPORAL_GAP)) return false
       if (b0 && !b1) {
         const finish=plans.filter(p=>p.id===other.id&&p.kind==='exit'&&p.end>t&&p.end<=next).map(p=>p.end)[0]
         if (finish!==undefined) {
           const before=at(other,plans,finish-1e-6)
-          if (before&&sweptOverlap(a0,sampleRoute(route,finish-start).point,b0,before)) return false
+          if (before&&sweptOverlap(a0,sampleRoute(route,finish-start).point,b0,before,TEMPORAL_GAP)) return false
         }
       }
     }
@@ -264,11 +275,27 @@ export function planScene(items: SceneItem[], slots: Point[], geometry: Geometry
   const parked = new Set<string>()
   let total = 0, budget = items.length * 4 + 4
   const add = (item: SceneItem, points: Point[], kind: Reservation['kind'], edge?: Edge) => {
-    let route = createRoute(points, reservations.some(r => r.id === item.id) ? zero() : item.velocity)
+    const velocity=reservations.some(r => r.id === item.id) ? zero() : item.velocity
+    let route = createRoute(points,velocity)
     // Validate the actual Hermite trajectory, not just its straight-line chord.
-    let start = Math.max(0, ...reservations.filter(r => r.id === item.id).map(r => r.end))
+    const earliest=Math.max(0, ...reservations.filter(r => r.id === item.id).map(r => r.end))
+    let start=earliest
     const latest = total + 30
-    while (start <= latest && !temporalSafe(item, route, start, items, reservations)) start += 45
+    let curved=false, found=false
+    // Candidate times are reservation boundaries, not an unbounded millisecond scan.
+    // Every accepted candidate still passes the full swept-box test.
+    const times=[...new Set([earliest,earliest+90,...reservations.map(r=>r.end+1),total+1])]
+      .filter(t=>t>=earliest&&t<=latest).sort((a,b)=>a-b)
+    for(const proposed of times){
+      for(const bow of [36,-36,18,-18,0]){
+        const candidate=createRoute(points,velocity,bow)
+        if(temporalSafe(item,candidate,proposed,items,reservations)){
+          route=candidate;start=proposed;curved=bow!==0;found=true;break
+        }
+      }
+      if(found)break
+    }
+    if(!found)start=latest+1
     if (start > latest) {
       route = createRoute(points)
       start = total + 1
@@ -277,6 +304,7 @@ export function planScene(items: SceneItem[], slots: Point[], geometry: Geometry
     }
     else if (start > 0 && Math.hypot(item.velocity.x, item.velocity.y) > 1) diagnostics.push(`${item.id}:queued-brake`)
     reservations.push({ id: item.id, route, start, end: start + route.duration, kind, edge })
+    if(curved)diagnostics.push(`${item.id}:safe-bow`)
     total = Math.max(total, start + route.duration)
     positions.set(item.id, points[points.length-1])
     if (kind === 'exit') positions.delete(item.id)

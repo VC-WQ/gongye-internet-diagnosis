@@ -40,3 +40,11 @@
   .factory-scene--continuous .scene-controls { padding-inline: 6px; }
   .factory-scene--continuous .scene-hint { font-size: 9px; }
 }
+/* Selection is a separate paint layer; world position has one controller owner. */
+.factory-scene--continuous .node-platform{fill:var(--surface-muted);stroke:var(--line);stroke-width:1;transition:fill 240ms var(--ease),stroke 240ms var(--ease),stroke-width 240ms var(--ease)}
+.factory-scene--continuous .node-edge{stroke:var(--line);transition:stroke 240ms var(--ease)}
+.factory-scene--continuous .node-label{fill:var(--surface);stroke:var(--line);transition:fill 240ms var(--ease),stroke 240ms var(--ease)}
+.factory-scene--continuous .is-selected .node-platform{fill:var(--brand-soft);stroke:var(--brand);stroke-width:2}
+.factory-scene--continuous .is-selected .node-edge,.factory-scene--continuous .is-selected .node-label{stroke:var(--brand)}
+.factory-scene--continuous .is-selected .node-label{fill:var(--surface-raised)}
+@media(prefers-reduced-motion:reduce){.factory-scene--continuous .node-platform,.factory-scene--continuous .node-edge,.factory-scene--continuous .node-label{transition:none}}

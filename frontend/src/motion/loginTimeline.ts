@@ -10,10 +10,23 @@ const progressAt = (elapsed: number, start: number, duration: number) =>
   clamp((elapsed - start) / duration)
 const safeLength = (value: number) => Number.isFinite(value) ? Math.max(1, value) : 1
 
-/** A moves one intact object; the static brand surface remains underneath. */
+/** One bounded overshoot and a zero-velocity landing, no endless oscillation. */
+export function settle(value: number, overshoot = .035, crest = .72): number {
+  const p = clamp(value)
+  if (p === 0 || p === 1) return p
+  return p < crest ? (1 + overshoot) * smooth(p / crest)
+    : 1 + overshoot * (1 - smooth((p - crest) / (1 - crest)))
+}
+
+/** A has three local clocks: red establishes direction, paper opens, form lands. */
 export function sampleA(progress: number) {
-  const p = smooth(progress)
-  return { progress: p, redX: -p || 0, done: progress >= 1 }
+  const p = clamp(progress)
+  const red = settle(p, .045, .74)
+  const paper = settle(progressAt(p, .08, .83), .035, .73)
+  const panel = settle(progressAt(p, .19, .81), .065, .76)
+  return { progress: p, redX: -red || 0, paperScale: .92 + .08 * paper,
+    paperX: .035 * (1 - paper), panelY: 42 * (1 - panel), panelScale: .96 + .04 * panel,
+    panelOpacity: smooth(progressAt(p, .19, .5)), done: progress >= 1 }
 }
 
 export interface LoginGeometry {
@@ -55,22 +68,23 @@ export function createCTimeline(geometry: LoginGeometry) {
     redStart: LOGOUT_SEQUENCE.redStart, redEnd: LOGOUT_SEQUENCE.redEnd,
     panelStart: LOGOUT_SEQUENCE.panelStart, panelEnd: DURATION.logoutReturn * 1000,
     redTravel: safeLength(geometry.redTravel),
-    paperTravel: safeLength(geometry.viewportWidth) * .12,
+    paperTravel: safeLength(geometry.viewportWidth),
   }
 }
 
 /** C restores the brand and then the new, empty login form over neutral paper. */
 export function sampleC(elapsed: number, geometry: LoginGeometry) {
   const t = createCTimeline(geometry)
-  const paperProgress = smooth(progressAt(elapsed, t.paperStart, t.paperEnd - t.paperStart))
-  const redProgress = smooth(progressAt(elapsed, t.redStart, t.redEnd - t.redStart))
-  const panelProgress = smooth(progressAt(elapsed, t.panelStart, t.panelEnd - t.panelStart))
+  const paperProgress = settle(progressAt(elapsed, t.paperStart, t.paperEnd - t.paperStart), .025, .76)
+  const redProgress = settle(progressAt(elapsed, t.redStart, t.redEnd - t.redStart), .045, .72)
+  const panelProgress = settle(progressAt(elapsed, t.panelStart, t.panelEnd - t.panelStart), .055, .74)
   return {
-    paperProgress, paperX: t.paperTravel * (1 - paperProgress),
+    paperProgress, paperX: 0, paperScale: paperProgress,
     redProgress, redX: -t.redTravel * (1 - redProgress) || 0,
     panelProgress, panelScale: .78 + .22 * panelProgress,
-    panelOpacity: panelProgress,
-    panelRadius: 50 * (1 - panelProgress),
+    panelY: 26 * (1 - panelProgress),
+    panelOpacity: clamp(panelProgress),
+    panelRadius: 50 * clamp(1 - panelProgress),
     paperDone: elapsed >= t.paperEnd,
     redDone: elapsed >= t.redEnd,
     panelDone: elapsed >= t.panelEnd,
@@ -85,16 +99,17 @@ export function sampleB(elapsed: number, geometry: LoginGeometry) {
   const panelProgress = smooth(progressAt(
     elapsed, timeline.panelPrepare, timeline.panelEnd - timeline.panelPrepare,
   ))
-  const redProgress = smooth(progressAt(elapsed, timeline.redStart, timeline.redDuration))
-  const paperProgress = smooth(progressAt(elapsed, timeline.paperStart, timeline.paperDuration))
+  const redProgress = settle(progressAt(elapsed, timeline.redStart, timeline.redDuration), .035, .75)
+  const paperProgress = settle(progressAt(elapsed, timeline.paperStart, timeline.paperDuration), .025, .79)
   return {
     panelProgress,
     panelScale: elapsed <= timeline.panelPrepare
       ? 1 + 0.025 * prep : 1.025 * (1 - panelProgress),
     panelRadius: 50 * smooth(panelProgress / 0.7),
     panelOpacity: 1 - smooth(panelProgress),
-    redProgress, redX: -timeline.redTravel * redProgress,
-    paperProgress, paperX: -timeline.paperTravel * paperProgress,
+    panelY: elapsed <= timeline.panelPrepare ? -4 * prep : -4 + 18 * panelProgress,
+    redProgress, redX: -timeline.redTravel * redProgress, redScale: 1 - .06 * Math.sin(Math.PI * clamp(redProgress)),
+    paperProgress, paperX: -timeline.paperTravel * paperProgress, paperScale: 1 - .045 * Math.sin(Math.PI * clamp(paperProgress)),
     panelDone: elapsed >= timeline.panelEnd,
     redDone: elapsed >= timeline.redEnd,
     paperDone: elapsed >= timeline.paperEnd,
@@ -113,9 +128,9 @@ export function panelInsets(progress: number, width: number, height: number) {
 export type FactoryEntry = keyof typeof FACTORY_ENTRANCE
 export function sampleFactoryEntrance(elapsed: number, entry: FactoryEntry) {
   const spec = FACTORY_ENTRANCE[entry]
-  const progress = smooth(progressAt(elapsed, spec.start, spec.duration))
+  const progress = settle(progressAt(elapsed, spec.start, spec.duration), entry === 'scene' ? .065 : .045, entry === 'scene' ? .7 : .76)
   return {
-    opacity: progress,
+    opacity: clamp(progress),
     x: spec.x * (1 - progress) || 0, y: spec.y * (1 - progress) || 0,
     done: elapsed >= spec.start + spec.duration,
   }

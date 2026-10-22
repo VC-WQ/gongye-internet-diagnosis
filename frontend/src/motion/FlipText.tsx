@@ -1,93 +1,87 @@
-import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
-import { changeFlip, finishFlip, stopFlip, type FlipState } from './flipState'
+import { useLayoutEffect, useRef } from 'react'
+import { textHandoff } from './textHandoff'
 import { DURATION, EASE_CSS, prefersReducedMotion } from './tokens'
 import './mechanical.css'
 
-/** A clipped text window: inert old text goes up while current text enters below. */
+/** Retain the entire visible composition when interrupted, not merely the incoming string. */
 export default function FlipText({ value, label, className = '' }: { value: string; label?: string; className?: string }) {
-  const [state, setState] = useState<FlipState>({ current: value, revision: 0 })
-  const latest = useRef(state)
-  const current = useRef<HTMLSpanElement>(null)
-  const old = useRef<HTMLSpanElement>(null)
-  const animations = useRef<Animation[]>([])
-  const outgoing = useRef({ transform: 'none', opacity: '1' })
-  const [reserved, setReserved] = useState({ width: 0, height: 0 })
-
-  const cancel = () => {
-    for (const animation of animations.current) animation.cancel()
-    animations.current = []
+  const windowRef = useRef<HTMLSpanElement>(null), track = useRef<HTMLSpanElement>(null)
+  const probe = useRef<HTMLSpanElement>(null), latest = useRef(value), revision = useRef(0)
+  const owned = useRef<Animation[]>([]), previous = useRef<string>()
+  latest.current = value
+  const cancel = () => { owned.current.forEach(a => a.cancel()); owned.current = [] }
+  const layer = (text: string, y = 0) => {
+    const node = document.createElement('span')
+    node.className = 'mechanical-text__layer'; node.textContent = text
+    node.style.transform = `translateY(${y}px)`
+    return node
   }
-
+  const settle = () => {
+    revision.current++; cancel()
+    track.current?.replaceChildren(layer(latest.current))
+    if (windowRef.current) windowRef.current.dataset.handoffState = 'settled'
+  }
   useLayoutEffect(() => {
-    const next = changeFlip(latest.current, value, prefersReducedMotion())
-    if (next === latest.current) return
-    // Read before cancelling: an interrupted B enters its exit from B's actual pose.
-    const pose = current.current ? getComputedStyle(current.current) : undefined
-    outgoing.current = { transform: pose?.transform ?? 'none', opacity: pose?.opacity ?? '1' }
-    cancel()
-    latest.current = next
-    setState(next)
-  }, [value])
-
-  useLayoutEffect(() => {
-    const node = current.current
-    if (!node) return
-    // Reserve the largest measured text slot. Long→short does not pull adjacent
-    // values around; CSS caps the reservation at the responsive parent width.
-    setReserved(previous => {
-      const width = Math.max(previous.width, node.offsetWidth)
-      const height = Math.max(previous.height, node.offsetHeight)
-      return width === previous.width && height === previous.height ? previous : { width, height }
+    const root = windowRef.current!, container = track.current!, measure = probe.current!
+    const height = Math.max(measure.offsetHeight, 1)
+    // Reserve width within the current responsive container; never accumulate old wrapped heights.
+    root.style.setProperty('--handoff-reserved-width', `${Math.max(measure.offsetWidth, Number(root.dataset.reservedWidth) || 0)}px`)
+    root.dataset.reservedWidth = String(Math.max(measure.offsetWidth, Number(root.dataset.reservedWidth) || 0))
+    const reservedHeight = Math.max(height, Number(root.dataset.reservedHeight) || 0)
+    root.dataset.reservedHeight = String(reservedHeight)
+    root.style.minHeight = `${reservedHeight}px`
+    if (previous.current === value) return
+    previous.current = value
+    if (!container.children.length || prefersReducedMotion() || !container.animate) { settle(); return }
+    const rect = root.getBoundingClientRect()
+    const snapshots = Array.from(container.children).map(child => {
+      const r = child.getBoundingClientRect(), y = r.top - rect.top
+      return { text: child.textContent ?? '', y, height: r.height }
     })
-    if (state.previous === undefined) return
-    if (prefersReducedMotion() || typeof node.animate !== 'function') {
-      const settled = finishFlip(latest.current, state.revision)
-      latest.current = settled
-      setState(settled)
-      return
-    }
-    const distance = Math.max(node.offsetHeight, old.current?.offsetHeight ?? 0, 1)
-    const timing = { duration: DURATION.flip * 1000, easing: EASE_CSS.balanced }
-    const incoming = node.animate([
-      { transform: `translateY(${distance}px)` },
-      { transform: 'translateY(0px)' },
-    ], timing)
-    const leaving = old.current?.animate([
-      outgoing.current,
-      { transform: `translateY(-${distance}px)`, opacity: 1 },
-    ], timing)
-    animations.current = leaving ? [incoming, leaving] : [incoming]
-    void incoming.finished.then(() => {
-      // A late finish from an interrupted transition cannot clear a newer pair.
-      const settled = finishFlip(latest.current, state.revision)
-      if (settled === latest.current) return
-      latest.current = settled
-      setState(settled)
-      animations.current = []
-    }).catch(() => {})
-    return cancel
-  }, [state.revision, state.previous])
-
+    const epoch = ++revision.current
+    cancel()
+    const { visible, distance } = textHandoff(snapshots, reservedHeight)
+    const nodes = visible.map(item => layer(item.text, item.y))
+    const incoming = layer(value, distance)
+    container.replaceChildren(...nodes, incoming)
+    root.dataset.handoffState = 'moving'
+    owned.current = [...nodes, incoming].map((node, i) => {
+      const y = i < visible.length ? visible[i].y : distance
+      return node.animate([{ transform: `translateY(${y}px)` }, { transform: `translateY(${y - distance}px)` }],
+        { duration: DURATION.flip * 1000, easing: EASE_CSS.balanced, fill: 'forwards' })
+    })
+    void owned.current[owned.current.length - 1].finished.then(() => { if (epoch === revision.current) settle() }).catch(() => {})
+  }, [value])
   useLayoutEffect(() => {
     const media = matchMedia('(prefers-reduced-motion: reduce)')
-    const changed = () => {
-      if (!media.matches) return
-      cancel()
-      const settled = stopFlip(latest.current)
-      latest.current = settled
-      setState(settled)
-    }
-    media.addEventListener('change', changed)
-    return () => { media.removeEventListener('change', changed); cancel() }
+    const change = () => { if (media.matches) settle() }
+    let width = windowRef.current?.parentElement?.clientWidth
+    const resize = new ResizeObserver(() => {
+      const next = windowRef.current?.parentElement?.clientWidth
+      if (next === width) return
+      width = next
+      if (windowRef.current && probe.current) {
+        windowRef.current.dataset.reservedWidth = String(probe.current.offsetWidth)
+        windowRef.current.style.setProperty('--handoff-reserved-width', `${probe.current.offsetWidth}px`)
+        const height = probe.current.offsetHeight
+        windowRef.current.dataset.reservedHeight = String(height)
+        windowRef.current.style.minHeight = `${height}px`
+      }
+      settle()
+    })
+    if (windowRef.current?.parentElement) resize.observe(windowRef.current.parentElement)
+    let disposed = false
+    void document.fonts.ready.then(() => {
+      if (disposed || !windowRef.current || !probe.current) return
+      const height = Math.max(probe.current.offsetHeight, Number(windowRef.current.dataset.reservedHeight) || 0)
+      windowRef.current.dataset.reservedHeight = String(height); windowRef.current.style.minHeight = `${height}px`
+    })
+    media.addEventListener('change', change)
+    return () => { disposed = true; revision.current++; cancel(); resize.disconnect(); media.removeEventListener('change', change) }
   }, [])
-
-  return <span className={`mechanical-text ${state.previous !== undefined ? 'is-folding' : ''} ${className}`}
-    data-handoff-state={state.previous === undefined ? 'settled' : 'moving'}
-    style={{ '--handoff-reserved-width': `${reserved.width}px`, minHeight: reserved.height || undefined } as CSSProperties}>
+  return <span ref={windowRef} className={`mechanical-text ${className}`} title={value} data-handoff-state="settled">
     <span className="motion-sr-only">{label ?? value}</span>
-    <span className="mechanical-text__track" aria-hidden="true" key={state.revision}>
-      {state.previous !== undefined && <span ref={old} className="mechanical-text__old">{state.previous}</span>}
-      <span ref={current} className="mechanical-text__new">{state.current}</span>
-    </span>
+    <span ref={probe} className="mechanical-text__probe" aria-hidden="true">{value}</span>
+    <span ref={track} className="mechanical-text__track" aria-hidden="true" />
   </span>
 }

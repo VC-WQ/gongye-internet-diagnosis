@@ -134,6 +134,10 @@ export function LoginTransitionProvider({ children }: { children: ReactNode }) {
     cancelAnimationFrame(introRaf.current)
     const cover = document.querySelector<HTMLElement>('[data-login-intro-cover]')
     if (cover) { cover.style.transform = 'translateX(-100vw)'; cover.style.visibility = 'hidden' }
+    for (const selector of ['.login-form', '.login-form-inner']) {
+      const node = document.querySelector<HTMLElement>(selector)
+      node?.style.removeProperty('transform'); node?.style.removeProperty('opacity')
+    }
     setIntroDone(true)
     stage('ready')
   }, [stage])
@@ -169,6 +173,7 @@ export function LoginTransitionProvider({ children }: { children: ReactNode }) {
     stage('intro')
     const cover = document.querySelector<HTMLElement>('[data-login-intro-cover]')
     const form = document.querySelector<HTMLElement>('.login-form')
+    const panel = document.querySelector<HTMLElement>('.login-form-inner')
     const brand = document.querySelector<HTMLElement>('.login-brand')
     if (!cover || !form || !brand) { finishIntro(); return }
     cover.style.visibility = 'visible'
@@ -191,6 +196,11 @@ export function LoginTransitionProvider({ children }: { children: ReactNode }) {
         if (reducedRef.current) { finishIntro(); return }
         const frame = sampleA((now - start) / (DURATION.loginReveal * 1000))
         cover.style.transform = `translateX(${frame.redX * measure()}px)`
+        form.style.transform = `translateX(${frame.paperX * innerWidth}px) scaleX(${frame.paperScale})`
+        if (panel) {
+          panel.style.transform = `translateY(${frame.panelY}px) scale(${frame.panelScale})`
+          panel.style.opacity = String(frame.panelOpacity)
+        }
         cover.dataset.loginProgress = frame.progress.toFixed(4)
         if (!frame.done) introRaf.current = requestAnimationFrame(step)
         else finishIntro()
@@ -263,17 +273,17 @@ export function LoginTransitionProvider({ children }: { children: ReactNode }) {
         const elapsed = Math.min(DURATION.loginSuccess * 1000, now - start)
         const frame = sampleB(elapsed, geometry)
         if (coverRef.current) {
-          coverRef.current.style.transform = `translateX(${frame.redX}px)`
+          coverRef.current.style.transform = `translateX(${frame.redX}px) scaleX(${frame.redScale})`
           coverRef.current.style.visibility = frame.redDone ? 'hidden' : 'visible'
           coverRef.current.dataset.loginProgress = frame.redProgress.toFixed(4)
         }
         if (paperRef.current) {
-          paperRef.current.style.transform = `translateX(${frame.paperX}px)`
+          paperRef.current.style.transform = `translateX(${frame.paperX}px) scaleY(${frame.paperScale})`
           paperRef.current.dataset.loginProgress = frame.paperProgress.toFixed(4)
         }
         if (panelRef.current) {
           const inset = panelInsets(frame.panelProgress, captured.rect.width, captured.rect.height)
-          panelRef.current.style.transform = `scale(${frame.panelScale})`
+          panelRef.current.style.transform = `translateY(${frame.panelY}px) scale(${frame.panelScale})`
           panelRef.current.style.clipPath = `inset(${inset.y}% ${inset.x}% round ${frame.panelRadius}%)`
           panelRef.current.style.opacity = String(frame.panelOpacity)
           panelRef.current.style.visibility = frame.panelDone ? 'hidden' : 'visible'
@@ -329,7 +339,7 @@ export function LoginTransitionProvider({ children }: { children: ReactNode }) {
         const elapsed = Math.min(DURATION.logoutReturn * 1000, now - start)
         const frame = sampleC(elapsed, geometry)
         if (paperRef.current) {
-          paperRef.current.style.transform = `translateX(${frame.paperX}px)`
+          paperRef.current.style.transform = `scaleX(${frame.paperScale})`
           paperRef.current.dataset.loginProgress = frame.paperProgress.toFixed(4)
         }
         if (coverRef.current) {
@@ -339,7 +349,7 @@ export function LoginTransitionProvider({ children }: { children: ReactNode }) {
         }
         if (panelRef.current) {
           const inset = panelInsets(1 - frame.panelProgress, captured.rect.width, captured.rect.height)
-          panelRef.current.style.transform = `scale(${frame.panelScale})`
+          panelRef.current.style.transform = `translateY(${frame.panelY}px) scale(${frame.panelScale})`
           panelRef.current.style.clipPath = `inset(${inset.y}% ${inset.x}% round ${frame.panelRadius}%)`
           panelRef.current.style.opacity = String(frame.panelOpacity)
           panelRef.current.style.visibility = 'visible'

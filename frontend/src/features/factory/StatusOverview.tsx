@@ -1,4 +1,3 @@
-import { Button } from 'antd'
 import {
   STATUS_FILTERS,
   STATUS_LABELS,
@@ -12,15 +11,11 @@ export default function StatusOverview({
   filter,
   onFilter,
   connection,
-  fullscreen,
-  onFullscreen,
 }: {
   counts: Record<StatusFilter, number>
   filter: StatusFilter
   onFilter: (status: StatusFilter) => void
   connection: 'connecting' | 'connected' | 'disconnected'
-  fullscreen: boolean
-  onFullscreen: () => void
 }) {
   return (
     <div className="factory-statusbar">
@@ -66,9 +61,7 @@ export default function StatusOverview({
               ? '正在连接'
               : '推送中断 · 定时刷新'}
         </span>
-        <Button size="small" type="text" onClick={onFullscreen}>
-          {fullscreen ? '退出全屏' : '全屏'}
-        </Button>
+
       </div>
     </div>
   )

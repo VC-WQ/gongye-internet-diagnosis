@@ -32,7 +32,7 @@
 .login-graphic i { position: absolute; top: 28%; left: 18%; width: 180px; height: 110px; border: 1px solid rgba(255,255,255,.3); transform: rotate(-28deg) skew(25deg); }
 .login-graphic i:nth-child(2) { top: 34%; border-color: rgba(255,255,255,.22); }
 .login-graphic i:nth-child(3) { top: 40%; border-color: rgba(255,255,255,.16); }
-.login-form { position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; padding: 48px 40px; background: var(--surface); }
+.login-form { position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; padding: 48px 40px; background: var(--surface); transform-origin:left center; }
 .login-form-inner { width: 100%; max-width: 360px; background: var(--surface); }
 .login-form-inner h2 { margin: 0 0 28px; font-size: 26px; font-weight: 600; }
 .login-form-inner .ant-tabs { width: 100%; }
@@ -44,11 +44,12 @@
 .login-transition { position: fixed; inset: 0; z-index: 1100; pointer-events: auto; }
 .login-transition__visual { position: absolute; inset: 0; overflow: hidden; }
 .login-transition--logout { background: var(--bg); }
-.login-transition--logout .login-paper { transform: translateX(12vw); }
+.login-transition--logout .login-paper { transform: scaleX(0); transform-origin:left center; }
 .login-transition--logout .login-red-block { transform: translateX(-100vw); }
 .login-transition--logout .login-panel-layer { opacity: 0; transform: scale(.78); }
 .login-paper { position: absolute; inset: 0; z-index: 1; background: var(--surface); will-change: transform; }
 .login-red-block { position: absolute; z-index: 2; overflow: hidden; background: var(--brand); will-change: transform; }
+.login-red-block { transform-origin:left center; }
 .login-red-block > .login-brand { width: 100%; height: 100%; box-sizing: border-box; }
 .login-panel-layer { position: absolute; z-index: 3; overflow: hidden; background: var(--surface); transform-origin: center; will-change: transform, clip-path, opacity; }
 .login-panel-layer > .login-form-inner { width: 100%; height: 100%; max-width: none; }

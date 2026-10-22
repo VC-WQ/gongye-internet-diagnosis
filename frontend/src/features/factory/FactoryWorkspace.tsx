@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useLayoutEffect, useMemo, useRef } from 'react'
 import { Alert, Button, Skeleton } from 'antd'
 import FactoryScene from '../../components/FactoryScene'
 import StatusOverview from './StatusOverview'
@@ -30,32 +30,41 @@ export default function FactoryWorkspace() {
   const outsideFilter = Boolean(selected && !filtered.some(device => device.id === selected.id))
   const telemetry = useDeviceTelemetry(selected?.id)
   const events = useResource(`factory-events:${selected?.id ?? 'all'}`, () => listEvents({ device_id: selected?.id, limit: 20 }), 10000)
-  const [fullscreen, setFullscreen] = useState(false)
-  const [fullError, setFullError] = useState('')
   const root = useRef<HTMLDivElement>(null)
   useFactoryEntrance(root)
-  useEffect(() => {
-    const changed = () => setFullscreen(document.fullscreenElement === root.current)
-    document.addEventListener('fullscreenchange', changed)
-    return () => document.removeEventListener('fullscreenchange', changed)
-  }, [])
+  useLayoutEffect(() => {
+    const node=root.current,board=node?.querySelector<HTMLElement>('.factory-board')
+    if(!node||!board)return
+    let disposed=false
+    const measure=()=>{
+      if(disposed)return
+      if(!matchMedia('(min-width:1101px)').matches){node.style.removeProperty('--factory-board-height');return}
+      const bottom=parseFloat(getComputedStyle(node).paddingBottom)||0
+      const top=board.getBoundingClientRect().top+scrollY
+      const height=Math.max(360,Math.round((visualViewport?.height??innerHeight)-top-bottom))
+      const value=`${height}px`
+      if(node.style.getPropertyValue('--factory-board-height')!==value)node.style.setProperty('--factory-board-height',value)
+      node.dataset.boardAvailable=String(height)
+    }
+    measure()
+    const observer=new ResizeObserver(measure)
+    observer.observe(node)
+    const header=document.querySelector('.workspace-header');if(header)observer.observe(header)
+    window.addEventListener('resize',measure);visualViewport?.addEventListener('resize',measure)
+    void document.fonts.ready.then(measure)
+    return()=>{disposed=true;observer.disconnect();window.removeEventListener('resize',measure);visualViewport?.removeEventListener('resize',measure)}
+  },[catalog.error])
   const counts = useMemo(() => Object.fromEntries(STATUS_FILTERS.map(status => [status,
     status === 'all' ? devices.length : devices.filter(device => device.status === status).length])) as Record<StatusFilter, number>, [devices])
-  const toggleFullscreen = async () => {
-    try {
-      if (document.fullscreenElement) await document.exitFullscreen()
-      else await root.current?.requestFullscreen()
-    } catch { setFullError('浏览器未允许全屏，请使用窗口模式') }
-  }
   return (
     <div ref={root} className="factory-workspace" data-route-preparing={catalog.loading && !catalog.data ? 'true' : undefined}>
       <div data-factory-entry="status" data-route-module="factory-status">
         <StatusOverview counts={counts} filter={workspace.statusFilter}
           onFilter={status => workspace.setStatusFilter(workspace.statusFilter === status ? 'all' : status)}
-          connection={telemetry.status} fullscreen={fullscreen} onFullscreen={toggleFullscreen} />
+          connection={telemetry.status} />
       </div>
-      {(catalog.error || fullError) && <Alert type="warning" showIcon message={catalog.error ?? fullError}
-        action={<Button onClick={() => { catalog.refresh(); setFullError('') }}>重试</Button>} />}
+      {catalog.error && <Alert type="warning" showIcon message={catalog.error}
+        action={<Button onClick={catalog.refresh}>重试</Button>} />}
       <div className="factory-board">
         <aside className="factory-board__devices" data-factory-entry="devices" data-route-module="factory-devices">
           <DeviceNavigator devices={filtered} total={devices.length} selectedId={workspace.selectedDeviceId}

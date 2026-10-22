@@ -88,10 +88,11 @@ function Machine({ type }: { type: string }) {
   )
 }
 type Sprite = SceneItem & { device: Device; phase: string; generation: number }
+type SpriteView = { id: string; device: Device; visible: boolean }
 type Pointer = { start: Point; last: Point; device?: string; moved: number; touch: boolean }
 type Controller = {
-  sync: () => void; measure: () => void; reset: () => void; zoom: (factor: number) => void
-  select: (id: string) => void; focus: (id:string) => void; pan: (x: number, y: number) => void
+  sync: () => void; measure: () => void; reset: () => void; zoom: (factor: number) => void; place: (id:string) => void
+  select: (id: string) => void; focus: (id?:string) => void; pan: (x: number, y: number) => void
   down: (e: ReactPointerEvent<SVGSVGElement>) => void
   drag: (e: ReactPointerEvent<SVGSVGElement>) => void
   up: (e: ReactPointerEvent<SVGSVGElement>, cancelled?: boolean) => void
@@ -108,14 +109,14 @@ export default function FactoryScene({ devices, visibleIds, selected, onSelect, 
   const props = useRef({ devices, visibleIds, selected, onSelect, onClear })
   props.current = { devices, visibleIds, selected, onSelect, onClear }
   const controller = useRef<Controller>()
-  const [sprites, setSprites] = useState<Sprite[]>([])
+  const [sprites, setSprites] = useState<SpriteView[]>([])
   const [view, setView] = useState({ columns: 4, width: 900, height: 660, x: 0, y: 0 })
   const viewRef = useRef(view); viewRef.current = view
   const [zoomLabel, setZoomLabel] = useState(100)
   const visibleKey = [...visibleIds].sort().join('|')
   useLayoutEffect(() => controller.current?.sync(), [devices, visibleKey])
   useLayoutEffect(() => controller.current?.measure(), [view])
-  useLayoutEffect(() => { if(selected)controller.current?.focus(selected) }, [selected])
+  useLayoutEffect(() => controller.current?.focus(selected), [selected])
 
   useEffect(() => {
     const element = svg.current, group = cameraGroup.current, host = root.current
@@ -139,7 +140,14 @@ export default function FactoryScene({ devices, visibleIds, selected, onSelect, 
     const resumeGeometry = () => {
       if(geometryPauseAt!==null){planStart+=(hiddenAt??performance.now())-geometryPauseAt;geometryPauseAt=null}
     }
-    const render = () => { if (!disposed) setSprites([...model.values()].filter(s => s.present)) }
+    let lastFocused: string | undefined
+    const render = () => {
+      if (disposed) return
+      // React receives immutable business/semantic DTOs, never mutable motion objects.
+      const next=[...model.values()].filter(s=>s.present).map(s=>({id:s.id,device:{...s.device},visible:s.visible}))
+      setSprites(previous=>previous.length===next.length&&previous.every((s,i)=>s.id===next[i].id&&s.visible===next[i].visible&&
+        JSON.stringify(s.device)===JSON.stringify(next[i].device))?previous:next)
+    }
     const cameraTransform = () => `translate(${450+camera.x} ${330+camera.y}) scale(${camera.zoom}) translate(-450 -330)`
     const updateGeometry = () => {
       const raw=element.getScreenCTM()
@@ -151,20 +159,24 @@ export default function FactoryScene({ devices, visibleIds, selected, onSelect, 
         e:s.a*x+s.c*y+s.e, f:s.b*x+s.d*y+s.f },
         rect: { left:r.left, right:r.right, top:r.top, bottom:r.bottom } }
     }
-    const paint = () => {
-      group.setAttribute('transform', cameraTransform())
-      element.dataset.camera = `${camera.x.toFixed(2)},${camera.y.toFixed(2)},${camera.zoom.toFixed(3)}`
-      for (const sprite of model.values()) {
+    const place = (id:string) => {
+        const sprite=model.get(id)
+        if(!sprite)return
         const node = nodes.current.get(sprite.id)
-        if (!node) continue
+        if (!node) return
         node.setAttribute('transform', `translate(${sprite.current.x} ${sprite.current.y})`)
+        node.dataset.sceneOwner='controller'
         node.dataset.scenePosition = `${sprite.current.x.toFixed(3)},${sprite.current.y.toFixed(3)}`
         node.dataset.sceneVelocity = `${sprite.velocity.x.toFixed(2)},${sprite.velocity.y.toFixed(2)}`
         node.dataset.scenePhase = sprite.visible ? sprite.phase : 'exit'
         node.dataset.sceneTarget = `${sprite.target.x.toFixed(2)},${sprite.target.y.toFixed(2)}`
         node.dataset.sceneGeneration = String(sprite.generation)
         if (sprite.edge) node.dataset.sceneExitEdge = sprite.edge
-      }
+    }
+    const paint = () => {
+      group.setAttribute('transform', cameraTransform())
+      element.dataset.camera = `${camera.x.toFixed(2)},${camera.y.toFixed(2)},${camera.zoom.toFixed(3)}`
+      for (const id of model.keys())place(id)
     }
     const advance = (time: number) => {
       if (!plan) return
@@ -257,6 +269,7 @@ export default function FactoryScene({ devices, visibleIds, selected, onSelect, 
       host.dataset.sceneColumns=String(v.columns)
       host.dataset.sceneGeometry=geometry?'valid':'waiting'
       replan()
+      focus(props.current.selected)
     }
     const activeCamera = () => (['x','y','zoom'] as const).some(k=>Math.abs(targetCamera[k]-camera[k])>(k==='zoom'?.0004:.08)||Math.abs(cameraVelocity[k])>.02)
     const animate = (time: number) => {
@@ -301,15 +314,21 @@ export default function FactoryScene({ devices, visibleIds, selected, onSelect, 
     const local = (x:number,y:number) => { const inv=inverse(rootMatrix); return inv?transform({x,y},inv):null }
     const zoom = (factor:number,anchor={x:450,y:330})=>move(zoomAt(targetCamera,factor,anchor))
     const reset = ()=>move(HOME)
-    const focus = (id:string)=>{
+    const focus = (id?:string)=>{
+      if(!id){lastFocused=undefined;return}
+      if(!geometry||!initialized)return
       const sprite=model.get(id)
       if (!sprite?.visible||!props.current.devices.some(d=>d.id===id)) return
       const v=viewRef.current
+      const signature=`${id}:${v.columns}:${v.x}:${v.y}:${v.width}:${v.height}:${sprite.target.x}:${sprite.target.y}`
+      if(lastFocused===signature)return
+      lastFocused=signature
+      host.dataset.sceneFocusRequests=String(Number(host.dataset.sceneFocusRequests??0)+1)
       move(focusCamera(sprite.target,{left:v.x,right:v.x+v.width,top:v.y,bottom:v.y+v.height},v.columns<4?1.1:1.3))
     }
     const select = (id:string)=>{
       if(!model.get(id)?.visible||!props.current.devices.some(d=>d.id===id))return
-      focus(id);props.current.onSelect(id)
+      props.current.onSelect(id)
     }
     const hit = (target: EventTarget|null) => {
       const id=target instanceof Element?target.closest('[data-device]')?.getAttribute('data-device'):undefined
@@ -328,7 +347,7 @@ export default function FactoryScene({ devices, visibleIds, selected, onSelect, 
         multiple=false
       }
     }
-    controller.current={sync,measure,reset,zoom,select,focus,pan:(x,y)=>move({...targetCamera,x:targetCamera.x+x,y:targetCamera.y+y}),
+    controller.current={sync,measure,reset,zoom,select,focus,place,pan:(x,y)=>move({...targetCamera,x:targetCamera.x+x,y:targetCamera.y+y}),
       down:e=>{
         if (e.button!==0) return
         if (!pointers.size) multiple=false
@@ -377,6 +396,7 @@ export default function FactoryScene({ devices, visibleIds, selected, onSelect, 
     document.addEventListener('visibilitychange',visibility);media.addEventListener('change',motionChanged)
     const resize=new ResizeObserver(measure);resize.observe(element)
     sync();measure();paint()
+    if(props.current.selected)focus(props.current.selected)
     return ()=>{
       disposed=true;cancelAnimationFrame(frame);controller.current=undefined
       resize.disconnect();document.removeEventListener('visibilitychange',visibility);media.removeEventListener('change',motionChanged)
@@ -416,22 +436,18 @@ export default function FactoryScene({ devices, visibleIds, selected, onSelect, 
           <path d="M30 300v20l420 220 420-220v-20M450 540v20" fill="none" stroke="var(--line)" />
           {sprites.map(sprite=>{
             const device=sprite.device,chosen=device.id===selected,color=STATUS_META[device.status]?.hex??'#7d8997'
-            return <g key={device.id} ref={node=>{if(node) nodes.current.set(device.id,node);else nodes.current.delete(device.id)}}
-              data-device={device.id} data-scene-phase={sprite.visible?sprite.phase:'exit'} data-scene-generation={sprite.generation}
-              data-scene-position={`${sprite.current.x.toFixed(3)},${sprite.current.y.toFixed(3)}`}
-              data-scene-target={`${sprite.target.x.toFixed(2)},${sprite.target.y.toFixed(2)}`}
-              data-scene-velocity={`${sprite.velocity.x.toFixed(2)},${sprite.velocity.y.toFixed(2)}`} data-scene-exit-edge={sprite.edge}
-              transform={`translate(${sprite.current.x} ${sprite.current.y})`} role="button" tabIndex={sprite.visible?0:-1}
+            return <g key={device.id} ref={node=>{if(node) { nodes.current.set(device.id,node);controller.current?.place(device.id) } else nodes.current.delete(device.id)}}
+              data-device={device.id} role="button" tabIndex={sprite.visible?0:-1}
               aria-label={`${device.name}，${STATUS_META[device.status]?.label??device.status}`} aria-pressed={chosen} aria-hidden={!sprite.visible||undefined}
               pointerEvents={sprite.visible?'auto':'none'} className={`factory-node ${chosen?'is-selected':''}`}
               onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();controller.current?.select(device.id)}}}>
               <title>{device.name} · {device.id}</title>
-              <path className="node-platform" d="M-103 19 0-35 103 19 0 74Z" fill={chosen?'var(--brand-soft)':'var(--surface-muted)'} stroke={chosen?'var(--brand)':'var(--line)'} strokeWidth={chosen?2:1} />
+              <path className="node-platform" d="M-103 19 0-35 103 19 0 74Z" />
               <ellipse cx="0" cy="28" rx="64" ry="17" fill="var(--machine-shadow)" opacity=".6" />
               <Machine type={device.device_type} />
-              <path d="M-103 19 0 74 103 19" fill="none" stroke={chosen?'var(--brand)':'var(--line)'} strokeWidth="2" />
+              <path className="node-edge" d="M-103 19 0 74 103 19" fill="none" strokeWidth="2" />
               <g transform="translate(0 111)">
-                <rect x="-95" y="-16" width="190" height="40" rx="0" fill={chosen?'var(--surface-raised)':'var(--surface)'} stroke={chosen?'var(--brand)':'var(--line)'} />
+                <rect className="node-label" x="-95" y="-16" width="190" height="40" rx="0" />
                 <circle cx="-78" cy="3" r="4" fill={color} />
                 <text x="-65" y="8" fill="var(--text)" fontSize="15" fontWeight="500">{Array.from(device.name).length>8?Array.from(device.name).slice(0,7).join('')+'…':device.name}</text>
               </g>
