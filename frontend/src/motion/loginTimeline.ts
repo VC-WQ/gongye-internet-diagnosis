@@ -80,7 +80,9 @@ export function sampleC(elapsed: number, geometry: LoginGeometry) {
   const panelProgress = settle(progressAt(elapsed, t.panelStart, t.panelEnd - t.panelStart), .055, .74)
   return {
     paperProgress, paperX: 0, paperScale: paperProgress,
-    redProgress, redX: -t.redTravel * (1 - redProgress) || 0,
+    // Keep the left edge covered: excess travel becomes a left-anchored stretch.
+    redProgress, redX: -t.redTravel * (1 - Math.min(1, redProgress)) || 0,
+    redScale: 1 + Math.max(0, redProgress - 1),
     panelProgress, panelScale: .78 + .22 * panelProgress,
     panelY: 26 * (1 - panelProgress),
     panelOpacity: clamp(panelProgress),

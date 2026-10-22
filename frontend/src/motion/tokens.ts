@@ -43,10 +43,10 @@ export const LOGIN_SEQUENCE = {
 
 /** C has its own return choreography; it never samples B backwards. */
 export const LOGOUT_SEQUENCE = {
-  paperEnd: 300,
-  redStart: 150,
-  redEnd: 650,
-  panelStart: 460,
+  paperEnd: 650,
+  redStart: 240,
+  redEnd: 820,
+  panelStart: 650,
 } as const
 
 /** Spatial origins belong to the surrounding layout, never to random cards. */

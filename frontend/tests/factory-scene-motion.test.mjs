@@ -87,9 +87,9 @@ test('visibility graph makes a short body-safe detour and rejects occupied desti
   for(let i=1;i<path.length;i++) assert.equal(sweptOverlap(path[i-1],path[i],obstacle,obstacle,SCENE_GAP-1),false)
   assert.equal(safePath({x:0,y:0},obstacle,[obstacle]),null)
 })
-test('Hermite samples keep the actual interruption point and incoming velocity',()=>{
+test('path clock keeps the interruption point and projected incoming speed',()=>{
   const route=createRoute([{x:100,y:100},{x:440,y:150}],{x:110,y:20})
-  close(sampleRoute(route,0).point,{x:100,y:100});close(sampleRoute(route,0).velocity,{x:110,y:20})
+  close(sampleRoute(route,0).point,{x:100,y:100});const v=sampleRoute(route,0).velocity;assert.ok(v.x>0);assert.ok(Math.abs(v.x*50-v.y*340)<1e-6)
   const mid=sampleRoute(route,120),again=createRoute([mid.point,{x:100,y:200}],mid.velocity)
   close(sampleRoute(again,0).point,mid.point)
   const final=sampleRoute(route,route.duration+1)
@@ -187,17 +187,32 @@ test('device and blank pointer sessions distinguish click, drag, pinch and cance
   assert.equal(pointerIntent(undefined,undefined,0,true,false,true),'gesture')
 })
 
-test('curved Hermite routes retain endpoint velocity and bow into real space',()=>{
- const route=createRoute([{x:100,y:100},{x:500,y:100}],{x:20,y:0},36)
- const start=sampleRoute(route,0),mid=sampleRoute(route,route.duration/2),end=sampleRoute(route,route.duration)
- close(start.point,{x:100,y:100});close(start.velocity,{x:20,y:0});close(end.point,{x:500,y:100});close(end.velocity,{x:0,y:0})
- assert.ok(mid.point.y>130 && mid.point.y<140)
+test('straight geometry stays collinear while time has nonlinear speed and exact derivatives',()=>{
+ const from={x:100,y:100},to={x:500,y:100},route=createRoute([from,to],{x:20,y:30})
+ close(sampleRoute(route,0).point,from);close(sampleRoute(route,0).velocity,{x:20,y:0})
+ const speeds=[]
+ for(let t=1;t<route.duration-1;t+=3){
+  const at=sampleRoute(route,t);assert.equal(at.point.y,100);speeds.push(at.velocity.x)
+  const l=sampleRoute(route,t-.01),r=sampleRoute(route,t+.01)
+  assert.ok(Math.abs((r.point.x-l.point.x)/.00002-at.velocity.x)<.01)
+ }
+ assert.ok(Math.max(...speeds)>Math.min(...speeds)*3)
+ close(sampleRoute(route,route.duration).point,to);close(sampleRoute(route,route.duration).velocity,{x:0,y:0})
 })
-test('bowed filter plans keep full machine envelopes separate at two millisecond samples',()=>{
+test('whole polyline clock crosses internal waypoints without restarting or stopping',()=>{
+ const route=createRoute([{x:0,y:0},{x:400,y:0},{x:400,y:300}])
+ assert.equal(route.corners.length,1)
+ const t=route.corners[0],before=sampleRoute(route,t-.01),after=sampleRoute(route,t+.01)
+ assert.ok(Math.hypot(before.velocity.x,before.velocity.y)>100)
+ assert.ok(Math.hypot(after.velocity.x,after.velocity.y)>100)
+ close(sampleRoute(route,t).point,{x:400,y:0})
+ for(let ms=0;ms<=route.duration;ms++) {const p=sampleRoute(route,ms).point;assert.ok(Math.abs(p.y)<1e-6||Math.abs(p.x-400)<1e-6)}
+})
+test('time-eased filter plans keep full machine envelopes separate at one millisecond samples',()=>{
  for(const columns of [2,4]){
   const input=initial(8,columns).map((s,i)=>({...s,visible:i%3===0}))
   const plan=planScene(input,createSlots(input.filter(s=>s.visible).length,columns),geometry)
-  for(let t=0;t<=plan.duration;t+=2){
+  for(let t=0;t<=plan.duration;t+=1){
    const states=input.map(i=>sampleItem(i,plan,t)).filter(s=>s.present)
    for(let i=0;i<states.length;i++)for(let j=0;j<i;j++)assert.equal(boxesOverlap(states[i].point,states[j].point,SCENE_GAP-1),false,`dense collision ${t}`)
   }

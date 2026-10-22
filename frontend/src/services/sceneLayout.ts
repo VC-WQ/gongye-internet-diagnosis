@@ -185,43 +185,49 @@ export function safePath(from: Point, to: Point, obstacles: Point[]): Point[] | 
   }
   return null
 }
-export type Leg = { from: Point; to: Point; velocity: Point; duration: number; bow: number }
-export type Route = { legs: Leg[]; duration: number }
-export function createRoute(points: Point[], initialVelocity = zero(), bow = 0): Route {
-  const legs = points.slice(1).map((to, i) => {
-    const from = points[i], length = distance(from, to), travel = MOTION.sceneReflow
-    const duration = Math.max(travel.min, Math.min(travel.max, length / travel.worldUnitsPerMs))
-    let velocity = i === 0 ? { ...initialVelocity } : zero()
-    const speed = Math.hypot(velocity.x, velocity.y), limit = length / (duration / 1000) * 1.5
-    if (speed > limit) velocity = { x: velocity.x * limit / speed, y: velocity.y * limit / speed }
-    return { from, to, velocity, duration, bow: Math.sign(bow)*Math.min(Math.abs(bow),length*.16,48) }
+export type Leg = { from: Point; to: Point; length: number; start: number }
+export type Route = { legs: Leg[]; length: number; duration: number; initialSlope: number; corners: number[] }
+/** One monotone clock for the complete polyline. Geometry never supplies easing. */
+export function routeClock(u: number, initialSlope = 0) {
+  const t = Math.max(0, Math.min(1, u)), t2 = t*t, t3 = t2*t, t4 = t3*t, t5 = t4*t
+  return {
+    progress: 10*t3 - 15*t4 + 6*t5 + initialSlope*(t - 6*t3 + 8*t4 - 3*t5),
+    derivative: 30*t2 - 60*t3 + 30*t4 + initialSlope*(1 - 18*t2 + 32*t3 - 15*t4),
+  }
+}
+export function createRoute(points: Point[], initialVelocity = zero()): Route {
+  let length = 0
+  const legs: Leg[] = []
+  for (let i=1;i<points.length;i++) {
+    const from=points[i-1], to=points[i], size=distance(from,to)
+    if (size < 1e-10) continue
+    legs.push({ from: {...from}, to: {...to}, length: size, start: length }); length += size
+  }
+  if (!legs.length && points.length) legs.push({ from: {...points[0]}, to: {...points[points.length-1]}, length: 0, start: 0 })
+  const travel=MOTION.sceneReflow
+  const duration=Math.max(travel.min,Math.min(travel.max*Math.max(1,legs.length),length/travel.worldUnitsPerMs))
+  const first=legs[0]
+  // A changed path cannot preserve an off-axis vector without changing its geometry.
+  const tangentSpeed=first?.length ? (initialVelocity.x*(first.to.x-first.from.x)+initialVelocity.y*(first.to.y-first.from.y))/first.length : 0
+  const initialSlope=length ? Math.max(0,Math.min(1.5,tangentSpeed*duration/1000/length)) : 0
+  const corners=legs.slice(1).map(leg=>{
+    const ratio=leg.start/length
+    let lo=0,hi=1
+    for(let i=0;i<36;i++){const mid=(lo+hi)/2;if(routeClock(mid,initialSlope).progress<ratio)lo=mid;else hi=mid}
+    return (lo+hi)/2*duration
   })
-  return { legs, duration: legs.reduce((sum, l) => sum + l.duration, 0) }
+  return { legs, length, duration, initialSlope, corners }
 }
 export function sampleRoute(route: Route, elapsed: number): { point: Point; velocity: Point; done: boolean } {
   if (!route.legs.length) return { point: zero(), velocity: zero(), done: true }
-  let t = Math.max(0, elapsed)
-  for (const leg of route.legs) {
-    if (t <= leg.duration) {
-      const u = t / leg.duration, u2 = u * u, u3 = u2 * u, seconds = leg.duration / 1000
-      const point = zero(), velocity = zero()
-      for (const k of ['x', 'y'] as const) {
-        point[k] = (2*u3-3*u2+1)*leg.from[k] + (u3-2*u2+u)*seconds*leg.velocity[k] + (-2*u3+3*u2)*leg.to[k]
-        velocity[k] = ((6*u2-6*u)*leg.from[k] + (3*u2-4*u+1)*seconds*leg.velocity[k] + (-6*u2+6*u)*leg.to[k]) / seconds
-      }
-      const length=distance(leg.from,leg.to)
-      if(length>EPS&&leg.bow){
-        const normal={x:-(leg.to.y-leg.from.y)/length,y:(leg.to.x-leg.from.x)/length}
-        const arc=16*u2*(1-u)*(1-u)*leg.bow
-        const speed=32*u*(1-u)*(1-2*u)*leg.bow/seconds
-        point.x+=normal.x*arc;point.y+=normal.y*arc
-        velocity.x+=normal.x*speed;velocity.y+=normal.y*speed
-      }
-      return { point, velocity, done: false }
-    }
-    t -= leg.duration
-  }
-  return { point: { ...route.legs[route.legs.length - 1].to }, velocity: zero(), done: true }
+  if (elapsed >= route.duration) return {point:{...route.legs[route.legs.length-1].to},velocity:zero(),done:true}
+  const clock=routeClock(Math.max(0,elapsed)/route.duration,route.initialSlope)
+  const travelled=clock.progress*route.length
+  const leg=route.legs.find(l=>travelled<l.start+l.length)??route.legs[route.legs.length-1]
+  const ratio=leg.length ? Math.max(0,Math.min(1,(travelled-leg.start)/leg.length)) : 1
+  const speed=route.length*clock.derivative/(route.duration/1000)
+  return { point:{x:leg.from.x+(leg.to.x-leg.from.x)*ratio,y:leg.from.y+(leg.to.y-leg.from.y)*ratio},
+    velocity:leg.length ? {x:(leg.to.x-leg.from.x)/leg.length*speed,y:(leg.to.y-leg.from.y)/leg.length*speed}:zero(),done:false }
 }
 export type SceneItem = { id: string; current: Point; velocity: Point; target: Point; present: boolean; visible: boolean; edge?: Edge }
 export type Reservation = { id: string; route: Route; start: number; end: number; kind: 'move' | 'enter' | 'exit' | 'park'; edge?: Edge }
@@ -243,22 +249,19 @@ function at(item: SceneItem, plans: Reservation[], t: number): Point | null {
 }
 function temporalSafe(item: SceneItem, route: Route, start: number, items: SceneItem[], plans: Reservation[]): boolean {
   const end = Math.max(start + route.duration, ...plans.map(p => p.end), 0)
-  for (let t = start; t < end; t += 10) {
-    const next = Math.min(end, t + 10), a0 = sampleRoute(route, t-start).point, a1 = sampleRoute(route, next-start).point
-    for (const other of items) if (other.id !== item.id) {
-      // A reservation can disappear in this interval; inspect the occupied instant
-      // just before its end rather than treating the whole final interval as empty.
-      const b0 = at(other, plans, t), b1 = at(other, plans, next-1e-6)
-      // Extra world-space envelope covers the bounded curve's deviation from
-      // the 10ms swept chord, in addition to the full machine box and base gap.
-      if (b0 && b1 && sweptOverlap(a0, a1, b0, b1,TEMPORAL_GAP)) return false
-      if (b0 && !b1) {
-        const finish=plans.filter(p=>p.id===other.id&&p.kind==='exit'&&p.end>t&&p.end<=next).map(p=>p.end)[0]
-        if (finish!==undefined) {
-          const before=at(other,plans,finish-1e-6)
-          if (before&&sweptOverlap(a0,sampleRoute(route,finish-start).point,b0,before,TEMPORAL_GAP)) return false
-        }
-      }
+  // Split BOTH participants at every corner/start/end, in addition to the original
+  // 10ms grid. A swept chord must never cut across a polyline corner.
+  const cuts=new Set<number>([start,end,start+route.duration,...route.corners.map(t=>start+t)])
+  for(let t=start;t<end;t+=10)cuts.add(t)
+  for(const plan of plans){cuts.add(plan.start);cuts.add(plan.end);for(const t of plan.route.corners)cuts.add(plan.start+t)}
+  const times=[...cuts].filter(t=>t>=start&&t<=end).sort((a,b)=>a-b)
+  for(let i=1;i<times.length;i++) {
+    const t=times[i-1],next=times[i],a0=sampleRoute(route,t-start).point,a1=sampleRoute(route,next-start).point
+    for(const other of items) if(other.id!==item.id) {
+      const b0=at(other,plans,t),b1=at(other,plans,next-1e-7)
+      // Full body + 3 world-unit envelope also bounds nonlinear relative motion
+      // between this clock's <=10ms checkpoints; no sampling frequency reduction.
+      if(b0&&b1&&sweptOverlap(a0,a1,b0,b1,TEMPORAL_GAP))return false
     }
   }
   return true
@@ -277,23 +280,17 @@ export function planScene(items: SceneItem[], slots: Point[], geometry: Geometry
   const add = (item: SceneItem, points: Point[], kind: Reservation['kind'], edge?: Edge) => {
     const velocity=reservations.some(r => r.id === item.id) ? zero() : item.velocity
     let route = createRoute(points,velocity)
-    // Validate the actual Hermite trajectory, not just its straight-line chord.
+    // The renderer and reservations sample exactly the same path clock.
     const earliest=Math.max(0, ...reservations.filter(r => r.id === item.id).map(r => r.end))
     let start=earliest
     const latest = total + 30
-    let curved=false, found=false
+    let found=false
     // Candidate times are reservation boundaries, not an unbounded millisecond scan.
     // Every accepted candidate still passes the full swept-box test.
     const times=[...new Set([earliest,earliest+90,...reservations.map(r=>r.end+1),total+1])]
       .filter(t=>t>=earliest&&t<=latest).sort((a,b)=>a-b)
     for(const proposed of times){
-      for(const bow of [36,-36,18,-18,0]){
-        const candidate=createRoute(points,velocity,bow)
-        if(temporalSafe(item,candidate,proposed,items,reservations)){
-          route=candidate;start=proposed;curved=bow!==0;found=true;break
-        }
-      }
-      if(found)break
+      if(temporalSafe(item,route,proposed,items,reservations)){start=proposed;found=true;break}
     }
     if(!found)start=latest+1
     if (start > latest) {
@@ -304,7 +301,6 @@ export function planScene(items: SceneItem[], slots: Point[], geometry: Geometry
     }
     else if (start > 0 && Math.hypot(item.velocity.x, item.velocity.y) > 1) diagnostics.push(`${item.id}:queued-brake`)
     reservations.push({ id: item.id, route, start, end: start + route.duration, kind, edge })
-    if(curved)diagnostics.push(`${item.id}:safe-bow`)
     total = Math.max(total, start + route.duration)
     positions.set(item.id, points[points.length-1])
     if (kind === 'exit') positions.delete(item.id)

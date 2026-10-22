@@ -343,7 +343,8 @@ export function LoginTransitionProvider({ children }: { children: ReactNode }) {
           paperRef.current.dataset.loginProgress = frame.paperProgress.toFixed(4)
         }
         if (coverRef.current) {
-          coverRef.current.style.transform = `translateX(${frame.redX}px)`
+          coverRef.current.style.transformOrigin = 'left center'
+          coverRef.current.style.transform = `translateX(${frame.redX}px) scaleX(${frame.redScale})`
           coverRef.current.style.visibility = 'visible'
           coverRef.current.dataset.loginProgress = frame.redProgress.toFixed(4)
         }
