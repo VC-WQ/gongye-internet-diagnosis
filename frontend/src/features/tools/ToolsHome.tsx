@@ -12,7 +12,7 @@ interface ToolCard {
 }
 
 const TOOL_CARDS: ToolCard[] = [
-  { key: 'diagnosis', title: '智能诊断', description: '选择设备与有效采样，发起诊断并查看证据。沿用真实诊断流程和未闭环事件保护。', path: '/tools/diagnosis' },
+  { key: 'diagnosis', title: '智能诊断', description: '选择设备和有效采样，发起诊断并查看结果；已有未完成事件时，先处理该事件。', path: '/tools/diagnosis' },
   { key: 'events', title: '事件与报告', description: '在同一任务中选择事件、查看证据、完成处置，并生成与复制报告。', path: '/tools/events' },
   {
     key: 'simulation',
@@ -36,7 +36,7 @@ const TOOL_CARDS: ToolCard[] = [
   {
     key: 'evaluation',
     title: '系统自评',
-    description: '读取真实诊断记录计算准确率、误报率、漏报率与阈值调整效果。',
+    description: '根据诊断记录查看准确率、误报率、漏报率和阈值调整效果。',
     path: '/tools/evaluation',
   },
   {

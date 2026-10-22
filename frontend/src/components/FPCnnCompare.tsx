@@ -197,8 +197,8 @@ export default function FPCnnCompare() {
                 dataSource="CWRU 轴承振动数据集（真实公开数据），两模型使用完全相同的数据划分、随机种子与训练轮数。"
                 insight={
                   bestFewShot
-                    ? `数据越少，物理先验的补偿越明显：训练数据降到 ${Math.round(bestFewShot.ratio * 100)}% 时，FP-CNN 相对基线 ${bestFewShot.delta >= 0 ? '+' : ''}${(bestFewShot.delta * 100).toFixed(1)} 个百分点。`
-                    : '数据越少，物理先验对数据稀缺的补偿作用通常越明显。'
+                    ? `训练数据比例为 ${Math.round(bestFewShot.ratio * 100)}% 时，FP-CNN 相对基线 ${bestFewShot.delta >= 0 ? '+' : ''}${(bestFewShot.delta * 100).toFixed(1)} 个百分点。`
+                    : '暂无少样本对照结果。'
                 }
               />
             }
@@ -221,8 +221,8 @@ export default function FPCnnCompare() {
                 dataSource="CWRU 轴承振动数据集（真实公开数据），噪声直接叠加在原始振动波形上，模型不做任何重新训练。"
                 insight={
                   bestNoise
-                    ? `强噪声下先验频带起到"带通滤波"作用：SNR=${bestNoise.snr_db}dB 时 FP-CNN ${bestNoise.delta >= 0 ? '+' : ''}${(bestNoise.delta * 100).toFixed(1)} 个百分点。`
-                    : '噪声越强，物理频带掩码抑制无关频段的作用越明显。'
+                    ? `SNR=${bestNoise.snr_db}dB 时 FP-CNN ${bestNoise.delta >= 0 ? '+' : ''}${(bestNoise.delta * 100).toFixed(1)} 个百分点。`
+                    : '暂无噪声对照结果。'
                 }
               />
             }
@@ -243,7 +243,7 @@ export default function FPCnnCompare() {
               <ChartNote
                 desc="FP-CNN 训练后四个可学习频带的中心频率，与由轴承几何（滚珠数 / 滚珠直径 / 节径）解析计算的理论特征频率对照。"
                 dataSource="CWRU 驱动端 SKF-6205 深沟球轴承（n=9, d=7.94mm, D=39.04mm, 1797rpm）解析计算值 + 网络训练后学到的中心。"
-                insight="两者越接近，说明网络确实「学到」了物理规律而不是死记数据；偏差则反映真实故障频率受滑动、载荷等因素影响而偏离理论值。"
+                insight="比较学习频带中心与理论频率的偏差。实际故障频率可能受滑动和载荷影响；频带接近本身不能证明模型的泛化能力。"
               />
             }
           >

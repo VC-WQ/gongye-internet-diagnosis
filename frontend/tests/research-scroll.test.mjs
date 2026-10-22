@@ -9,7 +9,7 @@ const catalogUri=uri(compile(await source('../src/features/about/research.ts')))
 const {RESEARCH_TOPICS}=await import(catalogUri)
 const navigation=compile(await source('../src/features/about/researchNavigation.ts')).replace("'./research'",JSON.stringify(catalogUri))
 const {researchTarget,RESEARCH_ANCHORS,activeResearchHeading,ResearchScrollIntent,estimateFigureHeight}=await import(uri(navigation))
-const {researchSources,ResearchRequestCache}=await import(uri(compile(await source('../src/features/about/researchRequests.ts'))))
+const {researchSources,ResearchRequestCache,figureSources,sceneSources}=await import(uri(compile(await source('../src/features/about/researchRequests.ts'))))
 test('all five topics and thirteen legacy points map to unique article anchors',()=>{
  assert.equal(RESEARCH_TOPICS.length,5);assert.equal(RESEARCH_TOPICS.flatMap(t=>t.points).length,13)
  assert.equal(RESEARCH_ANCHORS.length,19);assert.equal(new Set(RESEARCH_ANCHORS).size,19)
@@ -53,4 +53,14 @@ test('separate public and account scopes never reuse cached payloads',async()=>{
  const a=await first.read('self-evolution-loop',async()=>({status:'available',data:{account:'A'}}))
  const b=await second.read('self-evolution-loop',async()=>({status:'missing'}))
  assert.equal(a.status,'available');assert.equal(b.status,'missing');assert.equal(b.data,undefined)
+})
+
+test('scene requests separate overview from CWRU and keep steam correlation dependency',()=>{
+ assert.deepEqual(sceneSources({}),['dataset-registry'])
+ assert.deepEqual(sceneSources({topic:{id:'signal'},point:{figure:'cwru-signal'}}),['cwru-signal'])
+ assert.deepEqual(figureSources('steam'),['steam','steam-analysis'])
+ assert.deepEqual(figureSources('rul-sde-pf'),['xjtu-rul','rul-sde-pf'])
+ assert.deepEqual(figureSources('xjtu-rul'),['xjtu-rul','rul-sde-pf'])
+ assert.deepEqual(sceneSources({topic:{id:'health'}}),[])
+ assert.equal(researchSources(false).includes('self-evolution-loop'),false)
 })

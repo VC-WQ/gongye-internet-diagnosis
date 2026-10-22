@@ -38,7 +38,7 @@ export default function SharedDeviceDetail() {
     <div className="management-detail">
       <PageHeading
         title="设备详情"
-        meta={<span>实时数据、历史证据与维护信息共用同一设备身份</span>}
+        meta={<span>查看这台设备的实时数据、诊断记录与维护信息</span>}
         actions={<Space wrap>
           <Button onClick={() => navigate(account.data?.role === 'admin' ? '/admin/devices' : '/dashboard')}>{account.data?.role === 'admin' ? '设备列表' : '返回工厂'}</Button>
           {device.data && <Button onClick={() => navigate(`/tools/diagnosis?device=${encodeURIComponent(device.data!.id)}`)}>智能诊断</Button>}

@@ -17,7 +17,7 @@ export default function ResearchEvidenceIndex({ evidence, includeRuntime }: { ev
   return <div className="research-evidence-index">
     <p className="research-section__note">目录声明与本次实际可用证据分列。公开数据、构造目标域、仿真与数据库运行统计使用各自口径；缺失产物保留说明，不在前端生成数值。</p>
     <div className="research-evidence-grid">{RESEARCH_TOPICS.flatMap(topic => topic.points.filter(point => point.figure).map(point => <ResearchLink key={`${topic.id}/${point.id}`} anchor={pointAnchor(topic.id, point.id)}><strong>{point.title}</strong>{!includeRuntime && point.figure === 'self-evolution-loop' ? <span className="research-evidence-status">登录后查看统计</span> : <EvidenceBadge status={figureEvidence(point.figure!, evidence).status} />}<small>{PROVENANCE[point.figure!].source}</small></ResearchLink>))}</div>
-    <h4>研究覆盖矩阵</h4>
+    <h4>研究内容与数据状态</h4>
     <Table size="small" pagination={false} rowKey="key" dataSource={coverage} scroll={{ x: 760 }} columns={[
       { title: '研究方向 / 核心问题', key: 'topic', width: 230, render: (_, row) => <ResearchLink className="research-table-link" anchor={topicAnchor(row.topic.id)}><strong>{row.topic.index} · {row.topic.title}</strong><small>{row.topic.summary}</small></ResearchLink> },
       { title: '数据来源与方法', key: 'sources', width: 340, render: (_, row) => <div className="research-cell-lines">{row.declared.map(figure => <span key={figure}>{PROVENANCE[figure].source} · {PROVENANCE[figure].method}</span>)}</div> },

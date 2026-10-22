@@ -45,20 +45,20 @@ export default function ResearchOverview({ evidence, refresh, includeRuntime }: 
 
   return <div className="research-overview" data-research-overview>
     <div className="research-overview__intro">
-      <p>从原始信号、物理先验到寿命预测与事件闭环，把方法、结果与来源放在同一条证据链上阅读。</p>
-      <div className="research-overview__source"><SourceTag source="offline_experiment" /><span>公开数据与仿真实验分别标注{includeRuntime ? '；运行统计来自当前数据库' : '；公开入口不读取运行统计'}。</span><button type="button" onClick={refresh}>重新核验</button></div>
+      <p>查看信号分析、物理先验、寿命预测与事件处理的研究方法、实验结果和数据来源。</p>
+      <div className="research-overview__source"><SourceTag source="offline_experiment" /><span>公开数据与仿真实验分别标注{includeRuntime ? '；运行统计来自当前数据库' : '；公开入口不读取运行统计'}。</span><button type="button" onClick={refresh}>重新加载</button></div>
     </div>
     <dl className="research-metrics" aria-label="研究规模与当前数据状态">
       {[
         ['研究方向', String(RESEARCH_TOPICS.length), '贯穿数据、算法与工程'],
-        ['研究点', String(points.length), '包含真实证据索引'],
+        ['研究点', String(points.length), '包含研究证据索引'],
         ['登记数据集', evidence['dataset-registry']?.status === 'available' ? String(datasets.length) : '—', '取自数据资产登记'],
         ['可用证据', `${ready} / ${figures.length}`, includeRuntime ? '已接图形的结构核验' : '公开证据；另有登录统计'],
       ].map(([label, value, note]) => <div key={label}><dt>{label}</dt><dd><FlipValue value={value} /></dd><small>{note}</small></div>)}
     </dl>
     <div className="research-overview-charts" aria-label="首屏代表实验">
       <section className="research-overview-chart"><h3>{classification?.name ?? '表格分类'} · F1 / AUC</h3><p>同一数据集模型横评，数值直接取分类接口</p>{classification ? <ThemedChart option={classificationOption} style={{ height: 230 }} /> : <div className="research-chart-empty" role="status">{evidence.classification?.message ?? '正在核验分类实验数据'}</div>}<ResearchLink anchor={pointAnchor('results', 'classification')}>查看混淆矩阵、ROC 与特征重要性 →</ResearchLink></section>
-      <section className="research-overview-chart"><h3>工业蒸汽量预测 · R²</h3><p>保留负值与真实模型差异，不跨任务排名</p>{steam ? <ThemedChart option={regressionOption} style={{ height: 230 }} /> : <div className="research-chart-empty" role="status">{evidence.steam?.message ?? '正在核验回归实验数据'}</div>}<ResearchLink anchor={pointAnchor('results', 'steam')}>查看预测、误差与传感器相关性 →</ResearchLink></section>
+      <section className="research-overview-chart"><h3>工业蒸汽量预测 · R²</h3><p>R² 可为负；不同任务分别比较</p>{steam ? <ThemedChart option={regressionOption} style={{ height: 230 }} /> : <div className="research-chart-empty" role="status">{evidence.steam?.message ?? '正在核验回归实验数据'}</div>}<ResearchLink anchor={pointAnchor('results', 'steam')}>查看预测、误差与传感器相关性 →</ResearchLink></section>
     </div>
     <div className="research-featured-results" aria-label="当前离线实验快照">
       <ResearchLink anchor={pointAnchor('results', 'classification')}><span>表格分类 · 最佳 F1</span><strong>{finite(classificationBest?.f1) ? metricText(classificationBest.f1) : '—'}</strong><small>{classification?.name ?? '等待实验数据'} · {classificationBest?.name ?? '模型未就绪'}</small></ResearchLink>

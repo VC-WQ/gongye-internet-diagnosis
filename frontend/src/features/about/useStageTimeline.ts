@@ -1,6 +1,7 @@
 import { useCallback, useLayoutEffect, useRef, useState, type RefObject } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useUiPreferences } from '../../services/uiPrefs'
+import { paintStage, stageBoundaryKey } from './stageVisual'
 import { researchTarget, ResearchScrollIntent, SCROLL_KEYS } from './researchNavigation'
 import type { ResearchAnchorHandler } from './ResearchLink'
 import { RESEARCH_SCENES, clamp, sceneIndex, stageFrame, timelinePosition } from './stageTimeline'
@@ -10,10 +11,12 @@ export function useStageTimeline(root: RefObject<HTMLDivElement>, topicId?: stri
   const location = useLocation(), navigate = useNavigate()
   const { reducedMotion } = useUiPreferences()
   const reducedRef = useRef(reducedMotion); reducedRef.current = reducedMotion
-  const [position, setPosition] = useState(0)
+  const initial=useRef(sceneIndex(researchTarget(location.hash,topicId,pointId)))
+  const [position, setPosition] = useState(initial.current)
   const [requested, setRequested] = useState<string>()
   const [offset, setOffset] = useState(96)
-  const positionRef = useRef(0), frame = useRef(0), sampleFrame = useRef(0)
+  const boundary=useRef('')
+  const positionRef = useRef(initial.current), frame = useRef(0), sampleFrame = useRef(0)
   const intent = useRef(new ResearchScrollIntent())
   const syncing = useRef<string>(), userScroll = useRef(false), animating = useRef(false)
   const ownedScrollUntil = useRef(0)
@@ -29,9 +32,13 @@ export function useStageTimeline(root: RefObject<HTMLDivElement>, topicId?: stri
       root.current.querySelector<HTMLElement>('[data-stage-heading]')?.focus({ preventScroll: true })
     }
     positionRef.current = value
-    setPosition(value)
-    if (root.current) root.current.dataset.stagePosition = value.toFixed(4)
+    const key=stageBoundaryKey(value,reducedRef.current)
+    if(key!==boundary.current){boundary.current=key;setPosition(value)}
+    paintStage(root.current,value,reducedRef.current)
   }, [root])
+  // Reapply the latest pose after a discrete mount, data return or theme commit.
+  useLayoutEffect(()=>{paintStage(root.current,positionRef.current,reducedMotion)})
+  useLayoutEffect(()=>{publish(positionRef.current)},[reducedMotion,publish])
   const geometry = useCallback(() => {
     const node = root.current
     if (!node) return { start: 0, travel: 1 }

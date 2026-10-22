@@ -124,7 +124,7 @@ export default function DataAssetRegistry() {
               <ChartNote
                 desc="8 个数据集按五大诊断任务（信号分类/剩余寿命/缺陷检测/产线异常/表格分类回归）的数量占比环形图。"
                 dataSource="8 个数据集目录汇总（CWRU / XJTU-SY / NEU-DET / Steam / MachineFault / ManufacturingDefect 为真实公开数据，DigitalTwin / SmartFactory 为仿真数据；共约 51 万样本 · 16.3GB）。"
-                insight="任务类型覆盖越全，说明整套诊断系统的数据底座越完整、方法越通用。"
+                insight="此图按登记任务统计数据集数量；数量不代表样本规模，也不能说明模型的泛化能力。"
               />
             }
           >

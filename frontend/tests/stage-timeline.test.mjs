@@ -47,3 +47,15 @@ test('runtime counts never masquerade as accuracy and simulation time keeps hour
  const p=stageEvidence('digital-twin-phm',{'digital-twin-phm':{status:'available',data:{degradation:{series:[{t:0,prob:0}]}}}})
  assert.equal(p.x,'运行时间（小时）');assert.deepEqual(p.series[0].data,[[0,0]])
 })
+
+const timelineUri=uri(compile(await read('../src/features/about/stageTimeline.ts')).replace("'./research'",JSON.stringify(catalog)).replace("'./researchNavigation'",JSON.stringify(nav)))
+const {stageBoundaryKey}=await import(uri(compile(await read('../src/features/about/stageVisual.ts')).replace("'./stageTimeline'",JSON.stringify(timelineUri))))
+test('continuous positions use only mount/accessibility boundaries for React state',()=>{
+ const positions=Array.from({length:1801},(_,i)=>i/100)
+ const keys=positions.map(p=>stageBoundaryKey(p,false));assert.ok(new Set(keys).size<=56)
+ assert.equal(stageBoundaryKey(.1,false),stageBoundaryKey(.57,false))
+ assert.notEqual(stageBoundaryKey(.57,false),stageBoundaryKey(.6,false))
+ assert.notEqual(stageBoundaryKey(.6,false),stageBoundaryKey(.9,false))
+ assert.equal(stageBoundaryKey(.8,true),stageBoundaryKey(.99,true))
+ assert.deepEqual(positions.map(p=>stageBoundaryKey(p,false)).reverse(),positions.reverse().map(p=>stageBoundaryKey(p,false)))
+})

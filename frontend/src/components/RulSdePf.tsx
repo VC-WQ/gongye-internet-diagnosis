@@ -289,9 +289,8 @@ export default function RulSdePf() {
             />
             {m && (
               <div style={{ marginTop: 10, fontSize: 12, color: "var(--muted)" }}>
-                R² 提升 {r2Gain >= 0 ? '+' : ''}
-                {r2Gain.toFixed(3)}；基线 R² 为负，说明"健康指标指数外推"在该数据上甚至不如直接预测均值，
-                而 SDE + 粒子滤波首次把 R² 拉正。
+                SDE + PF 的 R² 为 {m.sde_pf.r2.toFixed(3)}，指数外推基线为 {m.baseline.r2.toFixed(3)}；
+                差值 {r2Gain >= 0 ? '+' : ''}{r2Gain.toFixed(3)}。R² 为负表示在本次评估中不如预测均值。
               </div>
             )}
           </Card>

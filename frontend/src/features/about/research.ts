@@ -144,7 +144,7 @@ export const RESEARCH_TOPICS: ResearchTopic[] = [
         id: 'evidence',
         title: '证据索引',
         summary:
-          '按真实可用状态列出研究实验；每项都可回到对应图表与数据资产登记核对，缺失产物会明确标记，不在前端生成未经验证的数值。',
+          '查看各项实验的图表、数据来源和可用状态；未提供的实验产物标为缺失。',
         api: '/api/v1/viz/dataset-registry',
       },
       {

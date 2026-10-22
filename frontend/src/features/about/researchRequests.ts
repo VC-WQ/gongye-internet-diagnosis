@@ -23,3 +23,11 @@ export class ResearchRequestCache {
   }
   clear() { this.requests.clear() }
 }
+
+/** Needed sources, including the steam figure's independent correlation payload. */
+export function figureSources(figure?: ResearchFigure): ResearchSource[] {
+  return !figure?[]:figure==='steam'?['steam','steam-analysis']:figure==='xjtu-rul'||figure==='rul-sde-pf'?['xjtu-rul','rul-sde-pf']:[figure]
+}
+export function sceneSources(scene: { topic?: unknown; point?: { figure?: ResearchFigure } }): ResearchSource[] {
+  return !scene.topic?['dataset-registry']:figureSources(scene.point?.figure)
+}

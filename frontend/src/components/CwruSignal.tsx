@@ -214,7 +214,7 @@ export default function CwruSignal() {
               <ChartNote
                 desc="四类状态振动信号的频域幅值谱叠加对比，突出故障特征频率区的差异。"
                 dataSource="CWRU 凯斯西储大学轴承故障数据集（FFT 频谱分析 · 真实公开数据）。"
-                insight="故障类型对应不同的特征频率峰值，支撑「振动信号即可诊断轴承故障」。"
+                insight="比较四类状态的频谱差异；特征峰可辅助诊断，分类效果仍需独立测试。"
               />
             }
           >
@@ -241,14 +241,14 @@ export default function CwruSignal() {
                   <ChartNote
                     desc="将高维振动特征经 PCA 降维后做 t-SNE 嵌入到二维空间，观察四类故障的可分性。"
                     dataSource="CWRU 凯斯西储大学轴承故障数据集（特征降维嵌入 · 真实公开数据）。"
-                    insight="四类故障簇分离越清晰，说明特征可被机器学习直接分类（ML-ready 证据）。"
+                    insight="二维嵌入用于观察样本分布；簇分离不能单独证明分类性能或泛化能力。"
                   />
                 </Space>
               ) : (
                 <ChartNote
                   desc="将高维振动特征做 t-SNE 二维嵌入，观察四类故障的可分性。"
                   dataSource="CWRU 凯斯西储大学轴承故障数据集（真实公开数据）。"
-                  insight="故障簇分离越清晰，特征越可被机器学习直接分类。"
+                  insight="二维嵌入用于观察样本分布；分类性能需在独立测试集上评估。"
                 />
               )
             }
@@ -263,13 +263,13 @@ export default function CwruSignal() {
 
         <Col xs={24} lg={12} style={{ marginTop: 16 }}>
           <Card
-            title="④ 故障严重度梯度（内圈故障，直径↑→特征频率能量↑）"
+            title="④ 不同内圈故障直径的频率能量"
             styles={{ body: cardBodyStyle }}
             extra={
               <ChartNote
                 desc="内圈故障在不同故障直径（0.007 至 0.021 英寸）下，各频率处的归一化平均能量热力图。"
                 dataSource="CWRU 凯斯西储大学轴承故障数据集（3 种故障直径梯度 · 真实公开数据）。"
-                insight="故障直径越大，特征频率能量越强——体现故障严重度与信号强度的正相关。"
+                insight="比较不同故障直径下的归一化能量分布，不将所有频率的变化概括为单调关系。"
               />
             }
           >

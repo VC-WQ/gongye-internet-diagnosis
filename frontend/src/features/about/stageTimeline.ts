@@ -3,7 +3,7 @@ import { OVERVIEW_ANCHOR, pointAnchor, topicAnchor } from './researchNavigation'
 
 /** Catalogue IDs remain the route protocol. No headings are used as scroll targets. */
 const catalogue = [
-  { id: OVERVIEW_ANCHOR, title: '研究全景', summary: '从原始信号到寿命预测，把方法、结果与来源放在同一条证据链上。', index: '00', topic: undefined, point: undefined },
+  { id: OVERVIEW_ANCHOR, title: '研究全景', summary: '浏览信号分析、故障诊断与寿命预测，查看各项方法和数据来源。', index: '00', topic: undefined, point: undefined },
   ...RESEARCH_TOPICS.flatMap(topic => [
     { id: topicAnchor(topic.id), title: topic.title, summary: topic.summary, index: topic.index, topic, point: undefined },
     ...topic.points.map((point, i) => ({ id: pointAnchor(topic.id, point.id), title: point.title, summary: point.summary, index: `${topic.index}.${i + 1}`, topic, point })),

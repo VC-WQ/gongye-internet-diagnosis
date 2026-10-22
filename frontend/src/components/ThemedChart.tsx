@@ -1,6 +1,6 @@
 import { useLayoutEffect, useMemo, useRef } from 'react'
 import { theme } from 'antd'
-import * as echarts from 'echarts'
+import echarts from './chartLibrary'
 import type { EChartsType } from 'echarts'
 import type { EChartsReactProps } from 'echarts-for-react/lib/types'
 import { createChartTheme } from '../theme/echarts'

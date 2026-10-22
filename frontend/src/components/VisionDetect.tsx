@@ -42,8 +42,8 @@ interface ComparisonModel {
 
 // 模型中文名（用于对比表与结论）
 const MODEL_NAME: Record<string, string> = {
-  yolov8s: 'YOLOv8s（一阶段·边缘）',
-  rtdetr: 'RT-DETR（Transformer·云端）',
+  yolov8s: 'YOLOv8s（一阶段检测）',
+  rtdetr: 'RT-DETR（Transformer）',
 }
 
 /**
@@ -210,15 +210,13 @@ export default function VisionDetect() {
             </Tag>
           </div>
           <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 4, lineHeight: 1.8 }}>
-            面向旋转机械<b>关键部件表面损伤</b>的自动识别：轴承滚道/滚动体、齿轮齿面、
-            泵与空压机叶轮、密封面。适用于<b>解体检修</b>与<b>内窥镜检查</b>场景。
-            检测结果作为<b>第五路证据</b>送入智能会诊，与振动诊断交叉验证
-            ——振动看动态响应，视觉看表面形貌，二者判的是同一类失效的不同表现。
+            上传图片，查看模型识别的表面缺陷、位置和置信度。
+            检测结果可作为<b>视觉弱证据</b>送入智能会诊。
+            用于轴承、齿轮或叶轮检修前，仍需在对应部件与拍摄条件下验证。
           </div>
           <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4, lineHeight: 1.8 }}>
             模型在 <b>NEU-DET 公开基准数据集</b>（东北大学 1800 张 200×200 标注图）上训练与验证。
-            该数据集的<b>点蚀、划痕、裂纹</b>三类缺陷形态与旋转部件表面损伤同源
-            （轴承点蚀正是内/外圈故障的物理成因），故可将学到的表面损伤检测能力迁移应用于设备部件检测。
+            数据集包含<b>点蚀、划痕、裂纹</b>等表面缺陷。钢材表面的检测结果不能直接代表轴承、齿轮或叶轮上的检测效果。
             <span style={{ color: "var(--status-warn)" }}>
               注：模型训练域为钢材表面，迁移至设备部件存在域差异，因此视觉证据在会诊中按<b>弱证据</b>参与融合。
             </span>
@@ -242,7 +240,7 @@ export default function VisionDetect() {
                 { title: '部件失效模式', dataIndex: 'mode', key: 'mode' },
                 { title: '关联部件', dataIndex: 'part', key: 'part', width: 160 },
                 {
-                  title: '与振动诊断的关联',
+                  title: '形貌关联参考',
                   dataIndex: 'link',
                   key: 'link',
                   render: (v: string) => (
@@ -261,8 +259,8 @@ export default function VisionDetect() {
               ]}
             />
             <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 8, lineHeight: 1.8 }}>
-              「关联=强」的三类（点蚀/划痕/裂纹）正是旋转机械的典型失效模式，
-              可与振动诊断形成直接互证；其余三类作为辅助判据。
+              表中关联按缺陷形貌列出参考对应，不代表设备部件上的检测精度，
+              也不能单凭钢材图像结果确认振动故障。
             </div>
           </Card>
         </Col>
@@ -415,21 +413,21 @@ export default function VisionDetect() {
         {/* 双模型精度-速度权衡 */}
         <Col span={24} style={{ marginTop: 16 }}>
           <Card
-            title="双模型精度-速度权衡（工业部署选型）"
+            title="双模型精度与速度对照"
             styles={{ body: cardBodyStyle }}
             extra={
               <ChartNote
-                desc="YOLOv8s（一阶段·边缘）与 RT-DETR（Transformer·云端）在 mAP/精确率/召回/FPS/参数量上的对比。"
+                desc="YOLOv8s（一阶段检测）与 RT-DETR（Transformer）在 mAP/精确率/召回/FPS/参数量上的对比。"
                 dataSource="NEU-DET 带钢表面缺陷训练产出的两个模型（YOLOv8s 与 RT-DETR 验证结果，真实公开数据）。"
-                insight="RT-DETR 精度略高，YOLOv8s 推理快约 4 倍——边缘实时选 YOLOv8s，云端高精度选 RT-DETR。"
+                insight="指标描述本次实验；部署前需在目标硬件、输入尺寸和任务数据上重新测试。"
               />
             }
           >
             {cmpRows.length ? (
               <>
                 <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 12, lineHeight: 1.7 }}>
-                  RT-DETR（Transformer）精度略高，但 YOLOv8s 推理快约 4 倍、参数少约 3 倍——
-                  结论：<b style={{ color: "var(--status-info)" }}>边缘实时部署选 YOLOv8s，云端高精度场景选 RT-DETR</b>。
+                  下表保留两模型的实验结果。输入尺寸和测试硬件会影响速度，
+                  部署选型还需结合目标设备的延迟、内存与精度要求。
                 </div>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                   <thead>

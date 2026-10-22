@@ -135,7 +135,7 @@ export default function DomainAdapt() {
           <Space size={8} wrap>
             <Tag color="cyan">CORAL / DANN</Tag>
             <span style={{ color: "var(--muted)", fontSize: 13 }}>
-              CWRU 试验台训练 → 迁移到离心泵 / 电机 / 空压机三类设备，
+              CWRU 试验台训练 → 离心泵 / 电机 / 空压机的构造目标域，
               用 CORAL / DANN 做<strong style={{ color: "var(--text)" }}>无目标域标签</strong>的域自适应
             </span>
           </Space>
@@ -290,8 +290,8 @@ export default function DomainAdapt() {
             />
             <div style={{ marginTop: 10, fontSize: 12, color: "var(--muted)" }}>
               每一行都是一种工况：连<strong style={{ color: "var(--text)" }}>轴承几何</strong>
-              （滚珠数 / 滚珠直径 / 节径）都不同，因此同一类故障的特征频率在各设备上落在不同位置 ——
-              这正是"实验室模型不敢直接上现场"的根因。
+              （滚珠数 / 滚珠直径 / 节径）都不同，因此同一类故障的特征频率位置也会变化。
+              这是跨域诊断需要考虑的差异之一。
             </div>
           </Card>
         </Col>

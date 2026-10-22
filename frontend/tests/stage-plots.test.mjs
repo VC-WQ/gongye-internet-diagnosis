@@ -5,7 +5,7 @@ import ts from 'typescript'
 const uri=s=>`data:text/javascript;base64,${Buffer.from(s).toString('base64')}`
 const compile=s=>ts.transpileModule(s,{compilerOptions:{module:ts.ModuleKind.ES2022,target:ts.ScriptTarget.ES2020}}).outputText
 const contract=uri(compile(await readFile(new URL('../src/features/about/dataContract.ts',import.meta.url),'utf8')))
-const {sharedLife,signalStage,domainStage,twinStage}=await import(uri(compile(await readFile(new URL('../src/features/about/stagePlots.ts',import.meta.url),'utf8')).replace("'./dataContract'",JSON.stringify(contract))))
+const {sharedLife,signalStage,domainStage,twinStage,fpCnnStage}=await import(uri(compile(await readFile(new URL('../src/features/about/stagePlots.ts',import.meta.url),'utf8')).replace("'./dataContract'",JSON.stringify(contract))))
 test('life bridge requires identical bearing, count and actual RUL; null forecast breaks path',()=>{
  const x={bearings:[{id:'B',series:[{t:0,rul:1,hi:0},{t:1,rul:.5,hi:.3},{t:2,rul:0,hi:1}]}]}
  const r={curves:[{id:'B',actual:[1,.5,0],sde_pf:[1,null,0],baseline:[null,.7,.1]}]}
@@ -17,7 +17,7 @@ test('life bridge requires identical bearing, count and actual RUL; null forecas
 })
 test('signal carries measured wave, FFT and embeddings; domain plot invents no embeddings',()=>{
  const d={time_domain:{waves:[{label:'normal',t_ms:[0,1],wave:[0,.2]}]},frequency_domain:{spectra:[{label:'normal',freqs:[0,10],amp:[0,.5]}]},tsne:{class_names:['Normal'],points:[[1,2],[3,4]],labels:['Normal','IR']}}
- const o=signalStage(d);assert.equal(o.grid.length,3);assert.deepEqual(o.series[2].data,[[1,2]]);assert.deepEqual(o.series[0].data,[[0,0],[1,.2]])
+ const o=signalStage(d);assert.equal(o.grid.length,3);assert.equal(new Set(o.series.map(s=>s.id)).size,o.series.length);assert.deepEqual(o.series[2].data,[[1,2]]);assert.deepEqual(o.series[0].data,[[0,0],[1,.2]])
  const a=domainStage({target_domains:{motor:{name:'motor'}},results:[{id:'V0',per_device:{motor:{accuracy:0}},source_test_accuracy:null,target_macro_accuracy:0}]})
  assert.deepEqual(a.series[0].data,[[0,0,0]]);assert.deepEqual(a.series[1].data,[null]);assert.equal(a.series.some(s=>s.type==='scatter'),false)
 })
@@ -34,4 +34,12 @@ test('compact options release secondary grids while keeping real primary series'
  const o=signalStage(d,true);assert.equal(o.grid.length,2);assert.equal(o.series.length,2);assert.equal(o.series.some(s=>s.xAxisIndex===2),false)
  const a=domainStage({target_domains:{motor:{name:'motor'}},results:[{id:'V0',per_device:{motor:{accuracy:0}},source_test_accuracy:null,target_macro_accuracy:0}]},true)
  assert.equal(a.series.length,1);assert.equal(a.grid.length,1);assert.deepEqual(a.series[0].data,[[0,0,0]])
+})
+
+test('FP-CNN composite preserves exact paired runs, order, units, zeros and missing values',()=>{
+ const d={noise:[{snr_db:10,baseline_acc:0,fp_acc:.8},{snr_db:-5,baseline_acc:null,fp_acc:.4}],few_shot:[{ratio:.5,baseline_acc:.7,fp_acc:.7},{ratio:.1,baseline_acc:.2,fp_acc:.3}]}
+ const o=fpCnnStage(d);assert.equal(o.grid.length,2)
+ assert.deepEqual(o.series[0].data,[[10,0],[-5,null]]);assert.deepEqual(o.series[1].data,[[10,.8],[-5,.4]])
+ assert.deepEqual(o.series[2].data,[[.5,.7],[.1,.2]]);assert.equal(o.series.some(s=>s.smooth),false)
+ assert.ok(o.xAxis[0].name.includes('dB'));assert.equal(fpCnnStage(d,true).series.length,4)
 })

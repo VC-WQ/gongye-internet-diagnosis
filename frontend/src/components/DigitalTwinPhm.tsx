@@ -210,7 +210,7 @@ export default function DigitalTwinPhm() {
             数字孪生预测性维护（DigitalTwin 仿真数据集实证）
           </div>
           <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>
-            {data ? `${data.overview.n_trajectories} 条运行轨迹 / ${data.overview.n_steps.toLocaleString()} 时间步 · 数字孪生预测 TTF 平均误差仅 ${mae}h，预防维护 ROI ${roi}x` : ''}
+            {data ? `${data.overview.n_trajectories} 条运行轨迹 / ${data.overview.n_steps.toLocaleString()} 时间步 · 数字孪生预测 TTF 平均绝对误差 ${mae}h，预防维护 ROI ${roi}x` : ''}
           </div>
         </Col>
 
@@ -270,14 +270,14 @@ export default function DigitalTwinPhm() {
                   <ChartNote
                     desc="预测剩余寿命 TTF 与真实值的散点对比，越贴近 y=x 理想线预测越准。"
                     dataSource="DigitalTwin 泵数字孪生仿真数据集（TTF 预测 vs 真实值，仿真数据）。"
-                    insight="点云贴合对角线 = 数字孪生预测准确，平均绝对误差见左上角。"
+                    insight="点越接近 y=x，预测与实际 TTF 的差值越小，平均绝对误差见左上角。"
                   />
                 </Space>
               ) : (
                 <ChartNote
                   desc="预测剩余寿命 TTF 与真实值的散点对比，越贴近 y=x 理想线预测越准。"
                   dataSource="DigitalTwin 泵数字孪生仿真数据集（TTF 预测 vs 真实值，仿真数据）。"
-                  insight="点云贴合对角线 = 数字孪生预测准确。"
+                  insight="点越接近 y=x，预测与实际 TTF 的差值越小。"
                 />
               )
             }
@@ -292,7 +292,7 @@ export default function DigitalTwinPhm() {
 
         <Col xs={24} lg={12} style={{ marginTop: 16 }}>
           <Card
-            title="预测性维护价值闭环"
+            title="维护成本与预期收益"
             styles={{ body: cardBodyStyle }}
             extra={
               data ? (

@@ -157,7 +157,7 @@ export default function SmartFactory() {
               <ChartNote
                 desc="各生产工段的故障次数占比（玫瑰图扇区越大 = 该工段故障越集中）。"
                 dataSource="SmartFactory 产线级仿真数据集（8 工段 × 500 台机组故障统计，产线仿真数据）。"
-                insight="定位产线上「哪里最危险」，回答从单机诊断上升到产线态势的治理视角。"
+                insight="比较各工段的异常分布，定位需要进一步检查的工段。"
               />
             }
           >
@@ -177,7 +177,7 @@ export default function SmartFactory() {
               <ChartNote
                 desc="各传感器在「正常运行 vs 故障状态」下的归一化读数对比，柱顶标注故障态相对正常态的偏离百分比。"
                 dataSource="SmartFactory 产线级仿真数据集（6 类传感器正常/故障读数统计，产线仿真数据）。"
-                insight="偏离越大（红色 +% 越高）的传感器越能提前预示故障，体现多传感器证据链。"
+                insight="红色百分比表示故障态相对正常态的读数偏离；偏离大小不等于故障预警的提前量。"
               />
             }
           >
