@@ -42,6 +42,7 @@ class VisionService:
 
     def __init__(self) -> None:
         self._models: dict[str, object] = {}
+        self._model_lock = threading.Lock()
 
     def available_models(self) -> list[dict]:
         """返回可用模型列表（weights 目录下存在的 *_best.pt）。"""
@@ -69,14 +70,14 @@ class VisionService:
         threading.Thread(target=_load, daemon=True).start()
 
     def _get_model(self, name: str):
-        if name not in self._models:
-            from ultralytics import YOLO
-
-            path = os.path.join(WEIGHT_DIR, f"{name}_best.pt")
-            if not os.path.isfile(path):
-                raise FileNotFoundError(f"模型权重不存在：{path}")
-            self._models[name] = YOLO(path)
-        return self._models[name]
+        with self._model_lock:
+            if name not in self._models:
+                path = os.path.join(WEIGHT_DIR, f"{name}_best.pt")
+                if not os.path.isfile(path):
+                    raise FileNotFoundError(f"模型权重不存在：{path}")
+                from ultralytics import YOLO
+                self._models[name] = YOLO(path)
+            return self._models[name]
 
     def detect(self, img_bytes: bytes, model: str = "yolov8s", conf: float = 0.25) -> dict:
         """对上传图片执行缺陷检测，返回检测框 + 标注图(base64)。"""

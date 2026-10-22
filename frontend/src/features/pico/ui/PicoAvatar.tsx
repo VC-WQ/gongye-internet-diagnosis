@@ -1,8 +1,9 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
+import { EMOTION_LABELS } from '../core/emotionLabels'
 import type { PicoEmotion } from '../core/types'
-import { PicoController, deformVertex, faceVertex, type PicoReaction } from '../animation/controller'
-import { paintFace } from '../animation/face'
+import { PicoController, advancePico, deformNormal, deformVertex, faceVertex, type PicoReaction } from '../animation/controller'
+import { faceSignature, paintFace } from '../animation/face'
 import { subscribePicoFrame, wakePicoFrames } from '../animation/scheduler'
 
 interface PicoAvatarProps {
@@ -24,21 +25,23 @@ function curvedDisplay(): THREE.BufferGeometry {
   return geometry
 }
 
-function deform(geometry: THREE.BufferGeometry, source: Float32Array, pose: { squash: number; wobble: number }, normals = true) {
+function deform(geometry: THREE.BufferGeometry, source: Float32Array, pose: { squash: number; wobble: number }, normals?: Float32Array) {
   const positions = geometry.getAttribute('position')
   for (let i = 0; i < positions.count; i++) {
-    positions.setXYZ(i, ...deformVertex(source[i * 3], source[i * 3 + 1], source[i * 3 + 2], pose))
+    const x=source[i*3],y=source[i*3+1],z=source[i*3+2]
+    positions.setXYZ(i, ...deformVertex(x,y,z,pose))
+    if(normals) geometry.getAttribute('normal').setXYZ(i,...deformNormal(x,y,z,normals[i*3],normals[i*3+1],normals[i*3+2],pose))
   }
   positions.needsUpdate = true
-  if (normals) geometry.computeVertexNormals()
+  if (normals) geometry.getAttribute('normal').needsUpdate = true
 }
 
 export default function PicoAvatar({ emotion, size = 84, rotation = 0, speed = 1, reducedMotion, reaction }: PicoAvatarProps) {
   const mountRef = useRef<HTMLSpanElement>(null)
-  const stateRef = useRef({ emotion, rotation, speed, reducedMotion, reaction })
-  stateRef.current = { emotion, rotation, speed, reducedMotion, reaction }
+  const stateRef = useRef({ emotion, size, rotation, speed, reducedMotion, reaction })
+  stateRef.current = { emotion, size, rotation, speed, reducedMotion, reaction }
   const invalidateRef = useRef<() => void>(() => {})
-  useEffect(() => { invalidateRef.current() }, [emotion, rotation, speed, reducedMotion, reaction])
+  useEffect(() => { invalidateRef.current() }, [emotion, size, rotation, speed, reducedMotion, reaction])
 
   useEffect(() => {
     const mount = mountRef.current
@@ -78,8 +81,9 @@ export default function PicoAvatar({ emotion, size = 84, rotation = 0, speed = 1
 
     const actor = new THREE.Group()
     scene.add(actor)
-    const bodyGeometry = new THREE.SphereGeometry(1, size < 60 ? 32 : 48, size < 60 ? 24 : 32)
+    const bodyGeometry = new THREE.SphereGeometry(1, 48, 32)
     const bodySource = new Float32Array(bodyGeometry.getAttribute('position').array)
+    const bodyNormals = new Float32Array(bodyGeometry.getAttribute('normal').array)
     const bodyMaterial = new THREE.MeshPhysicalMaterial({
       color: 0xe9e5dc, metalness: 0.12, roughness: 0.29, clearcoat: 0.65, clearcoatRoughness: 0.23,
     })
@@ -119,18 +123,27 @@ export default function PicoAvatar({ emotion, size = 84, rotation = 0, speed = 1
       seamGeometry.dispose(); seamMaterial.dispose()
     }
 
-    const controller = new PicoController(21 + size)
+    const controller = new PicoController(105)
     const media = window.matchMedia('(prefers-reduced-motion: reduce)')
     let visible = true
     let lost = false
     let last = 0
-    let rendered = 0
+    let nextFrame = 0
+    let fastUntil = 0
+    let lastTexture = ''
+    let lastShape = { squash: NaN, wobble: NaN }
     let frameCount = 0
     let needsFrame = true
     let previousEmotion = emotion
     let previousReaction = 0
-    const onMedia = () => { needsFrame = true; last = 0; wakePicoFrames() }
+    const onMedia = () => { needsFrame = true; fastUntil = performance.now()+1400; wakePicoFrames() }
     invalidateRef.current = onMedia
+    const resize = new ResizeObserver(() => {
+      const size=stateRef.current.size
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,size<=84?1.75:2))
+      renderer.setSize(size,size); needsFrame=true; wakePicoFrames()
+    })
+    resize.observe(mount)
     const onAttention = (event: PointerEvent) => { if (event.pointerType === 'touch') return; controller.react('attention'); onMedia() }
     mount.addEventListener('pointerenter', onAttention)
     media.addEventListener('change', onMedia)
@@ -166,33 +179,38 @@ export default function PicoAvatar({ emotion, size = 84, rotation = 0, speed = 1
     renderer.domElement.addEventListener('webglcontextrestored', onRestored)
     const unsubscribe = subscribePicoFrame({
       active: () => visible && !lost && (needsFrame || (!(stateRef.current.reducedMotion ?? media.matches) && stateRef.current.speed > 0)),
+      due: () => needsFrame ? 0 : nextFrame,
+      resume: () => { last=0;needsFrame=true;nextFrame=0 },
       render: (now) => {
         const state = stateRef.current
         const reduced = state.reducedMotion ?? media.matches
         if (previousEmotion !== state.emotion) { needsFrame = true; previousEmotion = state.emotion }
-        const interval = reduced ? 180 : size <= 84 ? 33 : 1000 / 45
-        if (!needsFrame && now - rendered < interval) return
         needsFrame = false
-        const dt = last ? Math.min(0.064, (now - last) / 1000) : 1 / 60
+        const dt = last ? Math.min(.25, (now - last) / 1000) : 1 / 60
         last = now
-        rendered = now
         controller.setEmotion(state.emotion)
         if (state.reaction && state.reaction.id !== previousReaction) {
           previousReaction = state.reaction.id
           controller.react(state.reaction.kind)
         }
-        const pose = controller.step(dt * Math.max(0, Math.min(2, state.speed)), reduced)
+        const pose = advancePico(controller,dt * Math.max(0, Math.min(2, state.speed)), reduced)
+        if(pose.action!=='rest'||pose.blink>0)fastUntil=Math.max(fastUntil,now+180)
+        nextFrame=now+(now<fastUntil||state.emotion!=='idle'?1000/30:80)
         actor.position.y = pose.bob
         actor.position.z = pose.lean
         actor.rotation.set(pose.pitch, pose.yaw + state.rotation, pose.roll)
-        deform(bodyGeometry, bodySource, pose)
-        deform(faceGeometry, faceSource, pose, false)
+        if(Math.abs(pose.squash-lastShape.squash)>.00004||Math.abs(pose.wobble-lastShape.wobble)>.00004||!Number.isFinite(lastShape.squash)) {
+          deform(bodyGeometry, bodySource, pose, bodyNormals)
+          deform(faceGeometry, faceSource, pose)
+          lastShape={squash:pose.squash,wobble:pose.wobble}
+        }
         accent.position.set(...deformVertex(0.73, 0.43, 0.57, pose))
         seam.scale.set(1 / Math.sqrt(1 + pose.squash), 1 / Math.sqrt(1 + pose.squash), 1)
         seam.position.y = -0.035 * (1 + pose.squash)
-        if (faceContext) {
-          paintFace(faceContext, pose, size <= 60)
-          texture.needsUpdate = true
+        const signature=faceSignature(pose,state.size<=60)
+        if (faceContext && signature!==lastTexture) {
+          paintFace(faceContext, pose, state.size <= 60)
+          texture.needsUpdate = true; lastTexture=signature
         }
         renderer.render(scene, camera)
         if (import.meta.env.DEV) {
@@ -217,6 +235,7 @@ export default function PicoAvatar({ emotion, size = 84, rotation = 0, speed = 1
     return () => {
       unsubscribe()
       observer?.disconnect()
+      resize.disconnect()
       invalidateRef.current = () => {}
       mount.removeEventListener('pointerenter', onAttention)
       media.removeEventListener('change', onMedia)
@@ -227,13 +246,13 @@ export default function PicoAvatar({ emotion, size = 84, rotation = 0, speed = 1
       renderer.forceContextLoss()
       renderer.domElement.remove()
     }
-  }, [size])
+  }, [])
 
   return <span
     ref={mountRef}
     className={`pico-avatar pico-avatar--${emotion}`}
     style={{ width: size, height: size, animation: 'none', filter: 'drop-shadow(0 6px 10px rgba(35, 30, 24, .12))' }}
     role="img"
-    aria-label={`Pico 三维球形助手 · ${emotion}`}
+    aria-label={`Pico 三维球形助手 · ${EMOTION_LABELS[emotion]}`}
   />
 }

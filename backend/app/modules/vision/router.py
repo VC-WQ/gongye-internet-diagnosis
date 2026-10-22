@@ -16,9 +16,8 @@ router = APIRouter(prefix="/vision", tags=["视觉检测智能体"])
 
 @router.get("/models")
 def list_models() -> dict:
-    """返回可用的检测模型列表，并在后台预热默认模型。"""
+    """返回可用的检测模型列表；实际模型仅在检测请求时加载。"""
     models = vision_service.available_models()
-    vision_service.prewarm("yolov8s")
     return {"models": models}
 
 

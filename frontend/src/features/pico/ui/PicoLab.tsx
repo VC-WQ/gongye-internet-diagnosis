@@ -1,6 +1,8 @@
 import { Button, Select, Space, Tag } from 'antd'
 import { usePico } from '../core/PicoProvider'
 import { PICO_EMOTIONS } from '../animation/controller'
+import SlidingChoice from '../../../components/SlidingChoice'
+import { EMOTION_LABELS } from '../core/emotionLabels'
 import { stopChineseSpeech } from '../../../services/speech'
 
 export interface PicoPresentation {
@@ -30,33 +32,19 @@ export default function PicoLab({ presentation, onPresentation }: {
   return (
     <section className="pico-lab" data-pico-lab>
       <div className="pico-lab__head">
-        <h2>Pico 状态矩阵</h2>
+        <h2>Pico 表情测试</h2>
         <Tag>仅开发环境 · 不触发业务</Tag>
       </div>
       <p className="pico-lab__hint">
-        点击表情按钮后观察左上角同一个三维角色；语音表情跟随真实 start/resume 事件。
+        选择表情，查看角色变化；播放语音可检查暂停、继续与停止时的动作。
       </p>
-      <Space wrap>
-        {PICO_EMOTIONS.map((item) => (
-          <Button
-            key={item}
-            size="small"
-            type={renderedEmotion === item ? 'primary' : 'default'}
-            onClick={() => {
-              stopChineseSpeech()
-              previewEmotion(item)
-            }}
-            data-pico-emotion={item}
-          >
-            {item}
-          </Button>
-        ))}
-      </Space>
+      <SlidingChoice value={renderedEmotion} options={PICO_EMOTIONS.map(value=>({value,label:EMOTION_LABELS[value]}))}
+        label="Pico 表情" dataPrefix="data-pico-emotion" onChange={value=>{stopChineseSpeech();previewEmotion(value)}} />
       <div className="pico-lab__presentation">
         <label>观察尺寸
           <Select<number> aria-label="Pico 观察尺寸" value={presentation.size}
             onChange={size => onPresentation({ ...presentation, size })}
-            options={[44, 76, 84, 160, 230].map(value => ({ value, label: `${value}px ${({44:'紧凑',76:'Dock',84:'工作台',160:'观察',230:'细节'} as Record<number,string>)[value]}` }))} />
+            options={[44, 76, 84, 160, 230].map(value => ({ value, label: `${value}px ${({44:'紧凑',76:'悬浮窗',84:'工作台',160:'观察',230:'细节'} as Record<number,string>)[value]}` }))} />
         </label>
         <label>观察角度
           <input type="range" min={-60} max={60} step={5} aria-label="Pico 观察角度"
@@ -86,7 +74,7 @@ export default function PicoLab({ presentation, onPresentation }: {
           停止
         </Button>
         <span className="page-meta" role="status" data-pico-emotion-state={emotion}>
-          表情：{emotion}
+          表情：{EMOTION_LABELS[emotion]}
         </span>
       </Space>
     </section>

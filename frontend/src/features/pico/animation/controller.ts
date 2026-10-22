@@ -256,3 +256,23 @@ export function faceVertex(u: number, v: number, radius = 1.008): [number, numbe
   const latitude = (v - 0.5) * 0.69
   return [Math.sin(longitude) * Math.cos(latitude) * radius, Math.sin(latitude) * radius, Math.cos(longitude) * Math.cos(latitude) * radius]
 }
+
+/** Inverse-transpose Jacobian of deformVertex; preserves smooth sphere normals
+ * without traversing every triangle after each small soft-body change. */
+export function deformNormal(x: number, y: number, z: number, nx: number, ny: number, nz: number, pose: Pick<PicoFrame, 'squash' | 'wobble'>): [number, number, number] {
+  const a=1/Math.sqrt(1+pose.squash), b=.4*pose.wobble*z, c=.4*pose.wobble*y
+  const d=.48*pose.wobble*x, e=1+pose.squash, f=-.48*pose.wobble*z
+  const h=.65*pose.wobble*z, i=a+.65*pose.wobble*y
+  const ox=(e*i-f*h)*nx-d*i*ny+d*h*nz
+  const oy=(c*h-b*i)*nx+a*i*ny-a*h*nz
+  const oz=(b*f-c*e)*nx+(c*d-a*f)*ny+(a*e-b*d)*nz
+  const length=Math.hypot(ox,oy,oz)||1
+  return [ox/length,oy/length,oz/length]
+}
+
+/** Preserve wall-clock choreography at low drawing frequency, with stable substeps. */
+export function advancePico(controller: PicoController, seconds: number, reduced: boolean): PicoFrame {
+  let remaining=Math.max(0,Math.min(.25,seconds)), frame=controller.step(0,reduced)
+  while(remaining>1e-8){const dt=Math.min(1/60,remaining);frame=controller.step(dt,reduced);remaining-=dt}
+  return frame
+}

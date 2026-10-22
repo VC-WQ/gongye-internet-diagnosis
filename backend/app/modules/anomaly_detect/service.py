@@ -2,13 +2,13 @@
 from __future__ import annotations
 
 import logging
+import threading
 from typing import Optional
 
 import numpy as np
 
-from .cnn_classifier import SEQ_LEN, cnn_classifier
+from .constants import SEQ_LEN
 from .health_scorer import health_scorer
-from .pinn_residual import pinn_residual_generator
 
 logger = logging.getLogger(__name__)
 
@@ -59,9 +59,26 @@ class AnomalyDetectService:
     """
 
     def __init__(self) -> None:
-        self.pinn = pinn_residual_generator
-        self.cnn = cnn_classifier
+        self._pinn = None
+        self._cnn = None
+        self._model_lock = threading.RLock()
         self.scorer = health_scorer
+
+    @property
+    def pinn(self):
+        with self._model_lock:
+            if self._pinn is None:
+                from .pinn_residual import pinn_residual_generator
+                self._pinn = pinn_residual_generator
+            return self._pinn
+
+    @property
+    def cnn(self):
+        with self._model_lock:
+            if self._cnn is None:
+                from .cnn_classifier import cnn_classifier
+                self._cnn = cnn_classifier
+            return self._cnn
 
     # ------------------------------------------------------------------
     # 主检测入口

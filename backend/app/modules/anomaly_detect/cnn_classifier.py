@@ -48,7 +48,7 @@ FAULT_LABELS_ZH = {
 }
 
 # 信号参数
-SEQ_LEN = 2048
+from .constants import SEQ_LEN
 N_CHANNELS = 1
 
 # 训练权重路径（由 train_cnn.py 训练后生成）

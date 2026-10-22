@@ -90,3 +90,23 @@ export function paintFace(ctx: CanvasRenderingContext2D, frame: PicoFrame, small
     drawEmotion(ctx, emotion, frame, small); ctx.restore()
   }
 }
+
+/** Only visible texture inputs: sub-pixel changes need no new Canvas/GPU upload. */
+export function faceSignature(f: PicoFrame, small: boolean): string {
+  const q=(v:number,precision=250)=>Math.round(v*precision)
+  const parts: (number|string)[]=[Number(small),Number(f.reduced),q(f.blink,1000),q(f.gazeX,100),q(f.gazeY,100)]
+  for(const [emotion,weight] of Object.entries(f.weights) as [PicoEmotion,number][]){
+    if(weight<.002)continue
+    parts.push(emotion,q(weight,1000))
+    switch(emotion){
+      case 'idle':parts.push(q(idleLineY(f.blink,f.time,f.reduced),10),q(f.reduced?0:Math.sin(f.time*.6)*3,10));break
+      case 'curious':parts.push(q(f.curiousMix));break
+      case 'thinking':parts.push(...f.dots.map(v=>q(v)));break
+      case 'search':{const phase=f.reduced?0:f.time*.65;parts.push(Math.floor(phase)%4,q(f.reduced?1:Math.min(1,(phase%1)*5)));break}
+      case 'talking':parts.push(f.mouthFrom,f.mouthTo,q(f.mouthMix));break
+      case 'happy':{const phase=f.reduced?0:(f.time*.26)%3;parts.push(Math.floor(phase),q(smooth(((phase%1)-.72)/.28)));break}
+      case 'confused':parts.push(q(f.reduced?0:smooth((Math.sin(f.time*1.1)+.15)/1.15)));break
+    }
+  }
+  return parts.join('|')
+}

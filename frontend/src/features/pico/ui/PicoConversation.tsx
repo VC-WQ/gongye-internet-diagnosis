@@ -23,7 +23,7 @@ const KIND_LABEL: Record<PicoReference['kind'], string> = {
 interface Flight {
   id: string
   text: string
-  from: { left: number; top: number; width: number; height: number }
+  from: { left: number; top: number }
   to: { left: number; top: number; width: number; height: number }
 }
 
@@ -94,6 +94,7 @@ export default function PicoConversation({
   const reduced = useRef(false)
   const pendingTimer = useRef<ReturnType<typeof setTimeout>>()
   const flightAnimation = useRef<Animation>()
+  const retargetFlight = useRef<() => void>(()=>{})
   const answerAnimations = useRef(new Set<Animation>())
   const clearMotion = useCallback(() => {
     pending.current = null
@@ -121,6 +122,7 @@ export default function PicoConversation({
   const onScroll = () => {
     const list = listRef.current
     if (!list) return
+    if (flightAnimation.current) retargetFlight.current()
     nearBottom.current = isNearBottom({
       scrollHeight: list.scrollHeight,
       scrollTop: list.scrollTop,
@@ -149,31 +151,28 @@ export default function PicoConversation({
       if (current) pending.current = null
       return
     }
-    const list = listRef.current
-    const target = list?.querySelector<HTMLElement>(
-      `[data-message-id="${CSS.escape(current.id)}"] .pico-message__bubble`,
-    )
-    if (!target) return
-    const rect = target.getBoundingClientRect()
-    const from = current.from
-    pending.current = null
-    setFlyingId(current.id)
-    setFlight({
-      id: current.id,
-      text: current.text,
-      from: {
-        left: from.left,
-        top: from.top,
-        width: Math.max(60, from.width),
-        height: Math.max(24, from.height),
-      },
-      to: {
-        left: rect.left,
-        top: rect.top,
-        width: rect.width,
-        height: rect.height,
-      },
-    })
+    // Ant Design settles textarea autoSize after the draft clears. Measure once
+    // at that layout boundary, before starting a fixed-size compositor flight.
+    let frame=0, stable=0, tries=0, previous=''
+    const measure = () => {
+      if (pending.current?.id !== current.id) return
+      const signature=`${listRef.current?.clientHeight}:${composerInputRef.current?.offsetHeight}`
+      stable=signature===previous?stable+1:0;previous=signature
+      if(stable<2&&++tries<8){frame=requestAnimationFrame(measure);return}
+      const list = listRef.current
+      if (list && nearBottom.current) list.scrollTop = list.scrollHeight
+      const target = list?.querySelector<HTMLElement>(`[data-message-id="${CSS.escape(current.id)}"] .pico-message__bubble`)
+      if (!target) return
+      const rect = target.getBoundingClientRect(), from = current.from
+      pending.current = null
+      setFlyingId(current.id)
+      setFlight({ id: current.id, text: current.text,
+        from: { left: from.left, top: from.top },
+        to: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
+      })
+    }
+    frame=requestAnimationFrame(measure)
+    return () => cancelAnimationFrame(frame)
   }, [messages])
 
   useLayoutEffect(() => {
@@ -184,33 +183,57 @@ export default function PicoConversation({
       setFlyingId(undefined)
       return
     }
-    const animation = ghost.animate(
-      [
-        {
-          left: `${flight.from.left}px`,
-          top: `${flight.from.top}px`,
-          width: `${flight.from.width}px`,
-          height: `${flight.from.height}px`,
-          opacity: 1,
-        },
-        {
-          left: `${flight.to.left}px`,
-          top: `${flight.to.top}px`,
-          width: `${flight.to.width}px`,
-          height: `${flight.to.height}px`,
-          opacity: 1,
-        },
-      ],
+    // Reserve the final bubble first. The flight never changes its wrapping box.
+    const dx = flight.from.left - flight.to.left
+    const dy = flight.from.top - flight.to.top
+    let animation = ghost.animate(
+      [{ transform: `translate3d(${dx}px,${dy}px,0)` }, { transform: 'translate3d(0,0,0)' }],
       { duration: DURATION.messageFlight * 1000, easing: EASE_CSS.balanced },
     )
+    const started=performance.now()
     flightAnimation.current = animation
     const finish = () => {
-      setFlight(undefined)
-      setFlyingId(undefined)
+      if (flightAnimation.current !== animation) return
+      flightAnimation.current = undefined
+      setFlight(current => current?.id === flight.id ? undefined : current)
+      setFlyingId(current => current === flight.id ? undefined : current)
     }
     animation.addEventListener('finish', finish)
     animation.addEventListener('cancel', finish)
+    // A changed wrapping width or viewport invalidates measured geometry. Restore
+    // the actual message immediately rather than fly towards a stale rectangle.
+    const invalidate = () => { animation.cancel(); finish() }
+    const retarget = () => {
+      if(flightAnimation.current!==animation)return
+      const target=listRef.current?.querySelector<HTMLElement>(`[data-message-id="${CSS.escape(flight.id)}"] .pico-message__bubble`)
+      const rect=target?.getBoundingClientRect(),viewport=listRef.current?.getBoundingClientRect()
+      if(!rect||!viewport||Math.abs(rect.width-flight.to.width)>.5||Math.abs(rect.height-flight.to.height)>.5||rect.bottom<viewport.top||rect.top>viewport.bottom){invalidate();return}
+      const left=parseFloat(ghost.style.left),top=parseFloat(ghost.style.top)
+      if(Math.abs(rect.left-left)<.5&&Math.abs(rect.top-top)<.5)return
+      const current=ghost.getBoundingClientRect()
+      const remaining=DURATION.messageFlight*1000-(performance.now()-started)
+      if(remaining<20){invalidate();return}
+      animation.removeEventListener('finish',finish);animation.removeEventListener('cancel',finish);animation.cancel()
+      ghost.style.left=`${rect.left}px`;ghost.style.top=`${rect.top}px`
+      animation=ghost.animate([{transform:`translate3d(${current.left-rect.left}px,${current.top-rect.top}px,0)`},{transform:'translate3d(0,0,0)'}],{duration:remaining,easing:EASE_CSS.balanced})
+      flightAnimation.current=animation
+      animation.addEventListener('finish',finish);animation.addEventListener('cancel',finish)
+    }
+    retargetFlight.current=retarget
+    const scroll = (event: Event) => { if (event.target === document || event.target === window) retarget() }
+    window.addEventListener('resize', invalidate)
+    window.addEventListener('scroll', scroll, true)
+    const list = listRef.current
+    const width = list?.clientWidth, height = list?.clientHeight
+    const observer = new ResizeObserver(() => {
+      if (list && (list.clientWidth !== width || list.clientHeight !== height)) invalidate()
+    })
+    if (list) observer.observe(list)
     return () => {
+      if(retargetFlight.current===retarget)retargetFlight.current=()=>{}
+      observer.disconnect()
+      window.removeEventListener('resize', invalidate)
+      window.removeEventListener('scroll', scroll, true)
       animation.removeEventListener('finish', finish)
       animation.removeEventListener('cancel', finish)
       animation.cancel()
@@ -275,6 +298,7 @@ export default function PicoConversation({
     setDraft('')
     if (box && !reduced.current) {
       pending.current = { id, text, from: box }
+      setFlyingId(id)
       clearTimeout(pendingTimer.current)
       pendingTimer.current = setTimeout(() => {
         if (pending.current?.id === id) {
@@ -448,14 +472,14 @@ export default function PicoConversation({
             ref={ghostRef}
             className="pico-flight-ghost"
             style={{
-              left: flight.from.left,
-              top: flight.from.top,
-              width: flight.from.width,
-              height: flight.from.height,
+              left: flight.to.left,
+              top: flight.to.top,
+              width: flight.to.width,
+              height: flight.to.height,
             }}
             aria-hidden="true"
           >
-            {flight.text}
+            <p className="pico-message__text">{flight.text}</p>
           </div>,
           document.body,
         )}

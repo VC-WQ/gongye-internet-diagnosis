@@ -327,8 +327,8 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-.pico-message__bubble.is-flight-target .pico-message__text {
-  opacity: 0;
+.pico-message__bubble.is-flight-target {
+  visibility: hidden;
 }
 .pico-message--user .pico-message__bubble {
   color: #fff;
@@ -462,6 +462,8 @@
 /* 用户文字飞行层 */
 .pico-flight-ghost {
   position: fixed;
+  max-width: none;
+  will-change: transform;
   z-index: 1200;
   box-sizing: border-box;
   padding: 9px 11px;

@@ -1,0 +1,6 @@
+.sliding-choice-scroll { max-width:100%; overflow-x:auto; padding:2px; }
+.sliding-choice { display:inline-flex; position:relative; isolation:isolate; padding:3px; border:1px solid var(--line); background:var(--surface-muted); }
+.sliding-choice__indicator { position:absolute; left:0; top:3px; bottom:3px; background:var(--text); pointer-events:none; z-index:-1; }
+.sliding-choice button { flex:none; min-width:62px; padding:8px 12px; border:0; background:transparent; color:var(--muted); cursor:pointer; font:inherit; font-size:12px; white-space:nowrap; }
+.sliding-choice button[aria-checked=true] { color:var(--surface); }
+.sliding-choice button:focus-visible { outline:2px solid var(--brand); outline-offset:-2px; }

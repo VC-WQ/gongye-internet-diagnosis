@@ -42,7 +42,7 @@ except ImportError:  # pragma: no cover
 SENSOR_CHANNELS = ["vibration"]
 
 # 信号参数
-SEQ_LEN = 2048
+from .constants import SEQ_LEN
 
 # 训练权重路径（由 train_pinn.py 训练后生成）
 PROJECT_ROOT = Path(__file__).resolve().parents[4]

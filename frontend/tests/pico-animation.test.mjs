@@ -8,7 +8,7 @@ async function loadModule(path) {
   const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2020 } })
   return import(`data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`)
 }
-const { PicoController, PICO_EMOTIONS, TALK_SYMBOLS, springTo, blinkAmount, chevronPoints, idleLineY, deformVertex, faceVertex } =
+const { PicoController, PICO_EMOTIONS, TALK_SYMBOLS, springTo, blinkAmount, chevronPoints, idleLineY, deformVertex, deformNormal, advancePico, faceVertex } =
   await loadModule('../src/features/pico/animation/controller.ts')
 
 test('spring preserves velocity on retarget and converges independently of ordinary frame rate', () => {
@@ -200,4 +200,37 @@ test('incidental hover cannot overwrite deliberate close or speech motion, but u
  assert.equal(controller.step(0).action,'voice-start')
  for(let i=0;i<150;i++)controller.step(1/60)
  controller.react('attention');assert.equal(controller.step(0).action,'attention')
+})
+
+test('analytic normals stay perpendicular to deformed surface tangents',()=>{
+ for(const pose of [{squash:0,wobble:0},{squash:.12,wobble:.08},{squash:-.08,wobble:-.07}])
+ for(let u=.1;u<.9;u+=.13)for(let v=.15;v<.85;v+=.17){
+  const p=faceVertex(u,v,1),n=deformNormal(...p,...p,pose),eps=.000001
+  for(const [du,dv] of [[eps,0],[0,eps]]){
+   const a=deformVertex(...faceVertex(u+du,v+dv,1),pose),b=deformVertex(...faceVertex(u-du,v-dv,1),pose)
+   const tangent=a.map((x,i)=>x-b[i]);assert.ok(Math.abs(n.reduce((sum,x,i)=>sum+x*tangent[i],0))/Math.hypot(...tangent)<1e-6)
+  }
+  assert.ok(Math.abs(Math.hypot(...n)-1)<1e-10)
+ }
+})
+test('low drawing frequency preserves wall-clock choreography through stable substeps',()=>{
+ const a=new PicoController(105),b=new PicoController(105);let x,y
+ for(let i=0;i<120;i++)x=advancePico(a,.1,false)
+ for(let i=0;i<720;i++)y=b.step(1/60)
+ assert.ok(Math.abs(x.time-12)<1e-8)
+ for(const key of ['time','yaw','gazeX','squash','blink'])assert.ok(Math.abs(x[key]-y[key])<1e-8,key)
+})
+test('deadline scheduler sleeps and cancels its timer on hide and disposal',async()=>{
+ const saved=Object.fromEntries(['document','requestAnimationFrame','cancelAnimationFrame','setTimeout','clearTimeout'].map(k=>[k,globalThis[k]]))
+ const frames=new Map(),timers=new Map(),listeners=new Map();let id=0,due=0,renders=0,resumes=0
+ Object.assign(globalThis,{document:{hidden:false,addEventListener:(n,f)=>listeners.set(n,f),removeEventListener:n=>listeners.delete(n)},requestAnimationFrame:f=>{frames.set(++id,f);return id},cancelAnimationFrame:i=>frames.delete(i),setTimeout:f=>{timers.set(++id,f);return id},clearTimeout:i=>timers.delete(i)})
+ const tick=now=>{const work=[...frames.values()];frames.clear();work.forEach(f=>f(now))}
+ try{
+  const {subscribePicoFrame,wakePicoFrames}=await loadModule('../src/features/pico/animation/scheduler.ts')
+  const off=subscribePicoFrame({active:()=>true,due:()=>due,resume:()=>{resumes++},render:now=>{renders++;due=now+100}})
+  tick(0);assert.equal(renders,1);assert.equal(frames.size,0);assert.equal(timers.size,1)
+  due=0;wakePicoFrames();assert.equal(timers.size,0);assert.equal(frames.size,1);tick(20);assert.equal(renders,2)
+  document.hidden=true;listeners.get('visibilitychange')();assert.equal(timers.size,0)
+  document.hidden=false;listeners.get('visibilitychange')();listeners.get('visibilitychange')();assert.equal(resumes,1);off();assert.equal(frames.size,0);assert.equal(timers.size,0);assert.equal(listeners.size,0)
+ }finally{Object.assign(globalThis,saved)}
 })
