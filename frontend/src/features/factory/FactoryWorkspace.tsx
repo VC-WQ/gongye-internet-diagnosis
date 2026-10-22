@@ -1,3 +1,4 @@
+import { useDeviceVisual } from './growth/DeviceVisualProvider'
 import { useLayoutEffect, useMemo, useRef } from 'react'
 import { Alert, Button, Skeleton } from 'antd'
 import FactoryScene from '../../components/FactoryScene'
@@ -21,11 +22,12 @@ export default function FactoryWorkspace() {
   const navigate = useSpatialNavigate()
   const catalog = useDeviceCatalog()
   const devices = useMemo(() => catalog.data ?? [], [catalog.data])
+  const visual = useDeviceVisual()
   const keyword = workspace.searchFilters.q?.trim().toLowerCase() ?? ''
   const filtered = useMemo(() => devices.filter(device =>
     (workspace.statusFilter === 'all' || device.status === workspace.statusFilter) &&
-    (!keyword || `${device.name} ${device.id}`.toLowerCase().includes(keyword))),
-  [devices, workspace.statusFilter, keyword])
+    (!keyword || `${device.name} ${device.id} ${visual.get(device).displayAlias ?? ''}`.toLowerCase().includes(keyword))),
+  [devices, workspace.statusFilter, keyword, visual])
   const selected = devices.find(device => device.id === workspace.selectedDeviceId)
   const outsideFilter = Boolean(selected && !filtered.some(device => device.id === selected.id))
   const telemetry = useDeviceTelemetry(selected?.id)

@@ -1,3 +1,5 @@
+import { useDeviceVisual } from './growth/DeviceVisualProvider'
+import DeviceIcon from './growth/DeviceIcon'
 import { Empty, Input } from 'antd'
 import { useRef } from 'react'
 import FlipSelection from '../../motion/FlipSelection'
@@ -21,6 +23,7 @@ export default function DeviceNavigator({
   onSelect: (id: string) => void
   selectedOutsideFilter: boolean
 }) {
+  const visual = useDeviceVisual()
   const list = useRef<HTMLDivElement>(null)
   return (
     <section className="factory-panel factory-panel--devices" aria-label="设备导航">
@@ -64,7 +67,8 @@ export default function DeviceNavigator({
                   style={{ background: STATUS_META[device.status]?.hex }}
                   aria-hidden
                 />
-                <span className="device-nav__name">{device.name}</span>
+                <DeviceIcon icon={visual.get(device).iconKey} color={visual.get(device).accentColor} />
+                <span className="device-nav__name">{visual.get(device).displayAlias ?? device.name}</span>
               </span>
 
             </button>

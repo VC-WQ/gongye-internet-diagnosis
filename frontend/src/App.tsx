@@ -1,3 +1,4 @@
+import { DeviceVisualProvider } from './features/factory/growth/DeviceVisualProvider'
 import { useSpatialNavigate } from './hooks/useSpatialNavigate'
 import {
   Component,
@@ -282,7 +283,30 @@ function AppEntry() {
 }
 
 function MainLayout() {
-  const account = useResource('account', getMe)
+  const token = useRef(localStorage.getItem('token'))
+  const [sessionRevision, setSessionRevision] = useState(0)
+  useEffect(() => {
+    const check = () => {
+      const next = localStorage.getItem('token')
+      if (next === token.current) return
+      token.current = next
+      cancelAuthenticatedRequests()
+      document.dispatchEvent(new Event('workspace:auth-transition'))
+      setSessionRevision(value => value + 1)
+    }
+    const storage = (event: StorageEvent) => { if (event.key === null || event.key === 'token') check() }
+    window.addEventListener('storage', storage)
+    window.addEventListener('focus', check)
+    document.addEventListener('visibilitychange', check)
+    return () => { window.removeEventListener('storage', storage); window.removeEventListener('focus', check); document.removeEventListener('visibilitychange', check) }
+  }, [])
+  const account = useResource(`account:${sessionRevision}`, async () => {
+    const expected = token.current
+    const user = await getMe()
+    if (expected !== localStorage.getItem('token')) throw new Error('账户已切换，正在重新验证')
+    return user
+  }, 0, Boolean(token.current))
+  if (!token.current) return <Navigate to="/login" replace />
   if (!account.data)
     return (
       <div className="auth-loading">
@@ -295,11 +319,13 @@ function MainLayout() {
     )
   return (
     <RealtimeProvider>
+      <DeviceVisualProvider key={account.data.id} userId={account.data.id} sessionToken={token.current}>
       <WorkspaceProvider>
         <PicoProvider>
           <Workspace user={account.data} />
         </PicoProvider>
       </WorkspaceProvider>
+      </DeviceVisualProvider>
     </RealtimeProvider>
   )
 }

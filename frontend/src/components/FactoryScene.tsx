@@ -1,4 +1,9 @@
-import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { DeviceIconPaths } from '../features/factory/growth/DeviceIcon'
+import { DeviceSceneBridge, type DeviceAnchor, type ScenePointerInput } from '../features/factory/growth/DeviceSceneBridge'
+import { relativeAffine } from '../features/factory/growth/projection'
+import DeviceGrowthHost from '../features/factory/growth/DeviceGrowthHost'
+import { useDeviceVisual } from '../features/factory/growth/DeviceVisualProvider'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Button, Empty, Space } from 'antd'
 import { boundCamera, zoomAt, pinchCamera, type Camera } from '../services/sceneCamera'
 import { createSlots, distance, focusCamera, inverse, outside, planScene, pointerIntent,
@@ -92,10 +97,10 @@ type SpriteView = { id: string; device: Device; visible: boolean }
 type Pointer = { start: Point; last: Point; device?: string; moved: number; touch: boolean }
 type Controller = {
   sync: () => void; measure: () => void; reset: () => void; zoom: (factor: number) => void; place: (id:string) => void
-  select: (id: string) => void; focus: (id?:string) => void; pan: (x: number, y: number) => void
-  down: (e: ReactPointerEvent<SVGSVGElement>) => void
-  drag: (e: ReactPointerEvent<SVGSVGElement>) => void
-  up: (e: ReactPointerEvent<SVGSVGElement>, cancelled?: boolean) => void
+  notify: () => void; select: (id: string) => void; focus: (id?:string) => void; pan: (x: number, y: number) => void
+  down: (e: ScenePointerInput) => void
+  drag: (e: ScenePointerInput) => void
+  up: (e: ScenePointerInput, cancelled?: boolean) => void
 }
 const HOME: Camera = { x: 0, y: 0, zoom: 1 }
 const matrixValue = (m: DOMMatrix): Matrix => ({ a:m.a, b:m.b, c:m.c, d:m.d, e:m.e, f:m.f })
@@ -104,8 +109,19 @@ export default function FactoryScene({ devices, visibleIds, selected, onSelect, 
   devices: Device[]; visibleIds: ReadonlySet<string>; selected?: string
   onSelect: (id: string) => void; onClear?: () => void
 }) {
+  const bridge = useMemo(() => new DeviceSceneBridge(), [])
+  const visual = useDeviceVisual()
   const root = useRef<HTMLDivElement>(null), svg = useRef<SVGSVGElement>(null), cameraGroup = useRef<SVGGElement>(null)
   const nodes = useRef(new Map<string, SVGGElement>())
+  const nodeCallbacks = useRef(new Map<string, (node: SVGGElement | null) => void>())
+  const deviceRef = (id: string) => {
+    let callback = nodeCallbacks.current.get(id)
+    if (!callback) {
+      callback = node => { if (node) { nodes.current.set(id,node); controller.current?.place(id) } else nodes.current.delete(id) }
+      nodeCallbacks.current.set(id,callback)
+    }
+    return callback
+  }
   const props = useRef({ devices, visibleIds, selected, onSelect, onClear })
   props.current = { devices, visibleIds, selected, onSelect, onClear }
   const controller = useRef<Controller>()
@@ -117,10 +133,19 @@ export default function FactoryScene({ devices, visibleIds, selected, onSelect, 
   useLayoutEffect(() => controller.current?.sync(), [devices, visibleKey])
   useLayoutEffect(() => controller.current?.measure(), [view])
   useLayoutEffect(() => controller.current?.focus(selected), [selected])
+  // Ref attachment is a commit-wide transaction. Never publish a partially
+  // reattached map to the overlay while React is committing sibling devices.
+  useLayoutEffect(() => {
+    const known = new Set(devices.map(device => device.id))
+    for (const id of nodeCallbacks.current.keys()) if (!known.has(id)) nodeCallbacks.current.delete(id)
+    controller.current?.notify()
+  })
 
   useEffect(() => {
     const element = svg.current, group = cameraGroup.current, host = root.current
     if (!element || !group || !host) return
+    // StrictMode replays effects without detaching the existing DOM refs.
+    for (const node of element.querySelectorAll<SVGGElement>('g[data-device]')) nodes.current.set(node.dataset.device!,node)
     const model = new Map<string, Sprite>(), pointers = new Map<number, Pointer>()
     let camera = { ...HOME }, targetCamera = { ...HOME }, cameraVelocity = { x:0, y:0, zoom:0 }
     let rootMatrix: Matrix | null = null, geometry: Geometry | null = null
@@ -136,11 +161,15 @@ export default function FactoryScene({ devices, visibleIds, selected, onSelect, 
     const pauseGeometry = () => {
       if(geometryPauseAt===null)geometryPauseAt=clock()
       host.dataset.sceneState='waiting-geometry';host.dataset.sceneRaf='idle'
+      notify()
     }
     const resumeGeometry = () => {
       if(geometryPauseAt!==null){planStart+=(hiddenAt??performance.now())-geometryPauseAt;geometryPauseAt=null}
     }
     let lastFocused: string | undefined
+    let anchorSequence = 0
+    const anchorCache = new Map<string, DeviceAnchor | null>()
+    const notify = () => { anchorSequence++; anchorCache.clear(); bridge.afterPaint(clock()) }
     const render = () => {
       if (disposed) return
       // React receives immutable business/semantic DTOs, never mutable motion objects.
@@ -177,6 +206,7 @@ export default function FactoryScene({ devices, visibleIds, selected, onSelect, 
       group.setAttribute('transform', cameraTransform())
       element.dataset.camera = `${camera.x.toFixed(2)},${camera.y.toFixed(2)},${camera.zoom.toFixed(3)}`
       for (const id of model.keys())place(id)
+      notify()
     }
     const advance = (time: number) => {
       if (!plan) return
@@ -334,7 +364,7 @@ export default function FactoryScene({ devices, visibleIds, selected, onSelect, 
       const id=target instanceof Element?target.closest('[data-device]')?.getAttribute('data-device'):undefined
       return id&&model.get(id)?.visible?id:undefined
     }
-    const release = (e:ReactPointerEvent<SVGSVGElement>,cancelled=false) => {
+    const release = (e:ScenePointerInput,cancelled=false) => {
       const p=pointers.get(e.pointerId)
       if (!p) return
       const end=document.elementFromPoint(e.clientX,e.clientY)
@@ -346,15 +376,19 @@ export default function FactoryScene({ devices, visibleIds, selected, onSelect, 
         else if (intent==='clear'&&end&&element.contains(end)) { reset(); props.current.onClear?.() }
         multiple=false
       }
+      notify()
     }
-    controller.current={sync,measure,reset,zoom,select,focus,place,pan:(x,y)=>move({...targetCamera,x:targetCamera.x+x,y:targetCamera.y+y}),
+    controller.current={sync,measure,reset,zoom,select,focus,place,notify,pan:(x,y)=>move({...targetCamera,x:targetCamera.x+x,y:targetCamera.y+y}),
       down:e=>{
         if (e.button!==0) return
+        const transferred = bridge.transferRotationToScene(e)
+        if (transferred) controller.current?.down(transferred)
         if (!pointers.size) multiple=false
         else multiple=true
         const p={x:e.clientX,y:e.clientY}
         pointers.set(e.pointerId,{start:p,last:p,device:hit(e.target),moved:0,touch:e.pointerType==='touch'})
         element.setPointerCapture(e.pointerId)
+        notify()
       },
       drag:e=>{
         const p=pointers.get(e.pointerId)
@@ -386,6 +420,44 @@ export default function FactoryScene({ devices, visibleIds, selected, onSelect, 
       else if (event.type==='gestureend') nativeGesture=false
       else { const anchor=local(e.clientX,e.clientY); if (anchor&&Number.isFinite(e.scale)&&e.scale>0) zoom(e.scale/gestureScale,anchor); gestureScale=e.scale||1 }
     }
+    const disconnectBridge = bridge.connect({
+      read: id => {
+        if (anchorCache.has(id)) return anchorCache.get(id) ?? null
+        const node = nodes.current.get(id), item = model.get(id)
+        let result: DeviceAnchor | null = null
+        if (node?.isConnected && item?.visible && item.present && props.current.visibleIds.has(id)) {
+          const raw = node.getScreenCTM(), source = element.getScreenCTM(), box = element.viewBox.baseVal
+          const style = getComputedStyle(element), width = parseFloat(style.width), height = parseFloat(style.height)
+          const matrix = raw && source ? relativeAffine(matrixValue(source), matrixValue(raw),
+            { x:box.x, y:box.y, width:box.width, height:box.height }, width, height) : null
+          if (matrix) {
+            const x = matrix.c * 19.5 + matrix.e, y = matrix.d * 19.5 + matrix.f
+            const pad = Math.hypot(matrix.a,matrix.b) * 180
+            if (x > -pad && x < width+pad && y > -pad && y < height+pad) result = { deviceId:id,matrix,width,height,
+              sequence:anchorSequence,sceneMoving:activeCamera() || Boolean(plan && clock()-planStart < plan.duration),pointerBusy:pointers.size > 0 }
+          }
+        }
+        anchorCache.set(id,result)
+        return result
+      },
+      blend: (id,p) => {
+        const node = nodes.current.get(id)
+        if (!node) return
+        if (p <= 0) {
+          node.classList.remove('is-growth')
+          for (const key of ['machine','platform','shadow','caption']) node.style.removeProperty(`--growth-${key}-opacity`)
+          return
+        }
+        const mix = (a:number,b:number) => { const t = Math.max(0,Math.min(1,(p-a)/(b-a)));return t*t*(3-2*t) }
+        node.classList.add('is-growth')
+        node.style.setProperty('--growth-machine-opacity', String(1-mix(.12,.55)))
+        node.style.setProperty('--growth-platform-opacity', String(1-mix(0,.28)))
+        node.style.setProperty('--growth-shadow-opacity', String(.6*(1-mix(.12,.55))))
+        node.style.setProperty('--growth-caption-opacity', String(1-mix(.75,1)))
+      },
+      wheel, gesture, pointerDown: event => controller.current?.down(event),
+      clear: () => { reset(); props.current.onClear?.(); element.focus({preventScroll:true}) },
+    })
     const motionChanged=()=>{ reduced=media.matches; if (reduced) { camera={...targetCamera};cameraVelocity={x:0,y:0,zoom:0};replan();ensureFrame() } }
     const visibility=()=>{
       if (document.hidden) { hiddenAt=performance.now();advance(clock());paint();cancelAnimationFrame(frame);frame=0;lastTime=0;host.dataset.sceneRaf='hidden' }
@@ -398,7 +470,7 @@ export default function FactoryScene({ devices, visibleIds, selected, onSelect, 
     sync();measure();paint()
     if(props.current.selected)focus(props.current.selected)
     return ()=>{
-      disposed=true;cancelAnimationFrame(frame);controller.current=undefined
+      disconnectBridge();disposed=true;cancelAnimationFrame(frame);controller.current=undefined
       resize.disconnect();document.removeEventListener('visibilitychange',visibility);media.removeEventListener('change',motionChanged)
       element.removeEventListener('wheel',wheel)
       for (const name of ['gesturestart','gesturechange','gestureend']) element.removeEventListener(name,gesture)
@@ -436,7 +508,7 @@ export default function FactoryScene({ devices, visibleIds, selected, onSelect, 
           <path d="M30 300v20l420 220 420-220v-20M450 540v20" fill="none" stroke="var(--line)" />
           {sprites.map(sprite=>{
             const device=sprite.device,chosen=device.id===selected,color=STATUS_META[device.status]?.hex??'#7d8997'
-            return <g key={device.id} ref={node=>{if(node) { nodes.current.set(device.id,node);controller.current?.place(device.id) } else nodes.current.delete(device.id)}}
+            return <g key={device.id} ref={deviceRef(device.id)}
               data-device={device.id} role="button" tabIndex={sprite.visible?0:-1}
               aria-label={`${device.name}，${STATUS_META[device.status]?.label??device.status}`} aria-pressed={chosen} aria-hidden={!sprite.visible||undefined}
               pointerEvents={sprite.visible?'auto':'none'} className={`factory-node ${chosen?'is-selected':''}`}
@@ -446,15 +518,18 @@ export default function FactoryScene({ devices, visibleIds, selected, onSelect, 
               <ellipse cx="0" cy="28" rx="64" ry="17" fill="var(--machine-shadow)" opacity=".6" />
               <Machine type={device.device_type} />
               <path className="node-edge" d="M-103 19 0 74 103 19" fill="none" strokeWidth="2" />
-              <g transform="translate(0 111)">
+              <g className="node-caption" transform="translate(0 111)">
                 <rect className="node-label" x="-95" y="-16" width="190" height="40" rx="0" />
                 <circle cx="-78" cy="3" r="4" fill={color} />
-                <text x="-65" y="8" fill="var(--text)" fontSize="15" fontWeight="500">{Array.from(device.name).length>8?Array.from(device.name).slice(0,7).join('')+'…':device.name}</text>
+                <svg x="-65" y="-7" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={visual.get(device).accentColor} strokeWidth="1.5" aria-hidden><DeviceIconPaths icon={visual.get(device).iconKey} /></svg>
+                <rect x="91" y="-15" width="3" height="38" fill={visual.get(device).accentColor} aria-hidden />
+                <text x="-40" y="8" fill="var(--text)" fontSize="15" fontWeight="500">{Array.from(visual.get(device).displayAlias ?? device.name).length>8?Array.from(visual.get(device).displayAlias ?? device.name).slice(0,7).join('')+'…':(visual.get(device).displayAlias ?? device.name)}</text>
               </g>
             </g>
           })}
         </g>
       </svg>
+      <DeviceGrowthHost bridge={bridge} devices={devices} visibleIds={visibleIds} selected={selected} />
       {!sprites.length&&(!devices.length||!visibleIds.size)&&<div className="scene-empty"><Empty description={devices.length?'没有符合筛选的设备':'暂无设备'} /></div>}
       <div className="scene-controls">
         <span className="scene-hint">{visibleIds.size} 台设备 · 拖动平移 · 捏合缩放</span>
