@@ -131,7 +131,7 @@ export default function PicoAvatar({ emotion, size = 84, rotation = 0, speed = 1
     let previousReaction = 0
     const onMedia = () => { needsFrame = true; last = 0; wakePicoFrames() }
     invalidateRef.current = onMedia
-    const onAttention = () => { controller.react('attention'); onMedia() }
+    const onAttention = (event: PointerEvent) => { if (event.pointerType === 'touch') return; controller.react('attention'); onMedia() }
     mount.addEventListener('pointerenter', onAttention)
     media.addEventListener('change', onMedia)
     const observer = typeof IntersectionObserver !== 'undefined' ? new IntersectionObserver((entries) => {

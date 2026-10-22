@@ -1,4 +1,4 @@
-import { Button, Space, Tag } from 'antd'
+import { Button, Select, Space, Tag } from 'antd'
 import { usePico } from '../core/PicoProvider'
 import { PICO_EMOTIONS } from '../animation/controller'
 import { stopChineseSpeech } from '../../../services/speech'
@@ -54,10 +54,9 @@ export default function PicoLab({ presentation, onPresentation }: {
       </Space>
       <div className="pico-lab__presentation">
         <label>观察尺寸
-          <select aria-label="Pico 观察尺寸" value={presentation.size}
-            onChange={(event) => onPresentation({ ...presentation, size: Number(event.target.value) })}>
-            <option value={44}>44px 紧凑</option><option value={76}>76px Dock</option><option value={84}>84px 工作台</option><option value={160}>160px 观察</option><option value={230}>230px 细节</option>
-          </select>
+          <Select<number> aria-label="Pico 观察尺寸" value={presentation.size}
+            onChange={size => onPresentation({ ...presentation, size })}
+            options={[44, 76, 84, 160, 230].map(value => ({ value, label: `${value}px ${({44:'紧凑',76:'Dock',84:'工作台',160:'观察',230:'细节'} as Record<number,string>)[value]}` }))} />
         </label>
         <label>观察角度
           <input type="range" min={-60} max={60} step={5} aria-label="Pico 观察角度"
@@ -66,10 +65,9 @@ export default function PicoLab({ presentation, onPresentation }: {
           <output>{Math.round(presentation.rotation * 180 / Math.PI)}°</output>
         </label>
         <label>动作速度
-          <select aria-label="Pico 动作速度" value={presentation.speed}
-            onChange={(event) => onPresentation({ ...presentation, speed: Number(event.target.value) })}>
-            <option value={1}>自然速度</option><option value={0.25}>0.25× 慢动作</option><option value={0}>暂停</option>
-          </select>
+          <Select<number> aria-label="Pico 动作速度" value={presentation.speed}
+            onChange={speed => onPresentation({ ...presentation, speed })}
+            options={[{ value: 1, label: '自然速度' }, { value: .25, label: '0.25× 慢动作' }, { value: 0, label: '暂停' }]} />
         </label>
         <label><input type="checkbox" checked={presentation.reducedMotion === true}
           onChange={(event) => onPresentation({ ...presentation, reducedMotion: event.target.checked ? true : undefined })} />减少动态效果</label>

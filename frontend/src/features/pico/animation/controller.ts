@@ -138,7 +138,7 @@ export class PicoController {
       case 'nod': action.pitch = .12; action.duration = 1.05; break
       case 'double-blink': this.blinkStart = this.time; this.secondBlink = this.time + .43; action.duration = 1.05; break
       case 'lean': action.lean = .075; action.pitch = -.055; action.bob = .018; action.squash = .022; break
-      case 'attention': action.yaw = -.065; action.gazeX = -.45; action.roll = -.045; action.lean = .035; break
+      case 'attention': action.yaw = -.14; action.gazeX = -.7; action.roll = -.08; action.lean = .065; break
       case 'open': action.pitch = -.065; action.lean = .07; action.bob = .035; action.squash = .045; action.duration = 1.35; break
       case 'close': action.pitch = .07; action.gazeY = .2; action.duration = .8; break
       case 'context': action.yaw = -.10; action.gazeX = -.65; action.gazeY = -.15; action.duration = 1.4; break
@@ -157,6 +157,7 @@ export class PicoController {
     // Let a deliberate open/message/voice reaction finish before that quiet cue.
     if (kind === 'attention' && this.action && this.time < this.action.start + this.action.duration &&
       !(['attention', 'context', ...AUTONOMOUS] as readonly string[]).includes(this.action.kind)) return
+    if (kind === 'attention' && this.action?.kind === 'attention' && this.time < this.action.start + .8) return
     this.startAction(kind)
   }
   private autonomousKind(): (typeof AUTONOMOUS)[number] {

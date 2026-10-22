@@ -145,7 +145,7 @@ export default function PicoDock() {
           aria-label={open ? '收起 Pico 助手' : '打开 Pico 助手'}
           aria-expanded={open}
           title="Pico · 点击打开，拖动可移动"
-          onPointerEnter={() => react('attention')}
+          onPointerEnter={event => { if (event.pointerType !== 'touch') react('attention') }}
           onFocus={() => { if (!restoringFocus.current) react('attention') }}
           onPointerDown={(event) => {
             if (event.button !== 0 || open) return

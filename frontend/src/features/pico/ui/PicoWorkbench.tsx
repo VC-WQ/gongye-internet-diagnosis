@@ -16,7 +16,7 @@ export default function PicoWorkbench() {
     return () => setWorkbenchActive(false)
   }, [setWorkbenchActive])
   return (
-    <section className="pico-workbench" aria-label="Pico 数字伴侣" onFocusCapture={() => react('attention')}
+    <section className="pico-workbench" aria-label="Pico 数字伴侣" onFocusCapture={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) react('attention') }}
       style={{ '--pico-preview-size': `${presentation.size}px` } as CSSProperties}>
       <PicoHeader
         variant="workbench"

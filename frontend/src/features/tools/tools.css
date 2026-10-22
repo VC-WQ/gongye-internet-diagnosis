@@ -83,3 +83,9 @@
   .tool-card:focus-visible:not(:disabled):not([aria-disabled="true"]) .tool-card__direction,
   .tool-card:active:not(:disabled):not([aria-disabled="true"]) .tool-card__direction { transform:none; }
 }
+
+.theme-choice { position: relative; display: inline-flex; gap: 0; isolation: isolate; border: 1px solid var(--line); }
+.theme-choice .ant-btn { position: relative; z-index: 1; min-width: 96px; border: 0; background: transparent; box-shadow: none; }
+.theme-choice .ant-btn[aria-pressed=true] { color: var(--on-brand, #fff); }
+.theme-choice__indicator { position: absolute; left: 0; top: 0; bottom: 0; background: var(--brand); pointer-events: none; z-index: 0; }
+.pico-lab__presentation .ant-select { min-width: 142px; }
