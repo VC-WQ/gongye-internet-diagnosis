@@ -1,0 +1,13 @@
+{
+  "modelVersion": "5.0.0",
+  "name": "industrial-diagnosis-harmony",
+  "version": "1.0.0",
+  "description": "工业设备诊断系统的鸿蒙交互端",
+  "main": "",
+  "author": "",
+  "license": "Apache-2.0",
+  "dependencies": {},
+  "devDependencies": {
+    "@ohos/hypium": "1.0.21"
+  }
+}

@@ -2,7 +2,7 @@
 
 > Industrial Equipment Multi-Agent Diagnosis System driven by Physical Digital Twin
 >
-> 统一接口前缀：`/api/v1`　后端：FastAPI　前端：React + TypeScript + Ant Design　实时通信：MQTT + WebSocket
+> 统一接口前缀：`/api/v1`　后端：FastAPI　鸿蒙端：ArkTS / ArkUI　网页：React + TypeScript + Ant Design　实时通信：MQTT + WebSocket
 
 ---
 
@@ -30,11 +30,16 @@
                                                                          │ HTTP
                                                                          ▼
                                                                   ┌──────────────┐
-                                                                  │  前端 React   │
-                                                                  │  frontend/    │
-                                                                  │  5173 / 80    │
+                                                                  │ 鸿蒙端 / 网页 │
+                                                                  │ harmonyos/   │
+                                                                  │ frontend/    │
                                                                   └──────────────┘
 ```
+
+交互端有两处，都只调用 `/api/v1`。分数、会诊和指令发布在后端完成。
+
+- **鸿蒙端** `harmonyos/`：赛题里的手机/平板交互端，ArkTS + ArkUI。登录、看设备、看采样、发起诊断、在仿真处置里下发润滑/降载/检修。打开方式见 `harmonyos/README.md`。
+- **网页** `frontend/`：原来的工厂大屏，继续用于开发和其他演示。
 
 - **模拟器**：用耦合随机微分方程（SDE）对 6 台异构设备的退化过程建模，产出振动/温度/电流/压力/转速/声压等观测值，可选通过 MQTT 上报。
 - **后端**：FastAPI，18 个功能模块路由，负责诊断、孪生、多智能体会诊、报告、阈值、可视化数据等。
@@ -55,6 +60,7 @@
 | 认证 | PyJWT + bcrypt |
 | 数据库 | SQLite（默认）/ MySQL（可切换） |
 | 前端 | React 18 + TypeScript 5 + Vite 5 + Ant Design 5 |
+| 鸿蒙端 | HarmonyOS Stage 模型，ArkTS / ArkUI，API 12 |
 | 可视化 | ECharts 5 + echarts-for-react；Three.js 0.186（数字人） |
 | 部署 | Docker Compose（backend / frontend / mqtt / simulator 四服务） |
 
@@ -65,7 +71,8 @@
 ```
 .
 ├── backend/                # 后端服务（FastAPI）
-├── frontend/               # 前端应用（React + Vite）
+├── harmonyos/              # 鸿蒙交互端（ArkTS / ArkUI，DevEco Studio 打开）
+├── frontend/               # 网页大屏（React + Vite）
 ├── simulators/             # 虚拟设备模拟器（物理数字孪生 SDE）
 ├── data/                   # 运行时导出物（视觉检测曲线/样例图等）
 ├── mqtt/                   # Mosquitto broker 配置

@@ -1,0 +1,16 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "工业设备诊断鸿蒙端"
+    },
+    {
+      "name": "ability_desc",
+      "value": "查看设备、采样，并向云侧发起诊断"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "设备诊断"
+    }
+  ]
+}

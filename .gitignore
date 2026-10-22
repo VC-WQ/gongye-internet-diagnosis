@@ -20,3 +20,11 @@ backend/requirements_check.txt
 # 前端生成文件
 frontend/dist/
 *.tsbuildinfo
+
+# 鸿蒙工程生成物（源码在 harmonyos/，构建产物不入库）
+harmonyos/.hvigor/
+harmonyos/oh_modules/
+harmonyos/entry/oh_modules/
+harmonyos/entry/build/
+harmonyos/local.properties
+harmonyos/.idea/
