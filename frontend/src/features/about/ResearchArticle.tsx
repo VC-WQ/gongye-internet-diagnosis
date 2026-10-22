@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
+import { useCallback, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { Drawer } from 'antd'
 import { PageHeading } from '../../components/BusinessUI'
 import { useResearchData } from './useResearchData'
@@ -7,6 +7,7 @@ import { ResearchNavigationProvider } from './ResearchLink'
 import ResearchTree from './ResearchTree'
 import ResearchStageScene from './ResearchStageScene'
 import ResearchDetails from './ResearchDetails'
+import { sharedLife } from './stagePlots'
 import { RESEARCH_SCENES, stageFrame } from './stageTimeline'
 import { useStageTimeline } from './useStageTimeline'
 import './stage.css'
@@ -28,7 +29,9 @@ export default function ResearchArticle({ topicId, pointId }: { topicId?: string
     activeRef.current = current.id
     if (document.activeElement?.closest('[data-stage-scene]')) stage.current?.querySelector<HTMLElement>('[data-stage-heading]')?.focus({ preventScroll: true })
   }, [current.id])
-  const layers = timeline.reducedMotion ? [frame.active] : frame.mix > 0 && frame.next !== frame.base ? [frame.base, frame.next] : [frame.base]
+  const lifeCompatible = useMemo(() => Boolean(sharedLife(evidence['xjtu-rul']?.status === 'available' ? evidence['xjtu-rul'].data : undefined, evidence['rul-sde-pf']?.status === 'available' ? evidence['rul-sde-pf'].data : undefined)), [evidence])
+  const lifePair = RESEARCH_SCENES[frame.base].point?.figure === 'xjtu-rul' && RESEARCH_SCENES[frame.next].point?.figure === 'rul-sde-pf' && lifeCompatible
+  const layers = lifePair ? [frame.active] : timeline.reducedMotion ? [frame.active] : frame.mix > 0 && frame.next !== frame.base ? [frame.base, frame.next] : [frame.base]
   return <ResearchDataProvider evidence={evidence} refresh={refresh} includeRuntime={includeRuntime}>
     <ResearchNavigationProvider onAnchor={(event, id) => { if (!event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey && event.button === 0) setDetailId(undefined); timeline.onAnchor(event, id) }}>
       <div data-route-module="research-heading"><PageHeading title="研究中心" meta={<span>数据、算法与工程证据 · 滚动推进研究舞台</span>} /></div>
@@ -38,19 +41,18 @@ export default function ResearchArticle({ topicId, pointId }: { topicId?: string
           <section ref={stage} className="research-stage" data-research-stage aria-label="研究叙事舞台" data-stage-active={current.id}>
             <header className="research-stage__bar"><h2 tabIndex={-1} data-stage-heading>{current.title}</h2><span>{String(frame.active + 1).padStart(2, '0')} / {RESEARCH_SCENES.length}</span><button type="button" disabled={frame.active === 0} aria-label="上一个研究场景" onClick={event => timeline.choose(RESEARCH_SCENES[Math.max(0, frame.active - 1)].id, event.detail === 0)}>↑</button><button type="button" disabled={frame.active === RESEARCH_SCENES.length - 1} aria-label="下一个研究场景" onClick={event => timeline.choose(RESEARCH_SCENES[Math.min(RESEARCH_SCENES.length - 1, frame.active + 1)].id, event.detail === 0)}>↓</button></header>
             <div className="research-stage__viewport">
-              <div className="stage-evidence-chain" aria-hidden="true" style={{ transform: `translateY(${-timeline.position * 6}px)` }}><span>信号</span><i /><span>诊断</span><i /><span>寿命</span><i /><span>闭环</span><i /><span>证据</span></div>
               {layers.map(index => {
                 const incoming = index !== frame.base
-                const y = timeline.reducedMotion ? 0 : incoming ? (1 - frame.mix) * 106 : -frame.mix * 106
-                const depth = timeline.reducedMotion ? 0 : incoming ? (1 - frame.mix) : -frame.mix
+                const shared = lifeCompatible && ['xjtu-rul', 'rul-sde-pf'].includes(RESEARCH_SCENES[index].point?.figure ?? '')
+                const depth = timeline.reducedMotion || lifePair ? 0 : incoming ? (1 - frame.mix) : -frame.mix
                 const hidden = index !== frame.active
-                return <div key={RESEARCH_SCENES[index].id} className="stage-scene" data-stage-scene={RESEARCH_SCENES[index].id} aria-hidden={hidden || undefined}
+                return <div key={shared ? 'shared-life' : RESEARCH_SCENES[index].id} className="stage-scene" data-stage-scene={RESEARCH_SCENES[index].id} aria-hidden={hidden || undefined}
                   ref={node => {
                     if (!node) return
                     if (hidden && node.contains(document.activeElement)) stage.current?.querySelector<HTMLElement>('[data-stage-heading]')?.focus({ preventScroll: true })
                     node.inert = hidden
-                  }} style={{ transform: `translateY(${y}%)`, '--stage-depth': depth, '--stage-scale': 1 - Math.abs(depth) * .035 } as CSSProperties}>
-                  <ResearchStageScene scene={RESEARCH_SCENES[index]} evidence={evidence} includeRuntime={includeRuntime} onDetails={openDetails} onRetry={refresh} />
+                  }} style={{ '--stage-depth': depth, '--stage-scale': 1 - Math.abs(depth) * .018, '--stage-alpha': 1 - Math.abs(depth), '--stage-clip-start': `${incoming && !lifePair && !timeline.reducedMotion ? (1-frame.mix)*100 : 0}%`, '--stage-clip-end': `${!incoming && !lifePair && !timeline.reducedMotion ? frame.mix*100 : 0}%` } as CSSProperties}>
+                  <ResearchStageScene scene={RESEARCH_SCENES[index]} evidence={evidence} includeRuntime={includeRuntime} onDetails={openDetails} onRetry={refresh} lifeReveal={lifePair ? timeline.reducedMotion ? (current.point?.figure === 'rul-sde-pf' ? 1 : 0) : frame.mix : undefined} />
                 </div>
               })}
             </div>

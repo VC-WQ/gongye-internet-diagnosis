@@ -2,13 +2,16 @@ import { RESEARCH_TOPICS } from './research'
 import { OVERVIEW_ANCHOR, pointAnchor, topicAnchor } from './researchNavigation'
 
 /** Catalogue IDs remain the route protocol. No headings are used as scroll targets. */
-export const RESEARCH_SCENES = [
+const catalogue = [
   { id: OVERVIEW_ANCHOR, title: '研究全景', summary: '从原始信号到寿命预测，把方法、结果与来源放在同一条证据链上。', index: '00', topic: undefined, point: undefined },
   ...RESEARCH_TOPICS.flatMap(topic => [
     { id: topicAnchor(topic.id), title: topic.title, summary: topic.summary, index: topic.index, topic, point: undefined },
     ...topic.points.map((point, i) => ({ id: pointAnchor(topic.id, point.id), title: point.title, summary: point.summary, index: `${topic.index}.${i + 1}`, topic, point })),
   ]),
 ]
+// Lead with measured signal and lifetime graphics; identities and legacy URLs stay intact.
+const leading = ['research-overview', 'research-signal-cwru', 'research-health-xjtu', 'research-health-rul', 'research-health-twin', 'research-diagnosis-domain', 'research-diagnosis-fpcnn']
+export const RESEARCH_SCENES = [...leading.flatMap(id => catalogue.filter(scene => scene.id === id)), ...catalogue.filter(scene => !leading.includes(scene.id))]
 export type ResearchScene = typeof RESEARCH_SCENES[number]
 export const clamp = (x: number, min: number, max: number) => Math.max(min, Math.min(max, Number.isFinite(x) ? x : min))
 export const sceneIndex = (id: string) => Math.max(0, RESEARCH_SCENES.findIndex(scene => scene.id === id))

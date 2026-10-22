@@ -4,16 +4,16 @@
 
 ## 单一叙事进度
 
-- `stageTimeline.ts` 将既有 19 个目录标识映射为场景。每段前 58% 用于稳定阅读，后 42% 上下连续交接。逆向滚动使用同一映射，没有另一套返回动画。
+- `stageTimeline.ts` 将既有 19 个目录标识映射为场景。每段前 58% 用于稳定阅读，后 42% 局部图形交接（最新整改见 `VISUAL_CORRECTIONS.md`）。逆向滚动使用同一映射，没有另一套返回动画。
 - `useStageTimeline.ts` 只读取自然文档 scrollY，相对 runway 计算 position。目录和上/下场景按钮通过可中断的滚动 tween 改变同一个 scrollY。
 - `ResearchScrollIntent` 的 epoch 管理动画所有权；迟到回调无法更新新意图。停止后没有常驻 RAF。
 - URL 的 hash 表示场景身份，不是 DOM 标题锚点。滚动观测只 replace；内部 replace 签名阻止 Router 写入反馈回路。旧 `/research/:topic/:point` 首次进入不自动改写，保留 Pico 精确 URL 回执。
 - sticky 舞台及祖先不裁切；只有内层 viewport 裁切出入场景。窗口尺寸重测保留当前进度，移动目录展开为覆盖层。
-- 当前相邻场景最多两层。非当前场景 inert/aria-hidden；键盘目录完成后聚焦稳定标题；退休场景中的焦点转到稳定工具条。
+- 当前相邻场景最多两层；XJTU/SDE 的同源 RUL 共用一层。非当前场景 inert/aria-hidden；键盘目录完成后聚焦稳定标题；退休场景中的焦点转到稳定工具条。
 
 ## 数据与完整详情
 
-`stageEvidence.ts` 对每个已知协议显式提取代表数据，不扫描任意数字字段，不跨任务混合单位。真实零值、负 R²、缺失状态仍由 `dataContract.ts` 决定。柱图保留零基线，负值自然扩展。CWRU 为 g/ms，孪生时间为小时；仿真与运行数据分别标注。
+`stagePlots.ts` 为信号、孪生和跨域提供复杂图形，`stageEvidence.ts` 为其余已知协议显式提取代表数据，不扫描任意数字字段，不跨任务混合单位。真实零值、负 R²、缺失状态仍由 `dataContract.ts` 决定。柱图保留零基线，负值自然扩展。CWRU 为 g/ms，孪生时间为小时；仿真与运行数据分别标注。
 
 舞台展示代表性图。Drawer 直接 lazy 复用全部 12 个原始研究 renderer、证据索引和全景，保留完整轴、单位、图例、模型参数和来源。关闭销毁图表；外层 `ResearchDataProvider` 保留 RUL/XJTU 显式选择和同一数据作用域。公开入口不读取运行统计。旧文章估高与锚点控制 hooks 已移除，避免第二套导航所有者。
 

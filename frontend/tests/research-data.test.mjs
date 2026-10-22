@@ -76,3 +76,12 @@ test('a multi-source figure is not counted available when its auxiliary experime
   assert.equal(figureEvidence('steam', { steam, 'steam-analysis': { status: 'available' } }).status, 'available')
   assert.equal(comparisonRows({ steam }).length, 1)
 })
+
+test('stage signal representations require paired arrays and labelled embeddings',()=>{
+ const data={overview:{n_samples:1,fs:12000},time_domain:{waves:[{t_ms:[0,1],wave:[0,.2]}]},frequency_domain:{spectra:[{freqs:[0,10],amp:[0,.1]}]},tsne:{points:[[1,2]],labels:['Normal'],class_names:['Normal']},severity_heatmap:{matrix:[[0]]}}
+ assert.equal(inspectEvidence('cwru-signal',data).status,'available')
+ const missing=structuredClone(data);delete missing.tsne.class_names
+ assert.equal(inspectEvidence('cwru-signal',missing).status,'incomplete')
+ const mismatch=structuredClone(data);mismatch.frequency_domain.spectra[0].amp=[]
+ assert.equal(inspectEvidence('cwru-signal',mismatch).status,'incomplete')
+})

@@ -28,7 +28,10 @@ export function inspectEvidence(figure: ResearchFigure | 'steam-analysis', paylo
       valid = rows(payload.datasets) && payload.datasets.every(d => typeof d.name === 'string' && typeof d.source === 'string' && finite(d.samples))
       break
     case 'cwru-signal':
-      valid = metrics(payload.overview, ['n_samples', 'fs']) && rows(payload.time_domain?.waves) && rows(payload.frequency_domain?.spectra) && rows(payload.tsne?.points) && rows(payload.severity_heatmap?.matrix)
+      valid = metrics(payload.overview, ['n_samples', 'fs']) && rows(payload.time_domain?.waves) && payload.time_domain.waves.every((w: JsonRecord) => rows(w.t_ms) && rows(w.wave) && w.t_ms.length === w.wave.length && w.t_ms.every(finite) && w.wave.every(finite))
+        && rows(payload.frequency_domain?.spectra) && payload.frequency_domain.spectra.every((s: JsonRecord) => rows(s.freqs) && rows(s.amp) && s.freqs.length === s.amp.length && s.freqs.every(finite) && s.amp.every(finite))
+        && rows(payload.tsne?.points) && rows(payload.tsne?.class_names) && rows(payload.tsne?.labels) && payload.tsne.points.length === payload.tsne.labels.length
+        && payload.tsne.points.every((p: unknown[]) => Array.isArray(p) && p.length === 2 && p.every(finite)) && rows(payload.severity_heatmap?.matrix)
       break
     case 'fpcnn-compare':
       valid = metrics(payload.full, ['baseline_acc', 'fp_acc', 'delta']) && rows(payload.few_shot) && rows(payload.noise) && rows(payload.confusion?.baseline) && rows(payload.confusion?.fp_cnn) && object(payload.bands?.learned) && object(payload.config)
