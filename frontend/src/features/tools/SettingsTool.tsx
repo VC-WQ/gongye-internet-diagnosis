@@ -32,6 +32,7 @@ export default function SettingsTool() {
     <div ref={rail} className="theme-choice" role="group" aria-label="界面主题">
       <span ref={indicator} className="theme-choice__indicator" data-theme-indicator aria-hidden="true" />
       {(['light', 'dark'] as const).map(value => <Button key={value} aria-pressed={theme === value}
+        style={{ background: 'transparent', color: theme === value ? (theme === 'dark' ? '#191916' : '#fff') : undefined }}
         onClick={() => setTheme(value)}>{value === 'light' ? '浅色' : '深色'}</Button>)}
     </div>
   </Card>

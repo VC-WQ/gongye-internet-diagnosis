@@ -18,7 +18,7 @@
 
 Pico attention 增强视线、倾斜与前倾，短时间重复 attention 合并；触摸不触发悬停，工作台内部焦点移动不重启注意动作。保留有意的打开、发送和语音动作优先级。实验台大小、速度使用数值型 Ant Design Select。
 
-主题只有 `UiPreferencesProvider.theme` 一份业务状态。共享指示器从取消前的实际矩形继续到目标；主题 effect 不在读取姿态前取消动画，ResizeObserver 与卸载各自清理。
+主题只有 `UiPreferencesProvider.theme` 一份业务状态。共享指示器从取消前的实际矩形继续到目标；主题 effect 不在读取姿态前取消动画，ResizeObserver 与卸载各自清理。按钮在 Ant Design hover 状态也保持透明，深色模式指示器上的文字使用深色以保证对比。
 
 ## 研究舞台
 
