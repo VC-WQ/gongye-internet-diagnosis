@@ -72,6 +72,8 @@ def classify_state(
     决策2b：健康分低于危险阈值（<30）-> alarm，即使分类结论为 normal。
     决策2c：故障分类模型不可用（fault_type=unknown）-> alarm（未分类异常）。
     """
+    if health_level in ("unobserved", "unlabeled"):
+        return EventState.NORMAL
     if health_level == "healthy":
         return EventState.NORMAL
     if health_level == "warning":

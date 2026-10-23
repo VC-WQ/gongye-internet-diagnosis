@@ -25,6 +25,22 @@ from .state_machine import StateTransitionError
 
 logger = logging.getLogger(__name__)
 
+ALLOWED_ACTIONS = ("lubricate", "reduce_load", "repair")
+
+
+class CommandRejected(Exception):
+    """指令不能下发：模式不对，或动作不在允许列表中。"""
+
+
+def validate_dispatch(run_mode: str | None, command: str | None) -> str:
+    """回放模式拒绝下发。仿真模式只接受三个固定动作。"""
+    if run_mode != "simulation":
+        raise CommandRejected("当前是公开数据回放，不能下发处置指令。请先切换到仿真处置。")
+    action = (command or "").strip()
+    if action not in ALLOWED_ACTIONS:
+        raise CommandRejected("只能下发润滑、降载或检修。")
+    return action
+
 # 故障结论中英文归一化：机器预测存英文代码(fault_type)，人工修订多为中文标签(fault_label)，
 # 统一归一为英文代码，保证 diagnosis_records.predicted_fault 与 actual_fault 可比、is_correct 计算正确。
 _FAULT_NORMALIZE = {
@@ -105,7 +121,8 @@ class CommandLoopService:
         health_level = str(consult.get("health_level", "healthy"))
         fault_type = str(consult.get("fault_type", "normal"))
         confidence = float(consult.get("confidence", 0.0))
-        health_score = float(consult.get("health_score", 100.0))
+        raw_health = consult.get("health_score")
+        health_score = float(raw_health) if isinstance(raw_health, (int, float)) else None
 
         # 2. 判定初始状态（决策1/决策2/决策2b）
         initial_state = state_machine.classify_state(

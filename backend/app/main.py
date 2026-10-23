@@ -78,6 +78,9 @@ async def lifespan(app: FastAPI):
     """应用生命周期管理。"""
     # 启动时创建数据表
     Base.metadata.create_all(bind=engine)
+    from app.modules.mqtt_pipeline.store import ensure_runtime_columns
+
+    ensure_runtime_columns()
     # 首次启动写入设备目录与默认管理员
     _seed_devices()
     _seed_admin()

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, Float, String
+from sqlalchemy import Boolean, Column, DateTime, Float, String
 
 from .base import Base
 
@@ -22,6 +22,11 @@ class Device(Base):
     threshold_vibration = Column(Float, default=4.5, comment="振动阈值")
     threshold_temp = Column(Float, default=85.0, comment="温度阈值")
     created_at = Column(DateTime, default=datetime.utcnow, comment="创建时间")
+    last_seen = Column(DateTime, comment="最近一条采样的入库时间")
+    run_mode = Column(String(32), default="public_replay", comment="public_replay / simulation")
+    dataset_name = Column(String(64), comment="当前采样所属数据集")
+    health_basis = Column(String(32), comment="skab_probability / xjtu_rul / simulation")
+    health_observed = Column(Boolean, default=False, comment="是否已有落库采样")
 
     def __repr__(self) -> str:
         return f"<Device id={self.id} name={self.name} status={self.status}>"

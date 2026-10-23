@@ -2,6 +2,7 @@
 from .base import Base, SessionLocal, engine, get_db
 from .device import Device
 from .event import Event
+from .reading import SensorReading
 from .user import User
 
 __all__ = [
@@ -11,5 +12,6 @@ __all__ = [
     "get_db",
     "Device",
     "Event",
+    "SensorReading",
     "User",
 ]

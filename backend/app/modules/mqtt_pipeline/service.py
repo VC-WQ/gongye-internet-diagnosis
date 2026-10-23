@@ -79,6 +79,9 @@ class MQTTPipelineService:
             return
 
         data_point = self._normalize(device_id, payload)
+        from .store import save_point
+
+        save_point(data_point)
 
         # 写滑动窗口（线程安全）
         with self._lock:
@@ -188,9 +191,13 @@ class MQTTPipelineService:
     def get_window(self, device_id: str) -> list[dict[str, Any]]:
         """返回指定设备滑动窗口内的最近数据（最多 64 条）。
 
-        没有真实上报时返回空列表，由前端显示「暂无实时数据」。
-        不再生成模拟波形冒充实时数据。
+        优先读数据库。没有落库记录时才看内存窗口。
         """
+        from .store import load_window
+
+        stored = load_window(device_id)
+        if stored:
+            return stored
         with self._lock:
             return list(self._windows.get(device_id, []))
 
