@@ -13,7 +13,8 @@ import {
   eventStatusText,
   formatConfidence,
   formatScore,
-  isActiveStatus
+  isActiveStatus,
+  runModeText
 } from '../common/Models';
 import { UiColor } from '../common/UiColor';
 
@@ -23,6 +24,7 @@ export struct DiagnosisView {
   @Link @Watch('onDeviceChanged') deviceId: string;
   @Link deviceName: string;
   @State snapshot: WindowSnapshot = emptyWindow();
+  @State runMode: string = '';
   @State event: DiagnosisEvent = emptyEvent();
   @State timeline: Array<TimelineItem> = [];
   @State error: string = '';
@@ -44,6 +46,7 @@ export struct DiagnosisView {
     this.reason = '';
     this.rejecting = false;
     this.snapshot = emptyWindow();
+    this.runMode = '';
     this.reload();
   }
 
@@ -68,6 +71,25 @@ export struct DiagnosisView {
           .fontSize(12)
           .fontColor(UiColor.muted)
           .width('100%')
+
+        if (this.runMode.length > 0) {
+          Row() {
+            Text(`运行模式：${runModeText(this.runMode)}`)
+              .fontSize(13)
+              .fontColor(UiColor.text)
+              .layoutWeight(1)
+            Button(this.runMode === 'simulation' ? '切到公开回放' : '切到仿真处置')
+              .height(30)
+              .fontSize(12)
+              .fontColor(UiColor.text)
+              .backgroundColor(UiColor.card)
+              .enabled(!this.busy)
+              .onClick(() => {
+                this.switchMode();
+              })
+          }
+          .width('100%')
+        }
 
         Button(this.busy ? '处理中' : '发起诊断')
           .width('100%')
@@ -326,10 +348,12 @@ export struct DiagnosisView {
     try {
       const snapshot = await CloudClient.windowOf(deviceId);
       const latest = await CloudClient.latestEvent(deviceId);
+      const info = await CloudClient.device(deviceId);
       if (ticket !== this.generation || deviceId !== this.deviceId) {
         return;
       }
       this.snapshot = snapshot;
+      this.runMode = info.runMode;
       if (latest === undefined || latest.deviceId !== deviceId) {
         this.event = emptyEvent();
         this.timeline = [];
@@ -345,6 +369,27 @@ export struct DiagnosisView {
       if (ticket === this.generation) {
         this.busy = false;
       }
+    }
+  }
+
+  private async switchMode(): Promise<void> {
+    if (this.busy || this.deviceId.length === 0) {
+      return;
+    }
+    const next = this.runMode === 'simulation' ? 'public_replay' : 'simulation';
+    this.busy = true;
+    this.error = '';
+    this.notice = '';
+    try {
+      await CloudClient.setMode(this.deviceId, next);
+      this.runMode = next;
+      this.notice = next === 'simulation'
+        ? '已切到仿真处置。回放评分已清除，现在可以下发固定处置动作。'
+        : '已切到公开数据回放。回放记录不能下发处置指令。';
+    } catch (error) {
+      this.fail(error);
+    } finally {
+      this.busy = false;
     }
   }
 

@@ -39,6 +39,15 @@
 3. **诊断**：把当前窗口提交到 `POST /command-loop/events`。泵、电机的分数和说明用云侧返回的 `health_score`、`health_basis`、`model_card`。没有模型输出时显示未评分，端上不补一个分数。
 4. 待确认时可以确认或拒绝。确认只进入处置，还不给设备下发动作。
 5. 处置中只能下发 `lubricate`、`reduce_load`、`repair`。页面写明：云侧返回指令编号只表示已经发布，不表示设备已经执行，也不表示故障已经恢复。本页没有回执查询。
+6. **运行模式**：诊断页显示设备处于公开数据回放还是仿真处置，可用按钮切换（`POST /devices/{id}/mode`）。回放模式不能下发处置；切到仿真会清掉回放评分。
+
+## 演示链路
+
+1. 启动后端和 MQTT Broker。
+2. 喂回放数据：`python scripts/replay_public_data.py pump-002 --dataset skab --file other/13.csv`（电机会诊用 `--dataset xjtu --bearing Bearing1_1`）。
+3. 鸿蒙端选 pump-002，采样页出现数据后发起诊断，能看到 SKAB 模型分数。
+4. 确认后进入处置。回放模式下发会被云侧拒绝；点「切到仿真处置」后再下发润滑、降载或检修。
+5. 仿真设备的遥测由 `simulators/virtual_device.py --use-mqtt` 提供，指令回执走 `device/+/command_ack`。
 
 同一台设备若还有未闭环事件，云侧会复用该事件。页面会说明没有新建诊断。
 

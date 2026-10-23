@@ -7,6 +7,7 @@ import {
   TimelineItem,
   WindowSnapshot,
   normalizeWindow,
+  parseDevice,
   parseDevices,
   parseEvent,
   parseTimeline,
@@ -49,6 +50,17 @@ export class CloudClient {
   static async windowOf(deviceId: string): Promise<WindowSnapshot> {
     const body = await CloudClient.get(`/mqtt-pipeline/window/${encodeURIComponent(deviceId)}`);
     return parseWindow(body.list, Date.now());
+  }
+
+  static async device(deviceId: string): Promise<DeviceItem> {
+    const body = await CloudClient.get(`/devices/${encodeURIComponent(deviceId)}`);
+    return parseDevice(body.record);
+  }
+
+  static async setMode(deviceId: string, runMode: string): Promise<void> {
+    await CloudClient.post(`/devices/${encodeURIComponent(deviceId)}/mode`, {
+      'run_mode': runMode
+    });
   }
 
   static async latestEvent(deviceId: string): Promise<DiagnosisEvent | undefined> {

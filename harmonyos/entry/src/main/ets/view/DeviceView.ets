@@ -6,7 +6,8 @@ import {
   deviceTypeText,
   errorMessage,
   formatClock,
-  formatScore
+  formatScore,
+  runModeText
 } from '../common/Models';
 import { UiColor } from '../common/UiColor';
 
@@ -92,10 +93,17 @@ export struct DeviceView {
       }
       .width('100%')
 
-      Text(`${item.id} · ${deviceTypeText(item.deviceType)}`)
+      Text(`${item.id} · ${deviceTypeText(item.deviceType)} · ${runModeText(item.runMode)}`)
         .fontSize(12)
         .fontColor(UiColor.muted)
         .width('100%')
+
+      if (item.datasetName.length > 0) {
+        Text(`数据集 ${item.datasetName}`)
+          .fontSize(12)
+          .fontColor(UiColor.muted)
+          .width('100%')
+      }
 
       Text(`目录健康分 ${formatScore(item.healthScore)} · 边缘自检 ${formatScore(item.edgeAnomalyScore)}`)
         .fontSize(12)

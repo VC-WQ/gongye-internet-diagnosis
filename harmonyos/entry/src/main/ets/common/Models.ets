@@ -6,6 +6,9 @@ export interface DeviceItem {
   healthScore: number;
   edgeAnomalyScore: number;
   lastUpdated: number;
+  runMode: string;
+  datasetName: string;
+  healthBasis: string;
 }
 
 export interface ChannelReading {
@@ -151,6 +154,16 @@ export function deviceStatusColor(value: string): string {
   return '#8EA0B0';
 }
 
+export function runModeText(value: string): string {
+  if (value === 'simulation') {
+    return '仿真处置';
+  }
+  if (value === 'public_replay') {
+    return '公开数据回放';
+  }
+  return value.length > 0 ? value : '公开数据回放';
+}
+
 export function eventStatusText(value: string): string {
   if (value === 'normal') {
     return '正常';
@@ -254,7 +267,10 @@ export function parseDevice(raw: ESObject): DeviceItem {
     status: textOf(pick(raw, 'status')),
     healthScore: numberOf(pick(raw, 'health_score')),
     edgeAnomalyScore: numberOf(pick(raw, 'edge_anomaly_score')),
-    lastUpdated: numberOf(pick(raw, 'last_updated'))
+    lastUpdated: numberOf(pick(raw, 'last_updated')),
+    runMode: textOf(pick(raw, 'run_mode')),
+    datasetName: textOf(pick(raw, 'dataset_name')),
+    healthBasis: textOf(pick(raw, 'health_basis'))
   };
 }
 
