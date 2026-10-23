@@ -27,7 +27,7 @@ def test_event_operator_is_authenticated_user_and_force_requires_admin(monkeypat
 
 def test_observation_requires_three_samples_and_preserves_state_machine(monkeypatch):
     from datetime import datetime
-    from app.models import Event, SessionLocal
+    from app.models import Device, Event, SessionLocal
     from app.modules.command_loop.models import CommandRecord
     from app.modules.command_loop.mqtt_publisher import mqtt_command_publisher
     with TestClient(app) as client:
@@ -44,7 +44,13 @@ def test_observation_requires_three_samples_and_preserves_state_machine(monkeypa
         assert client.post(base+'/execute',headers=headers,json={'operator':'admin'}).status_code == 400
         assert calls == []
         assert client.post(base+'/confirm',headers=headers,json={'operator':'forged'}).status_code == 200
-        assert client.post(base+'/execute',headers=headers,json={'operator':'forged'}).status_code == 200
+        # 回放模式拒绝下发；自由文本也不允许
+        assert client.post(base+'/execute',headers=headers,json={'operator':'forged'}).status_code == 400
+        assert calls == []
+        with SessionLocal() as db:
+            db.get(Device, 'pump-002').run_mode = 'simulation'
+            db.commit()
+        assert client.post(base+'/execute',headers=headers,json={'operator':'forged','command':'lubricate'}).status_code == 200
         with SessionLocal() as db:
             assert db.query(CommandRecord).filter_by(event_id=eid).one().status == 'sent'
         assert client.post(base+'/observe',headers=headers,json={'actual_curve':[80,85]}).status_code == 422
@@ -52,3 +58,6 @@ def test_observation_requires_three_samples_and_preserves_state_machine(monkeypa
         assert response.status_code == 200
         assert response.json()['status_state'] == 'recovered'
         assert client.post(base+'/observe',headers=headers,json={'actual_curve':[80,83,85]}).status_code == 400
+        with SessionLocal() as db:
+            db.get(Device, 'pump-002').run_mode = 'public_replay'
+            db.commit()

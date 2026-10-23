@@ -140,6 +140,10 @@ class MQTTPipelineService:
             "device_id": device_id,
             # Preserve declared provenance; an absent label is never promoted to real data.
             "source": payload.get("source") if isinstance(payload.get("source"), str) else "unknown",
+            "device_status": payload.get("status") if isinstance(payload.get("status"), str) else None,
+            "dataset": payload.get("dataset") if isinstance(payload.get("dataset"), str) else None,
+            "sample_note": payload.get("sample_note") if isinstance(payload.get("sample_note"), str) else None,
+            "original_timestamp": payload.get("original_timestamp"),
             "acoustic": self._first(payload, ("acoustic", "sound_level"), default=None),
             "timestamp": self._first(
                 payload, ("timestamp", "ts"), default=time.time()
@@ -218,21 +222,27 @@ class MQTTPipelineService:
 
         db = SessionLocal()
         try:
+            # 下发在事务内：记录提交前回执可能先到达，这里短轮询等待提交可见。
             record = None
-            if event_id is not None:
-                record = (
-                    db.query(CommandRecord)
-                    .filter(CommandRecord.event_id == event_id)
-                    .order_by(CommandRecord.id.desc())
-                    .first()
-                )
-            if record is None and device_id is not None:
-                record = (
-                    db.query(CommandRecord)
-                    .filter(CommandRecord.device_id == device_id)
-                    .order_by(CommandRecord.id.desc())
-                    .first()
-                )
+            for _ in range(10):
+                if event_id is not None:
+                    record = (
+                        db.query(CommandRecord)
+                        .filter(CommandRecord.event_id == event_id)
+                        .order_by(CommandRecord.id.desc())
+                        .first()
+                    )
+                if record is None and device_id is not None:
+                    record = (
+                        db.query(CommandRecord)
+                        .filter(CommandRecord.device_id == device_id)
+                        .order_by(CommandRecord.id.desc())
+                        .first()
+                    )
+                if record is not None:
+                    break
+                db.rollback()  # 放弃快照，下一轮才能看到新提交的记录
+                time.sleep(0.5)
             if record is None:
                 logger.warning("收到无法匹配的指令回执：topic=%s payload=%s", topic, payload)
                 return

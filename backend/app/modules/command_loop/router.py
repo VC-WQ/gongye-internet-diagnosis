@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from app.models import User, get_db
 from app.modules.auth.deps import get_current_user
 
-from .service import EventNotFoundError, StateTransitionError, command_loop_service
+from .service import CommandRejected, EventNotFoundError, StateTransitionError, command_loop_service
 from .feedback_loop import feedback_loop_service
 from .mqtt_publisher import CommandPublishError
 
@@ -74,6 +74,8 @@ def _http_exc(e: Exception) -> HTTPException:
     if isinstance(e, EventNotFoundError):
         return HTTPException(status_code=404, detail=str(e))
     if isinstance(e, StateTransitionError):
+        return HTTPException(status_code=400, detail=str(e))
+    if isinstance(e, CommandRejected):
         return HTTPException(status_code=400, detail=str(e))
     if isinstance(e, CommandPublishError):
         return HTTPException(status_code=503, detail=str(e))
@@ -147,7 +149,7 @@ def execute(event_id: int, body: ExecuteBody, db: Session = Depends(get_db), cur
     """执行指令并进入观察期（handling -> observing）。"""
     try:
         return command_loop_service.execute(db, event_id, current_user.username, body.command)
-    except (EventNotFoundError, StateTransitionError, CommandPublishError) as e:
+    except (EventNotFoundError, StateTransitionError, CommandRejected, CommandPublishError) as e:
         raise _http_exc(e)
 
 

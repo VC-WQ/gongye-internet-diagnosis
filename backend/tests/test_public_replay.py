@@ -86,3 +86,67 @@ def test_dispatch_rejects_replay_and_free_text():
     except CommandRejected:
         pass
     assert validate_dispatch("simulation", "lubricate") == "lubricate"
+
+
+def test_execute_enforces_mode_and_fixed_actions(monkeypatch):
+    """指令下发的模式与动作校验接在真实接口上，不只是单元函数。"""
+    from datetime import datetime
+
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+    from app.models import Event, SessionLocal
+    from app.modules.command_loop.mqtt_publisher import mqtt_command_publisher
+
+    with TestClient(app) as client:
+        token = client.post(
+            "/api/v1/auth/login", json={"username": "admin", "password": "admin123"}
+        ).json()["token"]
+        headers = {"Authorization": f"Bearer {token}"}
+        with SessionLocal() as db:
+            event = Event(
+                device_id="motor-002",
+                event_type="diagnosis_event",
+                status_state="handling",
+                timestamp=datetime.utcnow(),
+                agent_diagnosis={"report": {"recommendation": "润滑"}},
+            )
+            db.add(event)
+            db.commit()
+            db.refresh(event)
+            eid = event.id
+        monkeypatch.setattr(
+            mqtt_command_publisher,
+            "publish_command",
+            lambda *args, **kwargs: {
+                "command_id": "sandbox-replay",
+                "topic": "sandbox/test",
+                "published": True,
+            },
+        )
+        base = f"/api/v1/command-loop/events/{eid}"
+
+        rejected = client.post(base + "/execute", headers=headers, json={"operator": "admin", "command": "lubricate"})
+        assert rejected.status_code == 400
+        assert "回放" in rejected.json()["detail"]
+
+        mode = client.post("/api/v1/devices/motor-002/mode", headers=headers, json={"run_mode": "simulation"})
+        assert mode.status_code == 200
+        assert mode.json()["run_mode"] == "simulation"
+
+        free_text = client.post(base + "/execute", headers=headers, json={"operator": "admin", "command": "把轴承换了"})
+        assert free_text.status_code == 400
+
+        ok = client.post(base + "/execute", headers=headers, json={"operator": "admin", "command": "lubricate"})
+        assert ok.status_code == 200
+        assert ok.json()["command_id"] == "sandbox-replay"
+
+        devices = client.get("/api/v1/devices").json()
+        assert next(d for d in devices if d["id"] == "motor-002")["run_mode"] == "simulation"
+
+        assert client.post(
+            "/api/v1/devices/motor-002/mode", headers=headers, json={"run_mode": "public_replay"}
+        ).status_code == 200
+        assert client.post(
+            "/api/v1/devices/motor-002/mode", headers=headers, json={"run_mode": "whatever"}
+        ).status_code == 400

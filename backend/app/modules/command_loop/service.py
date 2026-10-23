@@ -13,6 +13,7 @@ from typing import Any, Optional
 
 from sqlalchemy.orm import Session
 
+from app.models.device import Device
 from app.models.event import Event
 from app.modules.multi_agent.service import multi_agent_service
 
@@ -310,6 +311,12 @@ class CommandLoopService:
         report = (event.agent_diagnosis or {}).get("report") or {}
         recommendation = report.get("recommendation", "执行维护指令")
         cmd = command or recommendation
+
+        # 模式与动作先过校验：回放拒绝下发，仿真只接受固定动作。
+        # 校验不过就不推进状态，也不发 MQTT。
+        device = db.get(Device, event.device_id)
+        run_mode = str(device.run_mode) if device is not None and device.run_mode else None
+        cmd = validate_dispatch(run_mode, cmd)
 
         # 先校验状态转换（handling -> observing），非法状态直接拒绝，
         # 避免「状态不合法却已经把指令发到设备」的副作用。

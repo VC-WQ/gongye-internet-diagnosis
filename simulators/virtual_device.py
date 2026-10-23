@@ -333,6 +333,7 @@ class VirtualDevice:
             "device_id": self.params.device_id,
             "name": self.params.name,
             "device_type": self.params.device_type,
+            "source": "simulation",
             "timestamp": time.time(),
             "elapsed": round(self.t, 3),
             "status": self.status,
