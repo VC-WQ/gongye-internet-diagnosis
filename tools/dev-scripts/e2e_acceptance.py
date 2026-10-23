@@ -6,16 +6,24 @@
 """
 import json
 import sys
+import os
+import argparse
+from pathlib import Path
 from collections import Counter
 
-sys.path.insert(0, r'd:\24006055周余露\大三上的文件\企业云\工业互联网系统\backend')
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'backend'))
+parser = argparse.ArgumentParser(description='离线会诊验收；需要已有数据集与权重，不下发设备控制。')
+parser.add_argument('--dataset', type=Path, default=ROOT / 'datasets/CWRU/processed.npz')
+parser.add_argument('--output', type=Path, default=Path(os.environ.get('ICT_ARTIFACT_DIR', ROOT.parent / 'gongye-internet-diagnosis-artifacts' / 'generated-research-reports')) / 'e2e_results.json')
+arguments = parser.parse_args()
 
 import numpy as np
 
 from app.modules.multi_agent import run_consultation
 
-NPZ = r'd:\24006055周余露\大三上的文件\企业云\工业互联网系统\datasets\CWRU\processed.npz'
-OUT_JSON = r'd:\24006055周余露\大三上的文件\企业云\工业互联网系统\tmp\e2e_results.json'
+NPZ = arguments.dataset
+OUT_JSON = arguments.output
 
 # CWRU 字符串标签 -> 内部 fault_type / 序号
 CLASSES = ['Normal', 'OR', 'IR', 'Ball']
@@ -138,6 +146,7 @@ def main() -> None:
         print(f"      {cls:<6}: {s['correct']}/{s['total']}")
 
     # 保存完整 JSON 供后续查阅
+    OUT_JSON.parent.mkdir(parents=True, exist_ok=True)
     with open(OUT_JSON, 'w', encoding='utf-8') as f:
         json.dump(records, f, ensure_ascii=False, indent=2)
     print(f"\n完整会诊记录已保存：{OUT_JSON}")

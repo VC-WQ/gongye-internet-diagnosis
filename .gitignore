@@ -20,3 +20,10 @@ backend/requirements_check.txt
 # 前端生成文件
 frontend/dist/
 *.tsbuildinfo
+
+# 浏览器与研究脚本的过程输出放在仓库外。
+.playwright-cli/
+scripts/*.log
+scripts/ch2_verify.txt
+scripts/ch3_routes.txt
+tools/dev-scripts/e2e_results.json

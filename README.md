@@ -117,4 +117,6 @@ cd backend
 
 可维护的实现说明位于 `frontend/docs/`：`CONTENT_MOTION.md` 说明单实例交接和冻结展示 DTO；`LOGIN_DEVICE_GROWTH.md` 说明登录、SVG/Three 桥接、聚焦协调与外观偏好；研究舞台和性能边界分别在 `STAGE_MOTION.md`、`VISUAL_CORRECTIONS.md`、`VISUAL_PERFORMANCE_V2_6.md`。
 
+`scripts/ch2_verify.py` 和 `scripts/ch3_routes.py` 将生成报告写入仓库外的 `gongye-internet-diagnosis-artifacts/generated-research-reports/`，可用 `ICT_ARTIFACT_DIR` 指定其他目录。离线会诊辅助脚本 `tools/dev-scripts/e2e_acceptance.py` 接受 `--dataset` 和 `--output`；重新统计使用 `tools/dev-scripts/recompute_stats.py --input <外部记录路径>`。历史验收 JSON 和训练日志已归档，不再隐式读取某个开发者的 Windows 绝对路径。研究脚本的运行仍需要相应数据与权重。
+
 审计、施工快照、录屏、截图、性能原始数据、移动清单和分支归档统一存放在仓库外的 `gongye-internet-diagnosis-artifacts/`。它们不属于运行依赖，不复制进源码。维护时先检查 Git worktree、开放 PR、未提交修改和 `.env`，不要重置或清空他人工作区。

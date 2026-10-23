@@ -6,7 +6,7 @@ import re
 import sys
 from pathlib import Path
 
-ROOT = Path(r"D:\企业云系统\工业互联网系统")
+ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "backend"))
 
@@ -111,5 +111,7 @@ if appts.exists():
     w("  路由 path: %s" % re.findall(r'path=["\']([^"\']+)["\']', tat))
     w("  页面数(import pages): %d" % len(set(re.findall(r'from ["\']\./pages/(\w+)', tat))))
 
-(ROOT / "scripts" / "ch3_routes.txt").write_text("\n".join(out), encoding="utf-8")
+report_dir = Path(os.environ.get("ICT_ARTIFACT_DIR", ROOT.parent / "gongye-internet-diagnosis-artifacts" / "generated-research-reports"))
+report_dir.mkdir(parents=True, exist_ok=True)
+(report_dir / "ch3_routes.txt").write_text("\n".join(out), encoding="utf-8")
 print("done")

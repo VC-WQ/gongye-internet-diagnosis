@@ -1,15 +1,16 @@
 """第二章核准脚本：特征频率公式自洽性 + 频谱分辨率 + 包络解调实测。
 
-产出 scripts/ch2_verify.txt
+产出仓库外的研究核准报告；可通过 ICT_ARTIFACT_DIR 指定目录。
 """
 from __future__ import annotations
 
 import sys
+import os
 from pathlib import Path
 
 import numpy as np
 
-ROOT = Path(r"D:\企业云系统\工业互联网系统")
+ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "backend"))
 
@@ -125,5 +126,7 @@ try:
 except Exception as exc:  # noqa: BLE001
     w(f"  [跳过] torch 段失败：{type(exc).__name__}: {exc}")
 
-(ROOT / "scripts" / "ch2_verify.txt").write_text("\n".join(out), encoding="utf-8")
+report_dir = Path(os.environ.get("ICT_ARTIFACT_DIR", ROOT.parent / "gongye-internet-diagnosis-artifacts" / "generated-research-reports"))
+report_dir.mkdir(parents=True, exist_ok=True)
+(report_dir / "ch2_verify.txt").write_text("\n".join(out), encoding="utf-8")
 print("\n".join(out))

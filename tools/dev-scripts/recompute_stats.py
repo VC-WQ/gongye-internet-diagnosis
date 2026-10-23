@@ -1,7 +1,11 @@
 """从已保存的验收 JSON 重新计算统计（修正信号一致率的证据不足口径）。"""
 import json
+import argparse
+from pathlib import Path
 
-OUT_JSON = r'd:\24006055周余露\大三上的文件\企业云\工业互联网系统\tmp\e2e_results.json'
+parser = argparse.ArgumentParser(description='从显式指定的会诊验收记录重新计算统计，不读取运行数据库。')
+parser.add_argument('--input', required=True, type=Path, help='外部归档中的 e2e_results.json')
+OUT_JSON = parser.parse_args().input
 DOMINANT_TO_FAULT = {
     'BPFO': 'outer_race', 'BPFI': 'inner_race', 'BSF': 'ball', '2xBSF': 'ball', 'none': 'normal',
 }
