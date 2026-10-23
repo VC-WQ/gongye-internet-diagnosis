@@ -40,8 +40,9 @@ export interface PicoDeviceFields {
 }
 
 type PicoNavigateAction = { type: 'navigate'; action_id: string } & (
-  | { route_id: 'factory' | 'device_management' | 'records'; params: Record<string, never> }
-  | { route_id: 'tools'; params: { tool?: 'diagnosis' | 'events' | 'simulation' | 'vision' | 'pico' | 'evaluation' | 'settings' } }
+  | { route_id: 'factory' | 'device_management'; params: Record<string, never> }
+  | { route_id: 'records'; params: { device_id?: string } }
+  | { route_id: 'tools'; params: { tool?: 'diagnosis' | 'events' | 'simulation' | 'vision' | 'pico' | 'evaluation' | 'settings'; device_id?: string } }
   | { route_id: 'research'; params: { topic_id?: string; point_id?: string } }
   | { route_id: 'device_detail'; params: { device_id: string; tab?: 'realtime' | 'history' | 'latent' | 'acoustic' | 'phm' | 'events' | 'threshold' } }
   | { route_id: 'event_detail' | 'report'; params: { event_id: number; device_id?: string } }
@@ -93,6 +94,7 @@ export interface PicoChatResponse {
   context_revision?: number | null
   resolved_context?: PicoResolvedContext | null
   ui_actions?: PicoUiAction[]
+  tool_trace?: Array<{ tool: string; status: string; duration_ms: number; reference_ids: string[] }>
 }
 
 export interface PicoMessage {

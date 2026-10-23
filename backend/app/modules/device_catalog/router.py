@@ -59,27 +59,8 @@ def get_device(device_id: str, db: Session = Depends(get_db)) -> dict:
 @router.get("/{device_id}/health-history")
 def health_history(device_id: str, limit: int = 50, db: Session = Depends(get_db)) -> list[dict]:
     """返回设备健康评分历史（按时间升序，来自诊断事件）。"""
-    events = (
-        db.query(Event)
-        .filter(Event.device_id == device_id)
-        .order_by(Event.timestamp.asc(), Event.id.asc())
-        .limit(max(1, min(200, limit)))
-        .all()
-    )
-    result: list[dict] = []
-    for ev in events:
-        diag = ev.agent_diagnosis or {}
-        hs = diag.get("health_score")
-        if hs is None:
-            continue
-        result.append(
-            {
-                "event_id": ev.id,
-                "timestamp": ev.timestamp.isoformat() if ev.timestamp else None,
-                "health_score": float(hs),
-            }
-        )
-    return result
+    from .history import health_history as read_health_history
+    return read_health_history(db, device_id, limit)
 
 
 class InjectBody(BaseModel):

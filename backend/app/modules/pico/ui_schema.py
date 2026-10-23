@@ -20,6 +20,17 @@ class EmptyParams(StrictModel):
 
 class ToolsParams(StrictModel):
     tool: ToolKey | None = None
+    device_id: SafeDeviceId | None = None
+
+    @model_validator(mode="after")
+    def device_requires_diagnosis(self):
+        if self.device_id is not None and self.tool != "diagnosis":
+            raise ValueError("device_id is supported only by diagnosis preparation")
+        return self
+
+
+class RecordsParams(StrictModel):
+    device_id: SafeDeviceId | None = None
 
 
 class ResearchParams(StrictModel):
@@ -54,11 +65,11 @@ class ActionBase(StrictModel):
 class NavigateAction(ActionBase):
     type: Literal["navigate"]
     route_id: Literal["factory", "tools", "research", "device_detail", "event_detail", "report", "device_management", "records"]
-    params: Union[EmptyParams, ToolsParams, ResearchParams, DeviceParams, EventParams] = Field(default_factory=EmptyParams)
+    params: Union[EmptyParams, ToolsParams, ResearchParams, DeviceParams, EventParams, RecordsParams] = Field(default_factory=EmptyParams)
 
     @model_validator(mode="after")
     def params_match_route(self):
-        expected = {"factory": EmptyParams, "tools": ToolsParams, "research": ResearchParams, "device_detail": DeviceParams, "event_detail": EventParams, "report": EventParams, "device_management": EmptyParams, "records": EmptyParams}[self.route_id]
+        expected = {"factory": EmptyParams, "tools": ToolsParams, "research": ResearchParams, "device_detail": DeviceParams, "event_detail": EventParams, "report": EventParams, "device_management": EmptyParams, "records": RecordsParams}[self.route_id]
         self.params = expected.model_validate(self.params.model_dump(exclude_none=True))
         return self
 
@@ -102,3 +113,15 @@ PicoUiAction = Annotated[Union[NavigateAction, SetThemeAction, PrefillDeviceActi
 
 class PicoUiPlan(StrictModel):
     action: PicoUiAction | None = None
+
+
+class PicoUiSequencePlan(StrictModel):
+    actions: list[PicoUiAction] = Field(min_length=1, max_length=3)
+
+    @model_validator(mode="after")
+    def coherent_sequence(self):
+        if len({action.action_id for action in self.actions}) != len(self.actions):
+            raise ValueError("action IDs must be unique")
+        if any(isinstance(action, PrefillDeviceAction) for action in self.actions[:-1]):
+            raise ValueError("prefill must be the final action")
+        return self

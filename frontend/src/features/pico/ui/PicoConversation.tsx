@@ -320,6 +320,16 @@ export default function PicoConversation({
     if (message.role !== 'assistant') return null
     return (
       <>
+        {message.actionResults && message.actionResults.length > 0 && (
+          <ol className="pico-action-results" aria-label="页面操作执行结果">
+            {message.actionResults.map((step, index) => (
+              <li key={`${step.action_id}:${index}`} data-step-status={step.status}>
+                <span>{({ running: '执行中', succeeded: '已完成', failed: '未完成', cancelled: '已停止', rejected: '未执行' } as const)[step.status]}：</span>
+                {step.message}
+              </li>
+            ))}
+          </ol>
+        )}
         {message.references && message.references.length > 0 && (
           <div className="pico-refs">
             {message.references.map((reference) => {

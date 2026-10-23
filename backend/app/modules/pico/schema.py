@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_serializer
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_validator
 
 from .ui_schema import PicoUiAction
 
@@ -76,8 +76,16 @@ class PicoMeta(BaseModel):
     planner: Optional[Literal["live", "unconfigured", "fallback"]] = None
 
 
+class PicoToolTrace(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    tool: str = Field(min_length=1, max_length=64)
+    status: Literal["current", "stale", "missing"]
+    duration_ms: float = Field(ge=0, allow_inf_nan=False)
+    reference_ids: list[str] = Field(default_factory=list, max_length=30)
+
+
 class PicoChatResponse(BaseModel):
-    version: str = "1.1"
+    version: str = "1.4"
     message_id: str
     request_id: str
     type: Literal["answer", "error"]
@@ -88,7 +96,16 @@ class PicoChatResponse(BaseModel):
     meta: PicoMeta
     context_revision: Optional[int] = None
     resolved_context: Optional[PicoResolvedContext] = None
-    ui_actions: list[PicoUiAction] = Field(default_factory=list, max_length=1)
+    ui_actions: list[PicoUiAction] = Field(default_factory=list, max_length=3)
+    tool_trace: list[PicoToolTrace] = Field(default_factory=list, max_length=5)
+
+    @model_validator(mode="after")
+    def coherent_actions(self):
+        if len({action.action_id for action in self.ui_actions}) != len(self.ui_actions):
+            raise ValueError("action IDs must be unique")
+        if any(action.type == "prefill_device_form" for action in self.ui_actions[:-1]):
+            raise ValueError("prefill must be the final action")
+        return self
 
     @field_serializer("ui_actions")
     def serialize_ui_actions(self, actions):

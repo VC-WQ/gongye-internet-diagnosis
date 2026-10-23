@@ -327,6 +327,9 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+.pico-action-results { margin: 10px 0; padding-left: 20px; font-size: 12px; line-height: 1.65; }
+.pico-action-results li + li { margin-top: 4px; }
+.pico-action-results [data-step-status="running"] { color: var(--muted); }
 .pico-message__bubble.is-flight-target {
   visibility: hidden;
 }

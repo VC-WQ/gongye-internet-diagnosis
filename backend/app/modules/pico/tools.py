@@ -35,6 +35,10 @@ READ_ONLY_TOOLS = [
     "search_events",
     "search_research_topics",
     "get_research_evidence",
+    "get_device_history",
+    "compare_devices",
+    "analyze_ranked_devices",
+    "compare_events",
 ]
 
 
@@ -48,11 +52,12 @@ def get_event(session: Session, event_id: int) -> Optional[Event]:
     return session.get(Event, event_id)
 
 
-def resolve_device_mention(session: Session, message: str) -> tuple[Optional[str], Optional[str]]:
+def resolve_device_mentions(session: Session, message: str) -> tuple[list[str], Optional[str]]:
     """只解析真实目录 ID/唯一名称；未知或歧义不能回退到当前设备。"""
     normalized = re.sub(r"\s+", "", message).casefold()
     devices = session.query(Device).all()
     matched: set[str] = set()
+    matched_aliases: dict[str, set[str]] = {}
     for device in devices:
         # The catalogue permits numeric-leading IDs and IDs without a hyphen too.
         if re.search(r"(?<![A-Za-z0-9_-])" + re.escape(device.id) + r"(?![A-Za-z0-9_-])", message, re.I):
@@ -63,8 +68,16 @@ def resolve_device_mention(session: Session, message: str) -> tuple[Optional[str
             aliases.add(name.replace("驱动电机", "电机", 1))
         if name.startswith("离心泵"):
             aliases.add(name.replace("离心泵", "泵", 1))
-        if any(alias and alias in normalized for alias in aliases):
-            matched.add(device.id)
+        for alias in aliases:
+            if alias and re.search(re.escape(alias) + (r"(?![a-z0-9])" if re.search(r"[a-z0-9]$", alias) else ""), normalized):
+                matched.add(device.id)
+                matched_aliases.setdefault(alias, set()).add(device.id)
+    for alias, ids in matched_aliases.items():
+        if len(ids) > 1:
+            return [], f"名称“{alias}”对应多台设备，请提供设备编号。"
+    for token in re.findall(r"(?:设备编号|设备ID|设备id)\s*(?:是|为|[:：])?\s*([A-Za-z0-9][A-Za-z0-9_-]{0,63})(?![A-Za-z0-9_-])", message):
+        if not any(d.id.casefold() == token.casefold() for d in devices):
+            return [], f"设备 {token} 不存在或不可见，请核对设备编号。"
     # IDs use token boundaries, preventing motor-001 from matching motor-0010.
     tokens = re.findall(r"(?<![A-Za-z0-9_-])[A-Za-z][A-Za-z0-9_]*(?:-[A-Za-z0-9_]+)+(?![A-Za-z0-9_-])", message)
     for token in tokens:
@@ -72,20 +85,83 @@ def resolve_device_mention(session: Session, message: str) -> tuple[Optional[str
         if device is None:
             # FP-CNN/SDE-PF/ResNet-50 are research terms, not fabricated device IDs.
             if re.match(r"^(?:pump|motor|compressor|device|no-such)-", token, re.I) or re.search(r"(?:设备编号|设备ID|设备id)\s*(?:是|为|[:：])?\s*" + re.escape(token), message):
-                return None, f"设备 {token} 不存在或不可见，请核对设备编号。"
+                return [], f"设备 {token} 不存在或不可见，请核对设备编号。"
             continue
         matched.add(device.id)
     named = re.findall(r"(?:驱动电机|电机|离心泵|泵|空压机)\s*[A-Za-z](?![A-Za-z0-9])", message)
-    if named and not matched:
-        return None, f"没有找到设备“{named[0]}”，请核对名称或提供设备编号。"
+    for mention in named:
+        simple = re.sub(r"\s+", "", mention).casefold()
+        candidates = [d.id for d in devices if simple in re.sub(r"\s+", "", d.name).casefold() or simple == re.sub(r"\s+", "", d.name).casefold().replace("驱动电机", "电机").replace("离心泵", "泵")]
+        if not candidates:
+            return [], f"没有找到设备“{mention}”，请核对名称或提供设备编号。"
+        if len(candidates) > 1:
+            return [], f"名称“{mention}”对应多台设备，请提供设备编号。"
+    return sorted(matched), None
+
+
+def resolve_device_mention(session: Session, message: str) -> tuple[Optional[str], Optional[str]]:
+    matched, error = resolve_device_mentions(session, message)
+    if error:
+        return None, error
     if len(matched) > 1:
         return None, "你提到了多台设备，请明确这次要查看哪一台。"
-    return (next(iter(matched)) if matched else None), None
+    return (matched[0] if matched else None), None
+
+
+def resolve_event_mentions(message: str) -> tuple[list[int], str | None]:
+    matches = re.findall(r"(?:事件|记录|报告)\s*[#＃]?\s*(\d+)|[#＃]\s*(\d+)", message)
+    ids = {int(first or second) for first, second in matches}
+    for chain in re.finditer(r"(?:事件|记录|报告)\s*[#＃]?\s*\d+(?:\s*(?:和|与|及|、|,|，)\s*[#＃]?\s*\d+)+", message):
+        ids.update(int(token) for token in re.findall(r"\d+", chain.group()))
+    if any(event_id < 1 or event_id > 9007199254740991 for event_id in ids):
+        return [], "事件编号必须是有效的正整数，请核对。"
+    return sorted(ids), None
+
+
+def device_history(session: Session, device_id: str, limit: int = 20) -> dict:
+    from app.modules.device_catalog.history import health_history
+    points = health_history(session, device_id, limit)
+    return {"device_id": device_id, "basis": "persisted_diagnosis_scores", "points": points,
+            "trend": {"first_score": points[0]["health_score"], "last_score": points[-1]["health_score"], "change_points": round(points[-1]["health_score"] - points[0]["health_score"], 6), "from": points[0]["timestamp"], "to": points[-1]["timestamp"]} if len(points) >= 2 else None}
+
+
+def compare_devices(session: Session, device_ids: list[str], events_per_device: int = 2) -> dict:
+    rows, missing = [], []
+    for device_id in device_ids[:3]:
+        overview = device_overview(session, device_id)
+        if overview is None:
+            missing.append(device_id)
+            continue
+        events = list_device_events(session, device_id, max(1, min(3, events_per_device)))
+        rows.append({**overview, "recent_events": [event_detail(event) for event in events]})
+    return {"devices": rows, "missing_device_ids": missing, "basis": "device_catalog_and_saved_events", "events_per_device": max(1, min(3, events_per_device))}
+
+
+def compare_events(session: Session, event_ids: list[int]) -> dict:
+    rows, missing = [], []
+    for event_id in event_ids[:3]:
+        event = get_event(session, event_id)
+        if event is None:
+            missing.append(event_id)
+        else:
+            rows.append(event_detail(event))
+    return {"events": rows, "missing_event_ids": missing, "basis": "persisted_diagnoses"}
+
+
+def analyze_ranked_devices(session: Session, filters: dict, sort: str, limit: int, events_per_device: int = 2) -> dict:
+    rows = search_devices(session, filters, sort, min(3, limit))
+    result = compare_devices(session, [row["id"] for row in rows], events_per_device)
+    return {**result, "sort": sort, "requested_limit": min(3, limit)}
 
 
 def finite_number(value: Any) -> Optional[float]:
-    if isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value):
-        return float(value)
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        try:
+            number = float(value)
+        except OverflowError:
+            return None
+        if math.isfinite(number):
+            return number
     return None
 
 
@@ -178,11 +254,14 @@ def search_events(session: Session, filters: dict, limit: int) -> list[Event]:
         query = query.filter(Event.severity == filters["severity"])
     if filters.get("abnormal_only"):
         query = query.filter(or_(Event.severity.in_(("warning", "critical", "alarm")), Event.status_state.in_(("warning", "alarm", "consulting", "pending", "handling", "observing", "relapsed"))))
+    if filters.get("unresolved_only"):
+        query = query.filter(Event.status_state.in_(("warning", "alarm", "consulting", "pending")))
     return query.order_by(Event.timestamp.desc(), Event.id.desc()).limit(max(1, min(limit, MAX_EVENTS))).all()
 
 
 def event_detail(event: Event) -> dict[str, Any]:
     """事件的安全摘要（不含原始全量窗口）。"""
+    from app.modules.device_catalog.history import observation_source
     diag = event.agent_diagnosis if isinstance(event.agent_diagnosis, dict) else {}
     report = diag.get("report") if isinstance(diag.get("report"), dict) else {}
     def excerpt(value: Any):
@@ -195,6 +274,7 @@ def event_detail(event: Event) -> dict[str, Any]:
         "status_state": event.status_state,
         "severity": event.severity,
         "timestamp": event.timestamp.isoformat() if event.timestamp else None,
+        "source_kind": observation_source(event),
         "fault_type": excerpt(diag.get("fault_type")),
         "fault_label": excerpt(diag.get("fault_label") or diag.get("fault_type")),
         "confidence": finite_number(diag.get("confidence")),
@@ -222,4 +302,6 @@ def report_summary(event: Event) -> dict[str, Any]:
         "fault_label": detail.get("fault_label"),
         "confidence": detail.get("confidence"),
         "health_score": detail.get("health_score"),
+        "timestamp": detail.get("timestamp"),
+        "source_kind": detail.get("source_kind"),
     }

@@ -78,7 +78,7 @@ def search_research_topics(query: str, limit: int = 5) -> list[dict[str, Any]]:
                 continue
             scored.append((20, {"kind": "knowledge", "id": f"fault-{fault}", "title": f"CWRU SKF6205 {aliases[0]}故障模式", "summary": section, "source": "backend/app/modules/multi_agent/knowledge_base/cwru_fault_modes.md", "route": "/research/signal/cwru"}))
     scored.sort(key=lambda item: -item[0])
-    return [entry for _, entry in scored[:max(1, min(limit, 8))]]
+    return [{**entry, "match_score": score} for score, entry in scored[:max(1, min(limit, 8))]]
 
 
 def _pick(data: Any, *keys: str) -> dict:

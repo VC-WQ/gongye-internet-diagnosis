@@ -1,4 +1,5 @@
-import { Select, Tabs } from 'antd'
+import { Select } from 'antd'
+import Tabs from '../../motion/ContentTabs'
 import EventResolutionPanel from '../factory/panels/EventResolutionPanel'
 import ReportDocumentPanel from '../factory/panels/ReportDocumentPanel'
 import { usePageQuery } from '../../hooks/usePageQuery'
@@ -14,7 +15,7 @@ export default function EventsTool() {
       options={(catalog.data ?? []).map(item => ({ value: item.id, label: `${item.name} · ${item.id}` }))} /></div>
     {workspace.selectedDeviceId && !catalog.loading && !device && <p className="factory-note">设备 {workspace.selectedDeviceId} 已不在当前目录中，历史事件与报告仍可查阅。</p>}
     <Tabs activeKey={section} onChange={key => update({ section: key === 'report' ? 'report' : undefined }, true)} items={[
-      { key: 'event', label: '处置与证据', children: <EventResolutionPanel device={device} events={events.data ?? []} loading={events.loading} error={events.error}
+      { key: 'event', label: '处置与证据', children: <EventResolutionPanel active={section === 'event'} device={device} events={events.data ?? []} loading={events.loading} error={events.error}
         event={event} eventId={eventId} eventLoading={selected.loading} eventError={selected.error}
         onSelect={id => workspace.setEvent(id, { replace: false })} onRefresh={events.refresh} onRefreshEvent={refresh}
         page={workspace.searchFilters.page ?? 1} onPage={page => workspace.setFilters({ page: String(page) })}

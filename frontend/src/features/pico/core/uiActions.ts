@@ -37,10 +37,13 @@ export function parsePicoUiAction(value: unknown): PicoUiAction | null {
   if (value.type !== 'navigate' || !keysOnly(value, ['type', 'action_id', 'route_id', 'params']) || !isRecord(value.params)) return null
   const params = value.params
   switch (value.route_id) {
-    case 'factory': case 'device_management': case 'records':
+    case 'factory': case 'device_management':
       return keysOnly(params, []) ? value as unknown as PicoUiAction : null
+    case 'records':
+      return keysOnly(params, ['device_id']) && (params.device_id === undefined || entity(params.device_id)) ? value as unknown as PicoUiAction : null
     case 'tools':
-      return keysOnly(params, ['tool']) && (params.tool === undefined || TOOLS.includes(params.tool as string)) ? value as unknown as PicoUiAction : null
+      return keysOnly(params, ['tool', 'device_id']) && (params.tool === undefined || TOOLS.includes(params.tool as string)) &&
+        (params.device_id === undefined || (params.tool === 'diagnosis' && entity(params.device_id))) ? value as unknown as PicoUiAction : null
     case 'research': {
       if (!keysOnly(params, ['topic_id', 'point_id'])) return null
       if (params.topic_id === undefined) return params.point_id === undefined ? value as unknown as PicoUiAction : null
@@ -58,10 +61,10 @@ export function parsePicoUiAction(value: unknown): PicoUiAction | null {
 export function picoUiActionPath(action: Extract<PicoUiAction, { type: 'navigate' }>): string {
   switch (action.route_id) {
     case 'factory': return '/dashboard'
-    case 'tools': return action.params.tool ? `/tools/${action.params.tool}` : '/tools'
+    case 'tools': return (action.params.tool ? `/tools/${action.params.tool}` : '/tools') + (action.params.device_id ? `?device=${encodeURIComponent(action.params.device_id)}` : '')
     case 'research': return '/research' + (action.params.topic_id ? `/${action.params.topic_id}` : '') + (action.params.point_id ? `/${action.params.point_id}` : '')
     case 'device_management': return '/admin/devices'
-    case 'records': return '/manage/records'
+    case 'records': return '/manage/records' + (action.params.device_id ? `?device=${encodeURIComponent(action.params.device_id)}` : '')
     case 'device_detail': return `/manage/devices/${encodeURIComponent(action.params.device_id)}` + (action.params.tab && action.params.tab !== 'realtime' ? `?detail=${action.params.tab}` : '')
     case 'event_detail': return `/manage/records/${action.params.event_id}`
     case 'report': {
@@ -80,11 +83,57 @@ export class PicoActionRegistry {
     this.ids.add(id)
     return true
   }
+  claimAll(ids: string[]): boolean {
+    if (new Set(ids).size !== ids.length || ids.some(id => this.ids.has(id))) return false
+    ids.forEach(id => this.ids.add(id))
+    return true
+  }
 }
 
-/** Self-navigation may finish; any different page/selection cancels the in-flight action. */
+export interface PicoExecutionState {
+  key: string
+  url: string
+  locationKey: string
+  sessionToken: string | null
+  navigationMarker?: string
+  deviceId?: string
+  eventId?: number
+}
+
+/** Read only canonical route identity; no arbitrary path from the model reaches this function. */
+export function picoNavigationIdentity(path: string): { deviceId?: string; eventId?: number } {
+  const [pathname, search = ''] = path.split('?')
+  const query = new URLSearchParams(search)
+  const deviceId = pathname.startsWith('/manage/devices/') ? decodeURIComponent(pathname.split('/')[3]) : query.get('device') ?? undefined
+  const value = pathname.startsWith('/manage/records/') ? Number(pathname.split('/')[3]) : Number(query.get('event'))
+  return { deviceId, eventId: Number.isSafeInteger(value) && value > 0 ? value : undefined }
+}
+
+/** A self-navigation ticket is consumed after its exact Router/Workspace commit.
+ * URL equality alone never authorizes a different device, history entry or account.
+ */
 export class PicoExecutionGuard {
-  target?: string
-  constructor(private originKey: string, private originUrl?: string) {}
-  accept(key: string, url: string): boolean { return (key === this.originKey && (this.originUrl === undefined || url === this.originUrl)) || (this.target !== undefined && url === this.target) }
+  private pending?: { url: string; marker: string; locationKey?: string; deviceId?: string; eventId?: number }
+  constructor(private baseline: PicoExecutionState) { this.baseline = { ...baseline } }
+  beginNavigation(url: string, marker: string): void {
+    this.pending = { url, marker, ...picoNavigationIdentity(url) }
+  }
+  accept(state: PicoExecutionState): boolean {
+    if (!state.sessionToken || state.sessionToken !== this.baseline.sessionToken) return false
+    const sameBaseline = state.key === this.baseline.key && state.url === this.baseline.url &&
+      state.locationKey === this.baseline.locationKey && state.deviceId === this.baseline.deviceId && state.eventId === this.baseline.eventId
+    if (!this.pending) return sameBaseline
+    if (sameBaseline && !this.pending.locationKey) return true
+    if (state.url !== this.pending.url || state.navigationMarker !== this.pending.marker ||
+      state.deviceId !== this.pending.deviceId || state.eventId !== this.pending.eventId ||
+      (this.pending.locationKey !== undefined && state.locationKey !== this.pending.locationKey)) return false
+    this.pending.locationKey = state.locationKey
+    return true
+  }
+  completeNavigation(state: PicoExecutionState): boolean {
+    if (!this.pending || state.navigationMarker !== this.pending.marker || !this.accept(state)) return false
+    this.baseline = { ...state }
+    this.pending = undefined
+    return true
+  }
 }

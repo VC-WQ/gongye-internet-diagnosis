@@ -93,13 +93,14 @@ export function notifyRouteReady(route: RouteIdentity) {
 }
 
 /** Every route write, including popstate, uses this single document VT entrance. */
-export function transitionRoute(commit: () => void, from: RouteIdentity, targetPath: string) {
+export function transitionRoute(commit: () => void, from: RouteIdentity, targetPath: string, signal?: AbortSignal) {
+  if (signal?.aborted) return
   coordinator.cancel()
   stopFallback()
   const enabled = isModuleNavigation(from.pathname, targetPath) && !authenticationOwnsMotion()
   if (!enabled) {
     coordinator.cancel()
-    flushSync(commit)
+    flushSync(() => { if (!signal?.aborted) commit() })
     return
   }
   const names = new Set<string>()
@@ -109,6 +110,10 @@ export function transitionRoute(commit: () => void, from: RouteIdentity, targetP
   let unsubscribe: (() => void) | undefined
   let watchdog: ReturnType<typeof setTimeout> | undefined
   let alive = true
+  // A cancelled Agent action owns only this ticket. A newer route cleans this
+  // listener first, so an old signal cannot cancel a later user navigation.
+  const abort = () => { if (alive) coordinator.cancel() }
+  signal?.addEventListener('abort', abort, { once: true })
   const doc = document as unknown as TransitionDocument
   const native = Boolean(doc.startViewTransition && !reduced())
   if (native) prepareModules(from, names, restore)
@@ -135,7 +140,7 @@ export function transitionRoute(commit: () => void, from: RouteIdentity, targetP
   })
   document.documentElement.dataset.routeTransition = native ? 'snapshot-pending' : 'fallback-pending'
   void coordinator.run({
-    commit: () => flushSync(commit),
+    commit: () => flushSync(() => { if (!signal?.aborted) commit() }),
     ready: () => ready,
     presented: usedNative => {
       unsubscribe?.()
@@ -144,6 +149,7 @@ export function transitionRoute(commit: () => void, from: RouteIdentity, targetP
     },
     cleanup: () => {
       alive = false
+      signal?.removeEventListener('abort', abort)
       unsubscribe?.()
       if (watchdog) clearTimeout(watchdog)
       restore.forEach(reset => reset())

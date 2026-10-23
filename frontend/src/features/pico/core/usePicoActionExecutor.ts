@@ -12,14 +12,19 @@ export function usePicoActionExecutor(key: string, open: boolean, setOpen: (valu
   const workspace = useWorkspace()
   const preferences = useUiPreferences()
   const navigate = useSpatialNavigate()
-  const current = useRef({ key, url: location.pathname + location.search, theme: preferences.theme, dockOpen: open, deviceId: workspace.selectedDeviceId })
-  current.current = { key, url: location.pathname + location.search, theme: preferences.theme, dockOpen: open, deviceId: workspace.selectedDeviceId }
+  const state = {
+    key, url: location.pathname + location.search, locationKey: location.key,
+    navigationMarker: typeof location.state?.picoExecution === 'string' ? location.state.picoExecution : undefined,
+    theme: preferences.theme, dockOpen: open, deviceId: workspace.selectedDeviceId, eventId: workspace.selectedEventId,
+  }
+  const current = useRef(state)
+  current.current = state
   const functions = useRef({ navigate, setOpen, setTheme: preferences.setTheme })
   functions.current = { navigate, setOpen, setTheme: preferences.setTheme }
   const executor = useRef<PicoActionExecutor>()
   if (!executor.current) executor.current = new PicoActionExecutor({
-    current: () => ({ ...current.current, theme: document.documentElement.dataset.theme ?? '' }),
-    navigate: path => functions.current.navigate(path),
+    current: () => ({ ...current.current, sessionToken: localStorage.getItem('token'), theme: document.documentElement.dataset.theme ?? '' }),
+    navigate: (path, marker, signal) => functions.current.navigate(path, { state: { picoExecution: marker }, signal }),
     setTheme: theme => functions.current.setTheme(theme),
     closeDock: () => functions.current.setOpen(false),
     getDevice, getEvent, getMe,

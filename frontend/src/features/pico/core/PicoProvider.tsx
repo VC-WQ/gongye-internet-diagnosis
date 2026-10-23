@@ -190,9 +190,10 @@ export function PicoProvider({ children }: { children: ReactNode }) {
     lastContext.current = contextKey
     react('context')
     // An executor's own navigation is expected; a user's different destination cancels it.
-    if (executionRef.current?.accept(contextKey, location.pathname + location.search)) return
+    if (executionRef.current?.accept(actionExecutor.currentState())) return
     requestRef.current += 1
     abortRef.current?.abort()
+    executionRef.current = undefined
     busyRef.current = false
     setBusy(false)
     stopSpeaking()
@@ -200,6 +201,7 @@ export function PicoProvider({ children }: { children: ReactNode }) {
     contextKey,
     stopSpeaking,
     react,
+    actionExecutor,
   ])
 
   // 路由变化时停止播报，避免跨页面残留
@@ -260,6 +262,7 @@ export function PicoProvider({ children }: { children: ReactNode }) {
     if (notification.severity === 'critical' && busyRef.current) {
       requestRef.current += 1
       abortRef.current?.abort()
+      executionRef.current = undefined
       busyRef.current = false
       setBusy(false)
     }
@@ -286,6 +289,7 @@ export function PicoProvider({ children }: { children: ReactNode }) {
   const cancel = useCallback(() => {
     requestRef.current += 1
     abortRef.current?.abort()
+    executionRef.current = undefined
     busyRef.current = false
     setBusy(false)
     setEmotion('idle')
@@ -311,6 +315,7 @@ export function PicoProvider({ children }: { children: ReactNode }) {
       react('message')
       const requestId = ++requestRef.current
       abortRef.current?.abort()
+      executionRef.current = undefined
       const controller = new AbortController()
       abortRef.current = controller
       busyRef.current = true
@@ -321,6 +326,7 @@ export function PicoProvider({ children }: { children: ReactNode }) {
 
       const userMessageId = options?.userMessageId ?? nextId('user')
       const captured = contextRef.current
+      const executionOrigin = actionExecutor.currentState()
       const requestContext = withPicoOverride(captured.snapshot, options?.override)
       const focus = !options?.override && focusRef.current?.key === captured.key ? focusRef.current.value : undefined
       const history = messages
@@ -352,7 +358,7 @@ export function PicoProvider({ children }: { children: ReactNode }) {
             },
             controller.signal,
           )
-          if (!canCommitPicoResponse({
+          if (executionOrigin.sessionToken !== actionExecutor.currentState().sessionToken || !canCommitPicoResponse({
             requestId, currentRequestId: requestRef.current,
             fingerprint: captured.key, currentFingerprint: contextRef.current.key,
             revision: requestContext.context_revision, responseRevision: response.context_revision,
@@ -378,16 +384,19 @@ export function PicoProvider({ children }: { children: ReactNode }) {
           let answerText = response.text
           let answerEmotion = response.emotion
           if (response.ui_actions !== undefined && (!Array.isArray(response.ui_actions) || response.ui_actions.length)) {
-            const guard = new PicoExecutionGuard(captured.key, captured.url)
+            const guard = new PicoExecutionGuard(executionOrigin)
             executionRef.current = guard
-            const result = Array.isArray(response.ui_actions) && response.ui_actions.length === 1
-              ? await actionExecutor.execute(response.ui_actions[0], controller.signal, guard)
-              : { action_id: 'invalid', status: 'rejected' as const, message: '单次页面操作超出允许数量，未执行。' }
+            const showProgress = (results: NonNullable<PicoMessage['actionResults']>) => {
+              setMessages(previous => previous.map(message => message.id === response.message_id
+                ? { ...message, actionResults: results }
+                : message))
+            }
+            const results = await actionExecutor.executeSequence(response.ui_actions, controller.signal, guard, showProgress)
             if (executionRef.current === guard) executionRef.current = undefined
-            answerText = result.message
-            answerEmotion = result.status === 'succeeded' ? 'happy' : 'confused'
+            answerText = [response.text, ...results.map(result => result.message)].join('\n')
+            answerEmotion = results.every(result => result.status === 'succeeded') ? 'happy' : 'confused'
             setMessages(previous => previous.map(message => message.id === response.message_id
-              ? { ...message, text: result.message, emotion: answerEmotion, actionResults: [result] }
+              ? { ...message, emotion: answerEmotion, actionResults: results }
               : message))
           }
           if (requestRef.current !== requestId) return
