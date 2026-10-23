@@ -1,10 +1,7 @@
 """模块5 多智能体会诊服务。
 
-编排流程已抽离到 graph.py（LangGraph 风格 State + 纯 Python 节点流）：
-    normalize -> detect(模块4) -> evidence([signal, physics, knowledge] 并行)
-    -> chairman -> decision
-
-本服务作为对外门面，负责委托编排与 Agent 状态查询。
+工厂里的智能诊断只调用已训练的泵分类模型和电机剩余寿命模型。
+轴承会诊图只从 consult_research 进入，并且先检查采样率和权重。
 """
 from __future__ import annotations
 
@@ -16,40 +13,73 @@ from .graph import consultation_graph
 logger = logging.getLogger(__name__)
 
 
+def _persist_score(device_id: str, result: dict) -> None:
+    """把模型分数写到设备卡片。没有模型输出时清空，避免留下标签分。"""
+    try:
+        from app.models import Device, SessionLocal
+    except Exception:
+        return
+    db = SessionLocal()
+    try:
+        device = db.get(Device, device_id)
+        if device is None:
+            return
+        basis = result.get("health_basis")
+        score = result.get("health_score")
+        level = str(result.get("health_level") or "")
+        if isinstance(score, (int, float)) and basis in ("skab_probability", "xjtu_rul"):
+            device.health_score = float(score)
+            device.health_basis = str(basis)
+            device.health_observed = True
+            device.status = {"healthy": "healthy", "warning": "degraded", "abnormal": "fault"}.get(level, "unknown")
+        else:
+            device.health_score = None
+            device.health_basis = basis if basis in ("simulation", "unobserved") else None
+            if device.run_mode != "simulation":
+                device.status = "unknown"
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        logger.warning("回写会诊分数失败：%s", exc)
+    finally:
+        db.close()
+
+
 class MultiAgentService:
     """多智能体会诊服务（门面）。"""
 
     def __init__(self) -> None:
         self.graph = consultation_graph
 
-    # ------------------------------------------------------------------
-    # 会诊主入口
-    # ------------------------------------------------------------------
     def consult(self, device_id: str, window: Any, vision: dict | None = None) -> dict:
-        """发起多智能体会诊，返回最终结果 dict（含 8 部分诊断报告）。
+        """工厂诊断入口。不进入 12 kHz 轴承会诊，也不使用部件图像。"""
+        del vision
+        records = window if isinstance(window, list) else []
+        from .replay_consult import consult_replay
 
-        Args:
-            device_id: 设备 ID
-            window: 传感器窗口（list[dict] / dict / SensorWindow）
-            vision: 可选的部件表面视觉检测结果（第五路证据）
-
-        Returns:
-            会诊结果 dict（见 ConsultResult 结构，含 report 字段）
-        """
-        result = self.graph.run(device_id, window, vision)
+        result = consult_replay(device_id, records)
+        _persist_score(device_id, result)
+        score = result.get("health_score")
+        score_text = f"{float(score):.2f}" if isinstance(score, (int, float)) else "未评分"
         logger.info(
-            "设备 %s 会诊完成：%s（%.4f）健康分 %.2f channels=%s",
+            "设备 %s 会诊完成：%s（%.4f）健康分 %s channels=%s",
             device_id,
             result["fault_label"],
             result["confidence"],
-            result["health_score"],
+            score_text,
             result["available_channels"],
         )
         return result
 
-    # ------------------------------------------------------------------
-    # Agent 状态
-    # ------------------------------------------------------------------
+    def consult_research(self, device_id: str, window: Any, vision: dict | None = None) -> dict:
+        """研究页轴承会诊。采样率或权重不满足时直接返回，不补启发式残差。"""
+        from app.modules.anomaly_detect.research_guard import blocked_consult, research_block_reason
+
+        reason = research_block_reason(window)
+        if reason:
+            return blocked_consult(device_id, reason)
+        return self.graph.run(device_id, window, vision)
+
     def get_agent_status(self) -> list[dict]:
         """返回各诊断 Agent 的注册状态（含决策 Agent）。"""
         pool = [

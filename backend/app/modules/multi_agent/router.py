@@ -10,16 +10,11 @@ router = APIRouter(prefix="/multi-agent", tags=["多智能体会诊"])
 
 @router.post("/consult")
 def consult(device_id: str, window: list[dict], vision: Optional[dict] = None) -> dict:
-    """发起多智能体会诊。
+    """研究页轴承会诊。不是工厂设备的智能诊断。
 
-    window 为传感器窗口（list[dict]），每条可含 vibration/temperature/
-    current/pressure/speed 等字段；当前仅振动（DE）通道有数据。
-
-    vision 为可选的部件表面视觉检测结果（第五路证据）：
-        {"available": bool, "damage_type": str|None, "confidence": float, "count": int}
-    提供后视觉证据将参与 D-S 融合，并与振动结论做交叉验证（可识别"早期窗口期"）。
+    只有约 12 kHz、不少于 2048 点、且 CNN 与 PINN 权重都存在时才会运行。
     """
-    return multi_agent_service.consult(device_id, window, vision)
+    return multi_agent_service.consult_research(device_id, window, vision)
 
 
 @router.get("/agents")
