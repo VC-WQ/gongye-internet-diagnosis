@@ -37,6 +37,9 @@ def _device_dict(device: Device) -> dict:
         "threshold_vibration": device.threshold_vibration,
         "threshold_temp": device.threshold_temp,
         "last_updated": last_updated,
+        "run_mode": device.run_mode or "public_replay",
+        "dataset_name": device.dataset_name,
+        "health_basis": device.health_basis,
     }
 
 
@@ -95,12 +98,44 @@ _INJECT_PRESETS = {
 }
 
 
-@router.post("/{device_id}/inject")
-def inject_fault(device_id: str, body: InjectBody, db: Session = Depends(get_db)) -> dict:
-    """设置设备故障/退化场景（概念演示：直接改设备健康状态）。
+class ModeBody(BaseModel):
+    """运行模式：公开数据回放 / 仿真处置。"""
 
-    真实产品中故障应由物理数字孪生隐状态涌现驱动；此处为前端演示提供
-    可重复、可控的三种模式。
+    run_mode: str
+
+
+@router.post("/{device_id}/mode")
+def set_mode(
+    device_id: str,
+    body: ModeBody,
+    _: User = Depends(require_admin),
+) -> dict:
+    """切换设备的运行模式（仅管理员）。
+
+    回放模式展示公开数据集采样与模型会诊；仿真模式接受固定处置动作。
+    进入仿真时清掉回放评分，避免把数据集结论当成仿真设备状态。
+    """
+    from app.modules.mqtt_pipeline.store import set_device_mode
+
+    try:
+        return set_device_mode(device_id, body.run_mode)
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"设备 {device_id} 不存在")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.post("/{device_id}/inject")
+def inject_fault(
+    device_id: str,
+    body: InjectBody,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+) -> dict:
+    """设置设备故障/退化场景（仅管理员，仿真测试用）。
+
+    真实产品中故障应由物理数字孪生隐状态涌现驱动；此处为演示提供
+    可重复、可控的三种模式，结果必须在前端明确标注为“仿真”。
     """
     device = db.get(Device, device_id)
     if device is None:

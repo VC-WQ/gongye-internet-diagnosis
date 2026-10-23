@@ -10,6 +10,7 @@ feedback_evaluator.evaluate_recovery 做恢复曲线对比：
 from __future__ import annotations
 
 from datetime import datetime
+import math
 
 from sqlalchemy.orm import Session
 
@@ -47,6 +48,11 @@ class FeedbackLoopService:
         event = db.get(Event, event_id)
         if event is None:
             raise ValueError(f"事件 {event_id} 不存在")
+
+        if event.status_state != EventState.OBSERVING.value:
+            raise state_machine.StateTransitionError("只有观察期事件可以评估恢复曲线")
+        if len(actual_curve) < 3 or any(not math.isfinite(v) or not 0 <= v <= 100 for v in actual_curve):
+            raise ValueError("观察期至少需要 3 个有效健康采样（0–100）")
 
         device_id = event.device_id
         ts = event.timestamp

@@ -1,55 +1,121 @@
-"""模块6 MQTT 指令下发（mock 模式）。
+"""模块6 MQTT 指令下发（真实发布 + 回执）。
 
-约束：正式 MQTT 必须用 paho-mqtt；当前 mock=True 不真连 broker，
-仅记录日志并返回 command_id，实际发送预留 paho 实现。
+约束：
+- 指令发布走真实 paho-mqtt，不再使用 mock 日志。
+- 若 Broker 不可用，抛出 CommandPublishError，由路由映射为 503，
+  绝不静默假装「已下发」。
+- 设备回执由 mqtt_pipeline 订阅 device/+/command_ack 后写回 CommandRecord。
 """
 from __future__ import annotations
 
+import json
 import logging
+import time
+from typing import Optional
+
+import paho.mqtt.client as mqtt
+
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
 
+class CommandPublishError(RuntimeError):
+    """指令发布失败（Broker 不可用或发布被拒绝）。"""
+
+
 class MqttCommandPublisher:
-    """指令下发器：mock 模式只记日志，真实模式预留 paho 发布。"""
+    """指令下发器：真实连接 Broker 并发布 JSON 指令。"""
 
     def __init__(
         self,
-        mock: bool = True,
         topic_template: str = "device/{device_id}/command",
     ) -> None:
-        self.mock = mock
         self.topic_template = topic_template
         self._seq = 0
+        self._client: Optional[mqtt.Client] = None
 
+    # ------------------------------------------------------------------
+    # 连接管理
+    # ------------------------------------------------------------------
+    def _ensure_client(self) -> mqtt.Client:
+        """懒创建并连接发布客户端。"""
+        if self._client is not None and self._client.is_connected():
+            return self._client
+        client = mqtt.Client(
+            mqtt.CallbackAPIVersion.VERSION2,
+            client_id=f"diagnosis-command-{settings.mqtt_client_id}",
+        )
+        if settings.mqtt_username:
+            client.username_pw_set(settings.mqtt_username, settings.mqtt_password)
+        try:
+            client.connect(settings.mqtt_host, settings.mqtt_port, keepalive=60)
+        except OSError as exc:
+            raise CommandPublishError(
+                f"MQTT Broker 不可用（{settings.mqtt_host}:{settings.mqtt_port}）：{exc}"
+            ) from exc
+        client.loop_start()
+        self._client = client
+        return client
+
+    def close(self) -> None:
+        """关闭发布客户端。"""
+        if self._client is not None:
+            try:
+                self._client.loop_stop()
+                self._client.disconnect()
+            finally:
+                self._client = None
+
+    # ------------------------------------------------------------------
+    # 发布
+    # ------------------------------------------------------------------
     def publish_command(
-        self, device_id: str, command: str, params: dict | None = None
-    ) -> str:
-        """下发指令并返回 command_id。
+        self,
+        device_id: str,
+        command: str,
+        params: Optional[dict] = None,
+        event_id: Optional[int] = None,
+    ) -> dict:
+        """下发指令并返回发布结果。
 
-        mock 模式：不连 broker，仅记录日志（真实发送走 _real_publish）。
+        Returns:
+            {command_id, topic, published, error}
+        Raises:
+            CommandPublishError: Broker 不可用或发布失败。
         """
         self._seq += 1
         command_id = f"cmd-{device_id}-{self._seq}"
         topic = self.topic_template.format(device_id=device_id)
-        params = params or {}
+        payload = {
+            "command_id": command_id,
+            "event_id": event_id,
+            "device_id": device_id,
+            "command": command,
+            "params": params or {},
+            "timestamp": time.time(),
+        }
 
-        if self.mock:
-            logger.info(
-                "[MOCK] 下发指令 %s -> topic=%s command=%s params=%s",
-                command_id, topic, command, params,
-            )
-        else:
-            self._real_publish(topic, command, params)
+        client = self._ensure_client()
+        info = client.publish(
+            topic, json.dumps(payload, ensure_ascii=False), qos=1
+        )
+        # wait_for_publish 在 QoS>0 时阻塞直至 PUBACK，确保「已下发」不是空话
+        try:
+            info.wait_for_publish(timeout=5)
+        except Exception as exc:  # pragma: no cover - 网络异常
+            raise CommandPublishError(f"指令发布超时：{exc}") from exc
 
-        return command_id
+        if info.rc != mqtt.MQTT_ERR_SUCCESS or not info.is_published():
+            raise CommandPublishError(f"指令发布失败，rc={info.rc}")
 
-    def _real_publish(self, topic: str, command: str, params: dict) -> None:
-        """真实 paho-mqtt 发布（预留，mock 模式不触发）。"""
-        import paho.mqtt.client as mqtt  # noqa: F401  # 满足 paho-mqtt 约束
+        logger.info("指令已下发 %s -> %s", command_id, topic)
+        return {
+            "command_id": command_id,
+            "topic": topic,
+            "published": True,
+            "error": None,
+        }
 
-        # TODO: 连接 broker -> publish(topic, payload) -> disconnect
-        raise NotImplementedError("真实 MQTT 下发尚未启用（当前 mock=True）")
 
-
-mqtt_command_publisher = MqttCommandPublisher(mock=True)
+mqtt_command_publisher = MqttCommandPublisher()

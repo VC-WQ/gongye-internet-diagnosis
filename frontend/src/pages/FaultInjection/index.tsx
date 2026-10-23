@@ -1,102 +1,113 @@
-import { useEffect, useState } from 'react'
-import { Button, Card, Descriptions, Radio, Select, Space, Tag, message } from 'antd'
-import { getDevices, injectFault, type Device } from '../../services/api'
-
-// 故障注入模式（概念演示版：直接设置设备健康状态，注入后可选正常模式一键复位）
-const MODES = [
-  { value: 'normal', label: '正常', color: 'green', desc: '健康分 95' },
-  { value: 'degradation', label: '退化', color: 'orange', desc: '健康分 70' },
-  { value: 'fault', label: '故障', color: 'red', desc: '健康分 45' },
-]
-
-const STATUS_LABEL: Record<string, string> = {
-  healthy: '正常',
-  degraded: '退化',
-  fault: '告警',
-  offline: '离线',
-}
-
+import { useEffect, useRef, useState } from 'react'
+import {
+  Alert,
+  Button,
+  Descriptions,
+  Modal,
+  Radio,
+  Select,
+  Space,
+  message,
+} from 'antd'
+import { injectFault, type Device } from '../../services/api'
+import { useDeviceCatalog } from '../../services/realtime'
+import { usePageQuery } from '../../hooks/usePageQuery'
+import { errorText } from '../../hooks/useResource'
+import { LoadState, StatusTag } from '../../components/BusinessUI'
 export default function FaultInjection() {
-  const [devices, setDevices] = useState<Device[]>([])
-  const [deviceId, setDeviceId] = useState<string>()
+  const catalog = useDeviceCatalog()
+  const { params, update } = usePageQuery()
+  const deviceId = params.get('device') ?? catalog.data?.[0]?.id
   const [mode, setMode] = useState('degradation')
   const [result, setResult] = useState<Device>()
   const [loading, setLoading] = useState(false)
-
+  const [open, setOpen] = useState(false)
+  const generation = useRef(0)
   useEffect(() => {
-    getDevices().then((d) => {
-      setDevices(d)
-      if (d.length > 0) setDeviceId(d[0].id)
-    })
-  }, [])
-
-  const onInject = async () => {
+    generation.current += 1
+    setResult(undefined)
+    setOpen(false)
+    return () => {
+      generation.current += 1
+    }
+  }, [deviceId])
+  const inject = async () => {
     if (!deviceId) return
+    const request = generation.current
     setLoading(true)
     try {
-      const r = await injectFault(deviceId, mode)
-      setResult(r)
-      message.success('故障场景已注入')
-    } catch {
-      message.error('注入失败')
+      const data = await injectFault(deviceId, mode)
+      if (request === generation.current) {
+        setResult(data)
+        catalog.refresh()
+        setOpen(false)
+        message.success('仿真场景已更新')
+      }
+    } catch (e) {
+      if (request === generation.current) message.error(errorText(e))
     } finally {
-      setLoading(false)
+      if (request === generation.current) setLoading(false)
     }
   }
-
   return (
-    <div>
-      <Card title="故障注入面板" style={{ marginBottom: 16 }}>
-        <Space direction="vertical" style={{ width: '100%' }}>
-          <div>
-            <span style={{ marginRight: 8 }}>设备：</span>
-            <Select
-              style={{ width: 240 }}
-              value={deviceId}
-              onChange={setDeviceId}
-              options={devices.map((d) => ({ value: d.id, label: `${d.name}（${d.id}）` }))}
-            />
-          </div>
-          <div>
-            <span style={{ marginRight: 8 }}>模式：</span>
-            <Radio.Group value={mode} onChange={(e) => setMode(e.target.value)}>
-              {MODES.map((m) => (
-                <Radio.Button key={m.value} value={m.value}>
-                  {m.label}
-                </Radio.Button>
-              ))}
-            </Radio.Group>
-          </div>
-          <div style={{ color: '#94a3b8', fontSize: 12 }}>
-            说明：概念演示版简化为直接设置健康状态，故障注入后可选正常模式一键复位
-          </div>
-          <Button type="primary" loading={loading} onClick={onInject}>
-            注入场景
+    <section className="surface">
+      <Alert
+        showIcon
+        type="warning"
+        message="修改设备目录中的仿真健康状态，不代表实际采样或故障恢复。"
+      />
+      <LoadState error={catalog.error} onRetry={catalog.refresh}>
+        <Space direction="vertical" size={20}>
+          <Select
+            aria-label="仿真设备"
+            style={{ width: 260 }}
+            value={deviceId}
+            disabled={loading}
+            onChange={(device) => update({ device }, true)}
+            options={catalog.data?.map((d) => ({
+              value: d.id,
+              label: `${d.name} · ${d.id}`,
+            }))}
+          />
+          <Radio.Group
+            aria-label="仿真状态"
+            value={mode}
+            disabled={loading}
+            onChange={(e) => setMode(e.target.value)}
+            options={[
+              { value: 'normal', label: '正常' },
+              { value: 'degradation', label: '退化' },
+              { value: 'fault', label: '故障' },
+            ]}
+            optionType="button"
+          />
+          <Button onClick={() => setOpen(true)} disabled={!deviceId}>
+            应用仿真状态
           </Button>
         </Space>
-      </Card>
-
+      </LoadState>
       {result && (
-        <Card title="注入结果">
-          <Descriptions column={3} bordered size="small">
-            <Descriptions.Item label="设备">{result.name}</Descriptions.Item>
-            <Descriptions.Item label="健康评分">
-              <span style={{ fontWeight: 700 }}>{Math.round(result.health_score)}</span>
-            </Descriptions.Item>
-            <Descriptions.Item label="状态">
-              <Tag color={result.status === 'fault' ? 'red' : result.status === 'degraded' ? 'orange' : 'green'}>
-                {STATUS_LABEL[result.status] ?? result.status}
-              </Tag>
-            </Descriptions.Item>
-            <Descriptions.Item label="边缘自检">
-              {(result.edge_anomaly_score * 100).toFixed(1)}%
-            </Descriptions.Item>
-          </Descriptions>
-          <div style={{ marginTop: 8, color: '#94a3b8', fontSize: 12 }}>
-            返回「设备大屏」即可看到该设备卡片状态变化
-          </div>
-        </Card>
+        <Descriptions style={{ marginTop: 28 }} column={3}>
+          <Descriptions.Item label="设备">{result.name}</Descriptions.Item>
+          <Descriptions.Item label="健康评分">
+            {result.health_score ?? '—'}
+          </Descriptions.Item>
+          <Descriptions.Item label="目录状态">
+            <StatusTag status={result.status} />
+          </Descriptions.Item>
+        </Descriptions>
       )}
-    </div>
+      <Modal
+        title="应用仿真状态"
+        open={open}
+        onCancel={() => !loading && setOpen(false)}
+        onOk={inject}
+        confirmLoading={loading}
+        maskClosable={!loading}
+        cancelButtonProps={{ disabled: loading }}
+      >
+        <p>将修改 {deviceId} 的目录状态与健康评分。是否继续？</p>
+      </Modal>
+    </section>
   )
 }

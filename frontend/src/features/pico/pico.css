@@ -1,0 +1,527 @@
+/* Pico 2.2：同一持久容器从右下球体连续拉出面板；内容裁切显露。 */
+.pico-dock {
+  --pico-panel-width: min(420px, calc(100vw - 32px));
+  --pico-panel-height: min(620px, calc(100dvh - 36px));
+  --pico-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 900;
+  font-family: var(
+    --font-sans,
+    -apple-system,
+    BlinkMacSystemFont,
+    'PingFang SC',
+    'Microsoft YaHei',
+    sans-serif
+  );
+}
+.pico-morph {
+  position: relative;
+  width: 84px;
+  height: 84px;
+  overflow: hidden;
+  background: transparent;
+  border: 1px solid transparent;
+  box-sizing: border-box;
+  transition:
+    width var(--pico-morph-duration, 420ms) var(--pico-ease),
+    height var(--pico-morph-duration, 420ms) var(--pico-ease),
+    border-color 80ms ease 0ms,
+    box-shadow 80ms ease 0ms;
+}
+.pico-morph.is-open {
+  width: var(--pico-panel-width);
+  height: var(--pico-panel-height);
+  background: var(--surface);
+  border-color: var(--line);
+  box-shadow: 0 20px 64px rgba(32, 28, 22, 0.2);
+}
+.pico-morph__avatar {
+  position: absolute;
+  left: 4px;
+  top: 4px;
+  z-index: 3;
+  width: 76px;
+  height: 76px;
+  pointer-events: none;
+  transform-origin: top left;
+  transition:
+    transform var(--pico-morph-duration, 420ms) var(--pico-ease),
+    left var(--pico-morph-duration, 420ms) var(--pico-ease),
+    top var(--pico-morph-duration, 420ms) var(--pico-ease);
+}
+.pico-morph.is-open .pico-morph__avatar {
+  left: 12px;
+  top: 10px;
+  transform: scale(0.58);
+}
+.pico-panel {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  visibility: hidden;
+  pointer-events: none;
+  clip-path: inset(100% 0 0 0);
+  transition:
+    clip-path var(--pico-reveal-duration, 380ms) var(--pico-ease),
+    visibility 0s linear var(--pico-morph-duration, 420ms);
+}
+.pico-morph.is-open .pico-panel {
+  visibility: visible;
+  pointer-events: auto;
+  clip-path: inset(0 0 0 0);
+  transition:
+    clip-path var(--pico-reveal-duration, 380ms) var(--pico-ease),
+    visibility 0s linear 0s;
+}
+.pico-orb-hit {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  padding: 0;
+  color: transparent;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  cursor: pointer;
+  touch-action: none;
+  transition: opacity 160ms ease;
+}
+.pico-orb-hit:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 3px;
+}
+.pico-morph.is-open .pico-orb-hit {
+  opacity: 0;
+  pointer-events: none;
+}
+.pico-orb-hit__label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.pico-orb__label {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  z-index: 5;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  pointer-events: none;
+  transition: opacity 140ms ease;
+}
+.pico-orb__badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 6;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--brand);
+  box-shadow: 0 0 0 2px var(--surface);
+}
+.pico-morph.is-open .pico-orb__label,
+.pico-morph.is-open .pico-orb__badge {
+  opacity: 0;
+}
+.pico-avatar {
+  display: inline-flex;
+  flex: none;
+  filter: drop-shadow(0 6px 10px rgba(35, 30, 24, 0.12));
+}
+.pico-avatar canvas {
+  display: block;
+}
+.pico-loading {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+/* Header */
+.pico-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+  min-height: 62px;
+  padding: 12px 12px 10px 70px;
+  background: var(--surface-muted);
+  border-bottom: 1px solid var(--line);
+}
+.pico-header--workbench {
+  padding-left: 16px;
+  background: transparent;
+}
+.pico-header__avatar {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 84px;
+  height: 84px;
+  margin-right: 2px;
+}
+.pico-header--workbench {
+  min-height: 104px;
+}
+.pico-header__identity {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.pico-header__identity strong {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.pico-header__context {
+  overflow: hidden;
+  font-size: 11px;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pico-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+}
+.pico-icon-button {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+.pico-icon-button:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--surface);
+}
+.pico-icon-button.is-active {
+  color: var(--brand);
+  background: var(--brand-soft);
+}
+.pico-icon-button:disabled {
+  opacity: 0.35;
+}
+
+/* Conversation */
+.pico-conversation {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.pico-conversation__messages {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  gap: 10px;
+  min-height: 0;
+  padding: 14px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  scrollbar-width: thin;
+}
+.pico-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin: auto;
+  padding: 10px 6px;
+  max-width: 330px;
+  text-align: center;
+  color: var(--muted);
+}
+.pico-empty p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.pico-empty-glyph {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  font: 600 42px/1 ui-monospace, Menlo, monospace;
+  letter-spacing: 0.04em;
+  color: var(--brand);
+}
+.pico-empty-glyph span:last-child {
+  animation: pico-cursor 1.6s steps(1) infinite;
+}
+@keyframes pico-cursor {
+  0%,
+  55% {
+    opacity: 1;
+  }
+  56%,
+  100% {
+    opacity: 0.25;
+  }
+}
+.pico-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+.pico-suggestions button {
+  padding: 6px 9px;
+  font-size: 11px;
+  color: var(--text);
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 0;
+}
+.pico-suggestions button:hover {
+  color: var(--brand);
+  border-color: var(--brand);
+}
+.pico-message {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: none;
+}
+.pico-message--user {
+  align-items: flex-end;
+}
+.pico-message--assistant {
+  align-items: flex-start;
+}
+.pico-message--system {
+  align-items: center;
+}
+.pico-message__bubble {
+  max-width: 88%;
+  padding: 9px 11px;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--text);
+  background: var(--surface-muted);
+  border-radius: 0;
+}
+.pico-message__text {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.pico-message__bubble.is-flight-target .pico-message__text {
+  opacity: 0;
+}
+.pico-message--user .pico-message__bubble {
+  color: #fff;
+  background: #b83741;
+}
+.pico-message--system .pico-message__bubble {
+  max-width: 100%;
+  padding: 3px 8px;
+  font-size: 10px;
+  color: var(--muted);
+  text-align: center;
+  background: transparent;
+}
+.pico-refs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 7px;
+}
+.pico-ref {
+  padding: 2px 6px;
+  font-size: 10px;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 0;
+}
+.pico-message__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 7px;
+}
+.pico-message__actions .ant-btn {
+  height: 24px;
+  padding: 0 7px;
+  font-size: 10px;
+}
+.pico-speak,
+.pico-meta-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  min-height: 24px;
+  padding: 0 4px;
+  font-size: 10px;
+  color: var(--muted);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+.pico-speak:hover,
+.pico-meta-button:hover {
+  color: var(--brand);
+}
+.pico-meta-details {
+  max-width: 260px;
+  margin: 0;
+  font-size: 11px;
+}
+.pico-meta-details div {
+  display: flex;
+  gap: 8px;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--line);
+}
+.pico-meta-details div:last-child {
+  border-bottom: 0;
+}
+.pico-meta-details dt {
+  flex: none;
+  color: var(--muted);
+}
+.pico-meta-details dd {
+  margin: 0;
+  color: var(--text);
+}
+.pico-thinking {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.pico-thinking__glyph {
+  font: 600 12px ui-monospace, Menlo, monospace;
+  color: var(--brand);
+}
+
+/* Composer */
+.pico-composer {
+  flex: none;
+  padding: 10px 12px 12px;
+  background: var(--surface-muted);
+  border-top: 1px solid var(--line);
+}
+.pico-composer textarea {
+  color: var(--text);
+  background: var(--surface-muted);
+  border-color: var(--line);
+}
+.pico-composer textarea::placeholder {
+  color: var(--muted);
+}
+.pico-composer__buttons {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+}
+.pico-input-hint {
+  font-size: 10px;
+  color: var(--muted);
+}
+.pico-speech-error {
+  margin: 0 0 8px;
+  font-size: 10px;
+  color: var(--status-danger);
+}
+
+/* 用户文字飞行层 */
+.pico-flight-ghost {
+  position: fixed;
+  z-index: 1200;
+  box-sizing: border-box;
+  padding: 9px 11px;
+  overflow: hidden;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.65;
+  color: #fff;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+  background: #b83741;
+  border-radius: 0;
+  box-shadow: 0 8px 24px rgba(60, 30, 30, 0.18);
+}
+
+.pico-workbench .pico-conversation__messages {
+  padding: 16px 18px;
+}
+.pico-workbench .pico-message__bubble {
+  max-width: min(78%, 560px);
+}
+.pico-workbench .pico-composer {
+  padding: 12px 16px 16px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pico-morph,
+  .pico-morph__avatar,
+  .pico-panel,
+  .pico-orb-hit,
+  .pico-orb__label,
+  .pico-orb__badge {
+    transition: none !important;
+  }
+  .pico-empty-glyph span:last-child {
+    animation: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .pico-dock {
+    --pico-panel-width: calc(100vw - 24px);
+    --pico-panel-height: calc(100dvh - 88px);
+    right: 12px;
+    bottom: max(12px, env(safe-area-inset-bottom));
+  }
+  .pico-morph {
+    width: 56px;
+    height: 56px;
+  }
+  .pico-morph__avatar {
+    left: -7px;
+    top: -7px;
+    transform: scale(0.7);
+  }
+  .pico-morph.is-open .pico-morph__avatar {
+    left: 9px;
+    top: 8px;
+    transform: scale(0.56);
+  }
+  .pico-header {
+    padding-left: 60px;
+  }
+  .pico-orb__label {
+    bottom: -2px;
+  }
+  .pico-message__bubble {
+    max-width: 92%;
+  }
+}

@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     mqtt_topic_prefix: str = "industrial/device"
     mqtt_client_id: str = "diagnosis-backend"
     mqtt_sensor_topic: str = "device/+/sensor_data"
+    mqtt_command_topic: str = "device/{device_id}/command"
+    mqtt_command_ack_topic: str = "device/+/command_ack"
 
     # 模型推理
     model_device: str = "cpu"  # cpu / cuda

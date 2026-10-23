@@ -13,14 +13,11 @@ from .pinn_residual import pinn_residual_generator
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# CNN 输入构造
-# ---------------------------------------------------------------------------
 def convert_to_cnn_input(window: list[dict]) -> Optional[np.ndarray]:
     """从传感器窗口提取振动序列，构造 CNN 输入 (1, 1, 2048)。
 
     兼容字段名：vibration（扁平或 observations 嵌套）与 CWRU 原始通道名 DE。
-    长度不足补零，超过 2048 取最近 2048 点。
+    长度不足补零，超过 2048 取最近 2048 点。研究页入口会先拒绝不足 2048 点的窗口。
     """
     def _vibration(rec) -> Optional[float]:
         if not isinstance(rec, dict):
@@ -53,37 +50,29 @@ def convert_to_cnn_input(window: list[dict]) -> Optional[np.ndarray]:
 
 
 class AnomalyDetectService:
-    """PINN + 1D-CNN 异常检测服务。
-
-    流程：传感器窗口 -> PINN 物理残差 + 1D-CNN 故障分类 -> 健康评分。
-    """
+    """PINN + 1D-CNN 异常检测服务。"""
 
     def __init__(self) -> None:
         self.pinn = pinn_residual_generator
         self.cnn = cnn_classifier
         self.scorer = health_scorer
 
-    # ------------------------------------------------------------------
-    # 主检测入口
-    # ------------------------------------------------------------------
     def detect(self, device_id: str, window: list[dict]) -> dict:
-        """对设备时间窗口数据进行异常检测。
+        """对设备时间窗口数据进行异常检测。不满足研究页条件时不评分。"""
+        from .research_guard import blocked_detect, research_block_reason
 
-        Args:
-            device_id: 设备 ID
-            window: 传感器窗口数据（list[dict]，每条含振动/温度/电流/压力/转速等）
+        reason = research_block_reason(window)
+        if reason:
+            return blocked_detect(device_id, reason)
 
-        Returns:
-            device_id / pinn(pinn残差) / cnn(分类结果) / health(健康评分)
-        """
-        # 1. PINN 物理残差（统一入口：训练模型优先，失败降级）
         pinn_result = self.pinn.compute_residual(window)
+        if pinn_result.get("pinn_source") != "trained_model":
+            return blocked_detect(device_id, "模型未加载")
 
-        # 2. 1D-CNN 故障分类（真实 2048 点窗口推理）
         cnn_result = self.cnn.classify(convert_to_cnn_input(window))
-
-        # 3. 健康评分
         health = self.scorer.score(pinn_result, cnn_result)
+        if not isinstance(health.get("health_score"), (int, float)):
+            return blocked_detect(device_id, "模型未加载")
 
         result = {
             "device_id": device_id,
@@ -103,15 +92,14 @@ class AnomalyDetectService:
         )
         return result
 
-    # ------------------------------------------------------------------
-    # 便捷方法
-    # ------------------------------------------------------------------
     def compute_anomaly_score(self, window: list[dict]) -> float:
-        """计算综合异常分数（0~1，健康分数取反）。"""
-        pinn = self.pinn.compute_residual(window)
-        cnn = self.cnn.classify(convert_to_cnn_input(window))
-        health = self.scorer.score(pinn, cnn)
-        return round((100.0 - health["health_score"]) / 100.0, 4)
+        """计算综合异常分数（0~1）。模型未加载时返回 0，不把缺省当成健康。"""
+        detected = self.detect("", window)
+        health = detected.get("health") or {}
+        score = health.get("health_score")
+        if not isinstance(score, (int, float)):
+            return 0.0
+        return round((100.0 - float(score)) / 100.0, 4)
 
     def physical_residual(self, sample: dict) -> dict:
         """计算单条样本的物理残差（PINN 约束）。"""

@@ -37,30 +37,52 @@ class AcousticService:
             round(float(np.max(np.abs(arr))), 4),
         ]
 
-    def spectrum(self, device_id: str) -> dict:
-        """返回模拟的声学频谱热力图数据（演示版）。
+    def spectrum(self, device_id: str, window: list[dict], sample_rate: int = 12000) -> dict:
+        """基于真实声学通道窗口计算 STFT 频谱热力图。
 
-        生成「频率 × 时间」二维频谱矩阵，供前端 ECharts heatmap 渲染。
-        用 device_id 做稳定种子，保证同一设备结果一致；特征峰模拟
-        轴承故障相关频段（1.2kHz 转频区 + 3.6kHz 特征频区）。
+        输入为 MQTT 真实上报的 acoustic 序列；无数据时返回 available=False，
+        不再生成演示用的随机频谱。
         """
-        n_freq, n_time = 64, 64
-        freqs = np.linspace(0, 6000, n_freq)
-        seed = sum((i + 1) * ord(c) for i, c in enumerate(device_id)) % (2**31)
-        rng = np.random.RandomState(seed)
-        spectrum = np.zeros((n_time, n_freq))
-        for t in range(n_time):
-            spectrum[t] = (
-                0.5 * np.exp(-((freqs - 1200) / 300) ** 2)
-                + 0.35 * np.exp(-((freqs - 3600) / 200) ** 2)
-                + rng.uniform(0.0, 0.15, n_freq)
-            )
+        acu = [
+            float(value)
+            for r in window
+            if isinstance(r, dict)
+            for value in (r.get("acoustic", r.get("acoustic_features")),)
+            if isinstance(value, (int, float))
+        ]
+        if len(acu) < 32:
+            return {
+                "device_id": device_id,
+                "available": False,
+                "reason": "no_data",
+                "freq": [],
+                "time": [],
+                "spectrum": [],
+                "coherence": None,
+            }
+
+        arr = np.asarray(acu, dtype=np.float32)
+        frame, hop = 32, 16
+        n_frames = max(1, 1 + (arr.size - frame) // hop)
+        window_fn = np.hanning(frame).astype(np.float32)
+        matrix = np.zeros((n_frames, frame // 2 + 1), dtype=np.float32)
+        for i in range(n_frames):
+            seg = arr[i * hop : i * hop + frame] * window_fn
+            matrix[i] = np.abs(np.fft.rfft(seg))
+
+        peak = float(matrix.max()) or 1.0
+        matrix = matrix / peak
+        freqs = np.fft.rfftfreq(frame, 1.0 / sample_rate)
+
+        fusion = self.fuse_device(window)
         return {
             "device_id": device_id,
+            "available": True,
             "freq": [round(float(f), 1) for f in freqs],
-            "time": list(range(n_time)),
-            "spectrum": spectrum.round(4).tolist(),
-            "coherence": round(0.86 + (seed % 10) / 100, 3),  # 声学与振动吻合度（演示值）
+            "time": list(range(n_frames)),
+            "spectrum": matrix.round(4).tolist(),
+            "coherence": fusion.get("cross_modal_agreement"),
+            "source": "mqtt_window",
         }
 
     def fuse(self, vibration_features: list[float], acoustic_features: list[float]) -> dict:
@@ -120,7 +142,12 @@ class AcousticService:
         返回跨模态一致性与融合异常分数（一致性越高，诊断越可信）。
         """
         vib = [r.get("vibration") for r in window if isinstance(r.get("vibration"), (int, float))]
-        acu = [r.get("acoustic") for r in window if isinstance(r.get("acoustic"), (int, float))]
+        acu = [
+            value
+            for r in window
+            for value in (r.get("acoustic", r.get("acoustic_features")),)
+            if isinstance(value, (int, float))
+        ]
         vib_feats = self._series_features(vib)
         acu_feats = self._series_features(acu)
         fusion = self.fuse(vib_feats, acu_feats)

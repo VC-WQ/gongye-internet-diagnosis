@@ -1,6 +1,8 @@
+import { LoadState } from './BusinessUI'
+import { errorText } from '../hooks/useResource'
 import { useEffect, useMemo, useState } from 'react'
 import { Card, Col, Empty, Row, Select, Space, Spin, Table, Tag } from 'antd'
-import ReactECharts from 'echarts-for-react'
+import ThemedChart from './ThemedChart'
 import { getRulSdePf } from '../services/api'
 import ChartNote from './ChartNote'
 import { xAxisBase, yAxisBase } from '../theme/echarts'
@@ -44,6 +46,7 @@ interface RulSdePfData {
 export default function RulSdePf() {
   const [data, setData] = useState<RulSdePfData>()
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [curveId, setCurveId] = useState<string>()
 
   useEffect(() => {
@@ -54,7 +57,7 @@ export default function RulSdePf() {
         setData(d)
         setCurveId((p) => p ?? d?.curves?.[0]?.id)
       })
-      .catch(() => {})
+      .catch((e) => { if (active) setLoadError(errorText(e)) })
       .finally(() => {
         if (active) setLoading(false)
       })
@@ -86,7 +89,7 @@ export default function RulSdePf() {
           name: 'SDE + 粒子滤波（本文）',
           type: 'bar',
           data: sde,
-          itemStyle: { color: '#22d3ee' },
+          itemStyle: { color: '#477d9e' },
           label: { show: true, position: 'top', formatter: (p: { value: number }) => p.value.toFixed(3) },
         },
         {
@@ -115,27 +118,30 @@ export default function RulSdePf() {
           name: '真实 RUL',
           type: 'line',
           showSymbol: false,
-          smooth: true,
+          smooth: false,
           data: curve.actual.map((v, i) => [((i / (n - 1)) * 100).toFixed(1), v]),
-          lineStyle: { color: '#f5222d', width: 2 },
+          lineStyle: { color: '#bf5965', width: 2 },
+          itemStyle: { color: '#bf5965' },
         },
         {
           name: 'SDE + 粒子滤波预测',
           type: 'line',
           showSymbol: false,
-          smooth: true,
+          smooth: false,
           connectNulls: false,
           data: curve.sde_pf.map((v, i) => [((i / (n - 1)) * 100).toFixed(1), v]),
-          lineStyle: { color: '#22d3ee', width: 2 },
+          lineStyle: { color: '#477d9e', width: 2 },
+          itemStyle: { color: '#477d9e' },
         },
         {
           name: '指数外推基线',
           type: 'line',
           showSymbol: false,
-          smooth: true,
+          smooth: false,
           connectNulls: false,
           data: curve.baseline.map((v, i) => [((i / (n - 1)) * 100).toFixed(1), v]),
-          lineStyle: { color: '#94a3b8', type: 'dashed' },
+          lineStyle: { color: '#6e7d8b', type: 'dashed' },
+          itemStyle: { color: '#6e7d8b' },
         },
       ],
     }
@@ -149,7 +155,7 @@ export default function RulSdePf() {
       const pairs = pred
         .map((p, i) => [p, actual[i]] as const)
         .filter(([p, a]) => p != null && a != null) as Array<[number, number]>
-      if (!pairs.length) return 0
+      if (!pairs.length) return null
       return pairs.reduce((s, [p, a]) => s + Math.abs(p - a), 0) / pairs.length
     }
     return {
@@ -166,13 +172,13 @@ export default function RulSdePf() {
         {
           name: 'SDE + 粒子滤波',
           type: 'bar',
-          data: cs.map((c) => +maeOf(c.sde_pf, c.actual).toFixed(4)),
-          itemStyle: { color: '#22d3ee' },
+          data: cs.map((c) => { const value = maeOf(c.sde_pf, c.actual); return value == null ? null : +value.toFixed(4) }),
+          itemStyle: { color: '#477d9e' },
         },
         {
           name: '指数外推基线',
           type: 'bar',
-          data: cs.map((c) => +maeOf(c.baseline, c.actual).toFixed(4)),
+          data: cs.map((c) => { const value = maeOf(c.baseline, c.actual); return value == null ? null : +value.toFixed(4) }),
           itemStyle: { color: '#64748b' },
         },
       ],
@@ -184,12 +190,12 @@ export default function RulSdePf() {
   const maeDrop = m && m.baseline.mae ? (m.baseline.mae - m.sde_pf.mae) / m.baseline.mae : 0
 
   return (
-    <Spin spinning={loading}>
+    <LoadState loading={loading} error={loadError} onRetry={() => window.location.reload()}><Spin spinning={false}>
       <Row gutter={16}>
         <Col span={24} style={{ marginBottom: 12 }}>
           <Space size={8} wrap>
-            <Tag color="cyan">创新点二</Tag>
-            <span style={{ color: '#94a3b8', fontSize: 13 }}>
+            <Tag color="cyan">SDE + PF</Tag>
+            <span style={{ color: "var(--muted)", fontSize: 13 }}>
               随机微分方程（SDE）建模磨损自加速过程 + 粒子滤波在线估计退化速率 + 首达时间外推 RUL
             </span>
           </Space>
@@ -208,9 +214,9 @@ export default function RulSdePf() {
             }
           >
             {m ? (
-              <ReactECharts theme="tech-dark" option={metricOption} style={{ height: 280 }} />
+              <ThemedChart option={metricOption} style={{ height: 280 }} />
             ) : (
-              <Empty description="数据准备中" />
+              <Empty description="暂无实验结果" />
             )}
           </Card>
         </Col>
@@ -239,9 +245,9 @@ export default function RulSdePf() {
             }
           >
             {curve ? (
-              <ReactECharts theme="tech-dark" option={curveOption} style={{ height: 280 }} />
+              <ThemedChart option={curveOption} style={{ height: 280 }} />
             ) : (
-              <Empty description="数据准备中" />
+              <Empty description="暂无实验结果" />
             )}
           </Card>
         </Col>
@@ -254,14 +260,14 @@ export default function RulSdePf() {
               <ChartNote
                 desc="按轴承分组统计的 RUL 预测平均绝对误差（MAE），逐根对比两种方法。"
                 dataSource="XJTU-SY 15 根轴承 · 3 种工况（35Hz12kN / 37.5Hz11kN / 40Hz10kN），真实公开数据。"
-                insight="每根轴承上青色柱都低于灰色柱，说明改进不是靠个别样本拉高的均值，而是整体一致变好。"
+                insight="逐轴承展示有效预测点上的 MAE；部分轴承并未优于基线。两种方法的有效预测区间可能不同，请结合具体曲线复核，缺失预测不记为零误差。"
               />
             }
           >
             {data?.curves?.length ? (
-              <ReactECharts theme="tech-dark" option={perBearingOption} style={{ height: 300 }} />
+              <ThemedChart option={perBearingOption} style={{ height: 300 }} />
             ) : (
-              <Empty description="数据准备中" />
+              <Empty description="暂无实验结果" />
             )}
           </Card>
         </Col>
@@ -301,7 +307,7 @@ export default function RulSdePf() {
               ]}
             />
             {m && (
-              <div style={{ marginTop: 10, fontSize: 12, color: '#94a3b8' }}>
+              <div style={{ marginTop: 10, fontSize: 12, color: "var(--muted)" }}>
                 R² 提升 {r2Gain >= 0 ? '+' : ''}
                 {r2Gain.toFixed(3)}；基线 R² 为负，说明"健康指标指数外推"在该数据上甚至不如直接预测均值，
                 而 SDE + 粒子滤波首次把 R² 拉正。
@@ -310,6 +316,6 @@ export default function RulSdePf() {
           </Card>
         </Col>
       </Row>
-    </Spin>
+    </Spin></LoadState>
   )
 }

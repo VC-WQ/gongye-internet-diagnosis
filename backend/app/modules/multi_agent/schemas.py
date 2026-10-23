@@ -39,6 +39,7 @@ FAULT_TYPE_LABELS_ZH: dict[str, str] = {
     FaultType.BALL.value: "滚动体故障",
     FaultType.LUBRICATION.value: "润滑不良",
     FaultType.OVERHEATING.value: "过热",
+    "unknown": "未分类异常（分类模型不可用）",
 }
 
 # 各类故障的可用性：前 4 类 available，后 2 类 not_available

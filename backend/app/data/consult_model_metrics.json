@@ -1,0 +1,101 @@
+{
+  "skab": {
+    "model_name": "SKAB 工况异常分类",
+    "model_file": "models/skab_anomaly.joblib",
+    "task": "工况异常分类",
+    "algorithm": "梯度提升树",
+    "train_range": "除 anomaly-free/anomaly-free.csv 与 other/13.csv 以外的 SKAB 试验",
+    "train_files": [
+      "other/1.csv",
+      "other/10.csv",
+      "other/11.csv",
+      "other/12.csv",
+      "other/14.csv",
+      "other/2.csv",
+      "other/3.csv",
+      "other/4.csv",
+      "other/5.csv",
+      "other/6.csv",
+      "other/7.csv",
+      "other/8.csv",
+      "other/9.csv",
+      "valve1/0.csv",
+      "valve1/1.csv",
+      "valve1/10.csv",
+      "valve1/11.csv",
+      "valve1/12.csv",
+      "valve1/13.csv",
+      "valve1/14.csv",
+      "valve1/15.csv",
+      "valve1/2.csv",
+      "valve1/3.csv",
+      "valve1/4.csv",
+      "valve1/5.csv",
+      "valve1/6.csv",
+      "valve1/7.csv",
+      "valve1/8.csv",
+      "valve1/9.csv",
+      "valve2/0.csv",
+      "valve2/1.csv",
+      "valve2/2.csv",
+      "valve2/3.csv"
+    ],
+    "holdout": "anomaly-free/anomaly-free.csv、other/13.csv",
+    "holdout_files": [
+      "anomaly-free/anomaly-free.csv",
+      "other/13.csv"
+    ],
+    "window": "最近 30 秒，步长 5 秒做训练和留出计分；会诊使用最近一个 30 秒窗口",
+    "score_formula": "100 × 正常概率",
+    "score_label": "正常概率换算",
+    "test_metric": {
+      "name": "留出试验异常类精确率、召回率、F1",
+      "precision": 0.2093,
+      "recall": 0.1698,
+      "f1": 0.1875,
+      "positive_class": "anomaly",
+      "windows": 2055
+    }
+  },
+  "xjtu": {
+    "model_name": "XJTU-SY 剩余寿命预测",
+    "model_file": "models/xjtu_rul.joblib",
+    "task": "剩余寿命预测",
+    "algorithm": "梯度提升树",
+    "label_note": "训练标签是失效后回推的剩余寿命比例，显示值是模型预测",
+    "train_range": "除 Bearing1_1、Bearing2_1 以外的 13 根 XJTU-SY 轴承",
+    "train_bearings": [
+      "Bearing1_2",
+      "Bearing1_3",
+      "Bearing1_4",
+      "Bearing1_5",
+      "Bearing2_2",
+      "Bearing2_3",
+      "Bearing2_4",
+      "Bearing2_5",
+      "Bearing3_1",
+      "Bearing3_2",
+      "Bearing3_3",
+      "Bearing3_4",
+      "Bearing3_5"
+    ],
+    "holdout": "Bearing1_1、Bearing2_1",
+    "holdout_bearings": [
+      "Bearing1_1",
+      "Bearing2_1"
+    ],
+    "window": "当前时刻之前的 30 个振动 RMS，不使用该时刻之后的采样，也不使用 hi",
+    "score_formula": "100 × 预测剩余寿命比例",
+    "score_label": "预测剩余寿命比例",
+    "event_state_rule": "预测值不低于 0.6 为正常，0.3 至 0.6 为预警，低于 0.3 为告警",
+    "test_metric": {
+      "name": "两根留出轴承的平均绝对误差",
+      "mae": 0.323,
+      "per_bearing": {
+        "Bearing1_1": 0.1152,
+        "Bearing2_1": 0.3652
+      },
+      "windows": 556
+    }
+  }
+}

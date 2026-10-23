@@ -48,7 +48,10 @@ class MQTTPipelineService:
         """连接 Broker 并开始订阅。"""
         if self._started:
             return
-        self.client = MQTTClient(handler=self.handle_message)
+        self.client = MQTTClient(
+            handler=self.handle_message,
+            ack_handler=self.handle_ack,
+        )
         self.client.connect()
         self._started = True
         logger.info("MQTT 数据管道已启动")
@@ -76,6 +79,9 @@ class MQTTPipelineService:
             return
 
         data_point = self._normalize(device_id, payload)
+        from .store import save_point
+
+        save_point(data_point)
 
         # 写滑动窗口（线程安全）
         with self._lock:
@@ -132,6 +138,13 @@ class MQTTPipelineService:
 
         return {
             "device_id": device_id,
+            # Preserve declared provenance; an absent label is never promoted to real data.
+            "source": payload.get("source") if isinstance(payload.get("source"), str) else "unknown",
+            "device_status": payload.get("status") if isinstance(payload.get("status"), str) else None,
+            "dataset": payload.get("dataset") if isinstance(payload.get("dataset"), str) else None,
+            "sample_note": payload.get("sample_note") if isinstance(payload.get("sample_note"), str) else None,
+            "original_timestamp": payload.get("original_timestamp"),
+            "acoustic": self._first(payload, ("acoustic", "sound_level"), default=None),
             "timestamp": self._first(
                 payload, ("timestamp", "ts"), default=time.time()
             ),
@@ -182,46 +195,68 @@ class MQTTPipelineService:
     def get_window(self, device_id: str) -> list[dict[str, Any]]:
         """返回指定设备滑动窗口内的最近数据（最多 64 条）。
 
-        若 MQTT 管道尚未收到数据（例如未部署 Broker 或模拟器未运行），
-        则回退为「确定性模拟波形」，保证实时传感器曲线始终有数据可演示。
+        优先读数据库。没有落库记录时才看内存窗口。
         """
+        from .store import load_window
+
+        stored = load_window(device_id)
+        if stored:
+            return stored
         with self._lock:
-            window = list(self._windows.get(device_id, []))
-        if window:
-            return window
-        return self._simulate_window(device_id)
+            return list(self._windows.get(device_id, []))
 
     # ------------------------------------------------------------------
-    # 兜底模拟（无 MQTT 数据时按设备生成平滑波形）
+    # 指令回执
     # ------------------------------------------------------------------
-    @staticmethod
-    def _simulate_window(device_id: str, size: int = 48) -> list[dict[str, Any]]:
-        """无 MQTT 数据时按设备生成一段平滑传感器波形。
+    def handle_ack(
+        self, device_id: Optional[str], payload: dict, topic: str
+    ) -> None:
+        """处理设备指令回执：写回 CommandRecord 状态（运行在 paho 线程）。"""
+        command_id = payload.get("command_id")
+        event_id = payload.get("event_id")
+        status = str(payload.get("status", "done"))
 
-        相位随时间缓慢流动，模拟「实时刷新」；设备名做稳定种子，
-        使不同设备的波形可区分。仅含观测通道，供实时曲线直接绘制。
-        """
-        import numpy as np
+        # 延迟导入，避免模块级循环依赖
+        from app.models import SessionLocal
+        from app.modules.command_loop.models import CommandRecord
 
-        # 稳定种子（不用 hash()，避免进程随机化）
-        seed = sum((i + 1) * ord(c) for i, c in enumerate(device_id)) % 1000
-        t = np.arange(size, dtype=float) + int(time.time() // 3)
-        rng = np.random.RandomState(seed)
+        db = SessionLocal()
+        try:
+            # 下发在事务内：记录提交前回执可能先到达，这里短轮询等待提交可见。
+            record = None
+            for _ in range(10):
+                if event_id is not None:
+                    record = (
+                        db.query(CommandRecord)
+                        .filter(CommandRecord.event_id == event_id)
+                        .order_by(CommandRecord.id.desc())
+                        .first()
+                    )
+                if record is None and device_id is not None:
+                    record = (
+                        db.query(CommandRecord)
+                        .filter(CommandRecord.device_id == device_id)
+                        .order_by(CommandRecord.id.desc())
+                        .first()
+                    )
+                if record is not None:
+                    break
+                db.rollback()  # 放弃快照，下一轮才能看到新提交的记录
+                time.sleep(0.5)
+            if record is None:
+                logger.warning("收到无法匹配的指令回执：topic=%s payload=%s", topic, payload)
+                return
 
-        # 每台设备一个退化系数（磨损越重的设备振动/温度略高）
-        degrade = 1.0 + (seed % 5) * 0.06
-        chans = {
-            "vibration": 0.12 * degrade + 0.05 * np.sin(t / 8 + seed) + rng.uniform(0, 0.02, size),
-            "temperature": 46 + (seed % 5) + 6 * np.sin(t / 30 + seed / 3) + rng.uniform(-0.4, 0.4, size),
-            "current": 6.0 * degrade + 0.6 * np.sin(t / 12 + seed / 2) + rng.uniform(-0.1, 0.1, size),
-            "pressure": 6.5 + 0.4 * np.sin(t / 20 + seed / 5) + rng.uniform(-0.05, 0.05, size),
-            "speed": 1480 + 25 * np.sin(t / 40 + seed / 7) + rng.uniform(-2, 2, size),
-            "acoustic": 68 + (seed % 6) + 4 * np.sin(t / 9 + seed / 4) + rng.uniform(-0.3, 0.3, size),
-        }
-        return [
-            {k: round(float(chans[k][i]), 4) for k in chans}
-            for i in range(size)
-        ]
+            params = dict(record.params or {})
+            params["ack"] = payload
+            record.params = params
+            record.status = status
+            db.commit()
+            logger.info("指令回执已入库：%s status=%s", command_id, status)
+        except Exception as exc:  # pragma: no cover - 线程内兜底
+            logger.warning("指令回执入库失败：%s", exc)
+        finally:
+            db.close()
 
     def get_devices(self) -> list[str]:
         """返回当前已缓存数据的设备 ID 列表。"""

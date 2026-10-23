@@ -1,6 +1,8 @@
+import { LoadState } from './BusinessUI'
+import { errorText } from '../hooks/useResource'
 import { useEffect, useMemo, useState } from 'react'
 import { Card, Col, Empty, Row, Spin, Tag } from 'antd'
-import ReactECharts from 'echarts-for-react'
+import ThemedChart from './ThemedChart'
 import { getDatasetRegistry } from '../services/api'
 import ChartNote from './ChartNote'
 
@@ -33,12 +35,12 @@ interface RegistryData {
 
 // 任务类型配色
 const TASK_COLOR: Record<string, string> = {
-  signal_cls: '#38bdf8',
-  rul: '#52c41a',
-  detection: '#722ed1',
-  anomaly: '#fa8c16',
-  tab_cls: '#13c2c2',
-  regression: '#eb2f96',
+  signal_cls: '#477d9e',
+  rul: '#348875',
+  detection: '#76689a',
+  anomaly: '#9a6a25',
+  tab_cls: '#3a8b8c',
+  regression: '#a86382',
 }
 
 function fmt(n: number): string {
@@ -57,6 +59,7 @@ function fmt(n: number): string {
 export default function DataAssetRegistry() {
   const [data, setData] = useState<RegistryData>()
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
 
   useEffect(() => {
     let active = true
@@ -64,7 +67,7 @@ export default function DataAssetRegistry() {
       .then((d) => {
         if (active) setData(d)
       })
-      .catch(() => {})
+      .catch((e) => { if (active) setLoadError(errorText(e)) })
       .finally(() => {
         if (active) setLoading(false)
       })
@@ -84,12 +87,12 @@ export default function DataAssetRegistry() {
           type: 'pie',
           radius: ['45%', '70%'],
           center: ['60%', '50%'],
-          itemStyle: { borderRadius: 4 },
+          itemStyle: { borderRadius: 0 },
           label: { show: false },
           data: dist.map((d) => ({
             name: d.task_label,
             value: d.count,
-            itemStyle: { color: TASK_COLOR[d.task] ?? '#94a3b8' },
+            itemStyle: { color: TASK_COLOR[d.task] ?? '#6e7d8b' },
           })),
         },
       ],
@@ -99,33 +102,30 @@ export default function DataAssetRegistry() {
   const s = data?.summary
 
   return (
-    <Spin spinning={loading}>
+    <LoadState loading={loading} error={loadError} onRetry={() => window.location.reload()}><Spin spinning={false}>
       <Row gutter={16}>
         <Col span={24} style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 16, fontWeight: 600, color: '#22d3ee' }}>
-            数据资产总览（8 个数据集：6 个真实公开 + 2 个仿真 · 覆盖五大诊断任务）
+          <div style={{ fontSize: 16, fontWeight: 600, color: "var(--status-info)" }}>
+            数据集目录
           </div>
-          <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>
-            信号分类 / 剩余寿命预测 / 缺陷检测 / 产线异常 / 表格分类回归 —— 本页为离线静态预计算实证结果（非实时仿真）；
-            其中 DigitalTwin 泵、SmartFactory 产线两个数据集为仿真生成，其仿真可视化已归入「设备大屏」页面
-          </div>
+
         </Col>
 
         {/* 顶部 KPI */}
         <Col span={24} style={{ marginBottom: 16 }}>
           <Row gutter={16}>
             {[
-              { label: '公开数据集', value: s?.n_datasets ?? 0, suffix: '个', color: '#22d3ee' },
-              { label: '样本总量', value: s ? fmt(s.total_samples) : 0, suffix: '', color: '#52c41a' },
-              { label: '数据总占用', value: s?.total_size_gb ?? 0, suffix: 'GB', color: '#fa8c16' },
+              { label: '数据集', value: s?.n_datasets ?? '—', suffix: '个', color: 'var(--status-info)' },
+              { label: '样本总量', value: s ? fmt(s.total_samples) : '—', suffix: '', color: 'var(--status-ok)' },
+              { label: '数据总占用', value: s?.total_size_gb ?? '—', suffix: 'GB', color: 'var(--status-warn)' },
             ].map((k) => (
               <Col xs={8} key={k.label}>
                 <Card styles={{ body: { padding: 16, textAlign: 'center' } }}>
                   <div style={{ fontSize: 28, fontWeight: 700, color: k.color }}>
                     {k.value}
-                    <span style={{ fontSize: 14, fontWeight: 400, color: '#94a3b8' }}>{k.suffix}</span>
+                    <span style={{ fontSize: 14, fontWeight: 400, color: "var(--muted)" }}>{k.suffix}</span>
                   </div>
-                  <div style={{ color: '#94a3b8', fontSize: 13 }}>{k.label}</div>
+                  <div style={{ color: "var(--muted)", fontSize: 13 }}>{k.label}</div>
                 </Card>
               </Col>
             ))}
@@ -146,9 +146,9 @@ export default function DataAssetRegistry() {
             }
           >
             {data ? (
-              <ReactECharts theme="tech-dark" option={taskOption} style={{ height: 360 }} />
+              <ThemedChart option={taskOption} style={{ height: 360 }} />
             ) : (
-              <Empty description="数据准备中" />
+              <Empty description="暂无实验结果" />
             )}
           </Card>
         </Col>
@@ -168,7 +168,7 @@ export default function DataAssetRegistry() {
                   extra={<Tag color={TASK_COLOR[d.task] ?? 'blue'}>{d.task_label}</Tag>}
                   styles={{ body: { padding: 12 } }}
                 >
-                  <div style={{ fontSize: 12, color: '#78879b', lineHeight: 1.9 }}>
+                  <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.9 }}>
                     <div>
                       <b>样本量：</b>
                       {fmt(d.samples)}
@@ -186,7 +186,7 @@ export default function DataAssetRegistry() {
                       <b>来源：</b>
                       {d.source}
                     </div>
-                    <div style={{ color: '#94a3b8' }}>
+                    <div style={{ color: "var(--muted)" }}>
                       <b>用于：</b>
                       {d.used_in}
                     </div>
@@ -197,6 +197,6 @@ export default function DataAssetRegistry() {
           </Row>
         </Col>
       </Row>
-    </Spin>
+    </Spin></LoadState>
   )
 }

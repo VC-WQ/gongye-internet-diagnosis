@@ -1,5 +1,6 @@
 __pycache__/
 .venv/
+node_modules
 node_modules/
 datasets/
 models/*.pt
@@ -10,7 +11,20 @@ tmp/
 
 # 环境变量与密钥（严禁提交）
 .env
+.env.local
+.env.*.local
 backend/requirements_check.txt
 
 # 包管理器缓存
 .cache/
+# 前端生成文件
+frontend/dist/
+*.tsbuildinfo
+
+# 鸿蒙工程生成物（源码在 harmonyos/，构建产物不入库）
+harmonyos/.hvigor/
+harmonyos/oh_modules/
+harmonyos/entry/oh_modules/
+harmonyos/entry/build/
+harmonyos/local.properties
+harmonyos/.idea/

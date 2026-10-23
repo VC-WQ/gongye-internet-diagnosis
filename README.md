@@ -2,7 +2,7 @@
 
 > Industrial Equipment Multi-Agent Diagnosis System driven by Physical Digital Twin
 >
-> 统一接口前缀：`/api/v1`　后端：FastAPI　前端：React + TypeScript + Ant Design　实时通信：MQTT + WebSocket
+> 统一接口前缀：`/api/v1`　后端：FastAPI　鸿蒙端：ArkTS / ArkUI　网页：React + TypeScript + Ant Design　实时通信：MQTT + WebSocket
 
 ---
 
@@ -12,7 +12,7 @@
 
 > **让大模型只做「解读」，不做「计算」。**
 
-所有数值判断（振动分类、物理残差、数字孪生、健康评分）交给可解释的算法；大模型（DeepSeek）只负责把硬指标转述成自然语言诊断报告，从机制上规避数值幻觉。
+所有数值判断（振动分类、物理残差、数字孪生、健康评分）来自算法、设备目录及真实业务记录；大模型（DeepSeek）负责解读这些事实，并为 Pico 生成经过校验的查询或页面操作计划，不自行产生设备指标。
 
 使用前请先读第 4 节（启动）与第 9 节（注意事项），其中包含数据库、大模型 Key、MQTT 等最容易踩坑的配置点。说明文档就是本 README。
 
@@ -30,16 +30,21 @@
                                                                          │ HTTP
                                                                          ▼
                                                                   ┌──────────────┐
-                                                                  │  前端 React   │
-                                                                  │  frontend/    │
-                                                                  │  5173 / 80    │
+                                                                  │ 鸿蒙端 / 网页 │
+                                                                  │ harmonyos/   │
+                                                                  │ frontend/    │
                                                                   └──────────────┘
 ```
 
+交互端有两处，都只调用 `/api/v1`。分数、会诊和指令发布在后端完成。
+
+- **鸿蒙端** `harmonyos/`：赛题里的手机/平板交互端，ArkTS + ArkUI。登录、看设备、看采样、发起诊断、在仿真处置里下发润滑/降载/检修。打开方式见 `harmonyos/README.md`。
+- **网页** `frontend/`：原来的工厂大屏，继续用于开发和其他演示。
+
 - **模拟器**：用耦合随机微分方程（SDE）对 6 台异构设备的退化过程建模，产出振动/温度/电流/压力/转速/声压等观测值，可选通过 MQTT 上报。
 - **后端**：FastAPI，18 个功能模块路由，负责诊断、孪生、多智能体会诊、报告、阈值、可视化数据等。
-- **前端**：React 单页应用，7 个可视化组件 + 16 个页面，ECharts 绘图、Three.js 数字人。
-- **大模型**：DeepSeek（OpenAI 兼容接口），仅用于会诊报告的「解读」环节，可用 Mock 模式离线运行。
+- **前端**：React 单页应用，V2.3 四域工作空间（工厂 / 工具 / 管理 / 研究），ECharts 绘图、Three.js 数字人 Pico；Pico Agent MVP 复用统一设备/事件上下文、共享会话及原有动效。
+- **大模型**：DeepSeek（OpenAI 兼容接口），用于会诊解读及 Pico 的受约束计划与事实回答；未配置或调用失败时明确降级。
 
 ---
 
@@ -55,6 +60,7 @@
 | 认证 | PyJWT + bcrypt |
 | 数据库 | SQLite（默认）/ MySQL（可切换） |
 | 前端 | React 18 + TypeScript 5 + Vite 5 + Ant Design 5 |
+| 鸿蒙端 | HarmonyOS Stage 模型，ArkTS / ArkUI，API 12 |
 | 可视化 | ECharts 5 + echarts-for-react；Three.js 0.186（数字人） |
 | 部署 | Docker Compose（backend / frontend / mqtt / simulator 四服务） |
 
@@ -65,7 +71,8 @@
 ```
 .
 ├── backend/                # 后端服务（FastAPI）
-├── frontend/               # 前端应用（React + Vite）
+├── harmonyos/              # 鸿蒙交互端（ArkTS / ArkUI，DevEco Studio 打开）
+├── frontend/               # 网页大屏（React + Vite）
 ├── simulators/             # 虚拟设备模拟器（物理数字孪生 SDE）
 ├── data/                   # 运行时导出物（视觉检测曲线/样例图等）
 ├── mqtt/                   # Mosquitto broker 配置
@@ -171,24 +178,30 @@ frontend/
 
 **`src/pages/` 页面（对应路由）：**
 
-| 页面目录 | 路由 | 说明 |
+| 目录 | 路由 | 说明 |
 |---|---|---|
-| `Dashboard/` | `/dashboard` | 设备大屏：KPI + 全厂健康态势 + 实时曲线 + 三大组件 |
-| `DiagnoseWorkbench/` | `/diagnose` | AI 诊断工作台（会诊/时间线/报告 三标签） |
-| `DeviceCenter/` | `/devices` | 设备中心（设备列表 + 故障注入） |
-| `DeviceDetail/` | `/device/:deviceId` | 设备详情（实时曲线/孪生隐状态/声学频谱/健康历史） |
-| `ModelLab/` | `/lab` | 算法实验室（分类/回归/RUL/相关性等 11 组图表） |
-| `SystemOps/` | `/ops` | 系统运维（系统自评 + 动态阈值建议） |
-| `SystemEval/` | 子页 | 系统自评（准确率/误报/漏报/延迟） |
-| `ThresholdSuggestions/` | 子页 | 动态阈值建议（采纳/拒绝） |
-| `FaultInjection/` | 子页 | 故障注入面板 |
-| `ChatWindow/` | 子页 | AI 诊断助手（数字人 + 多智能体会诊消息流 + **确认执行/修改建议/拒绝** 三按钮人机闭环） |
-| `Timeline/` | 子页 | 事件时间线（传感器曲线**通道下拉** + 数字孪生隐状态 + 事件标注时间线，三卡均带「说明」浮层） |
-| `ReportCenter/` | 子页 | 诊断报告中心（快报/事件报告） |
-| `UserManagement/` | `/admin/users` | 用户管理 |
-| `DeviceManagement/` | `/admin/devices` | 设备管理 |
-| `RecordManagement/` | `/admin/records` | 诊断记录管理 |
-| `Login/` | `/login` | 登录页 |
+| `features/factory/` | `/dashboard` | 工厂工作台：可点击状态筛选、设备导航、中心场景、实时监测、当前设备、事件与报告、原位展开层 |
+| `features/factory/panels/` | `/dashboard?panel=...` | 设备分析（7 Tab）、诊断、事件处置、报告；共用真实 event/device 数据 |
+| `features/tools/` | `/tools`、`/tools/{simulation,vision,pico,evaluation,settings}` | 仿真、缺陷检测、数字伴侣、系统自评、界面偏好 |
+| `features/about/` | `/about`、`/about/research/:topic/:point` | 研究目录与真实数据文章（数据/信号、诊断、健康、机理、成果） |
+| `features/admin/` | `/admin/users`、`/admin/devices`、`/admin/records` | 权限受控的后台管理 |
+| `features/pico/` | 全局 Dock + `/tools/pico` | 单一 Provider 的只读助手、连续形变、自动朗读、3D 表情 |
+| `motion/` | 全局 | 运动令牌、登录 A/B 时间线、FlipValue、内容过渡 |
+| `pages/Login/` | `/login` | 登录；A 红色揭幕、B 面板缩圆与纸层跟随 |
+| `pages/Timeline/` | 嵌入事件工作区 | 事件传感器/审计时间线组件 |
+| `pages/SystemEval/` | `/tools/evaluation` | 系统自评组件 |
+| `pages/ThresholdSuggestions/` | 设备分析“阈值建议”Tab | 按设备阈值建议（管理员审批） |
+| `pages/FaultInjection/` | `/tools/simulation` | 管理员仿真状态工具 |
+
+V2.2 保留旧地址兼容：`/devices`、`/device/:id`、`/diagnose`、`/events`、`/reports`、`/dashboard?view=*`、`/lab`、`/ops?tab=*` 均单向迁移到新工厂/工具/关于地址；`/dashboard` 的设备、事件、状态筛选、面板、详情 Tab、分页与通道仍是同一看板的内部状态。
+
+工厂使用 `/dashboard?device=...&event=...&status=...&panel=...&detail=...` 的单一状态；后退/前进走浏览器历史，“上一级”按信息层级返回（工厂展开层 → 工厂，工具子页 → 工具，研究文章 → 研究方向 → 研究目录）。旧 `/diagnose?tab=timeline` / `trajectory` / `report` 链接兼容迁移到事件或报告面板。
+
+实时推送复用 `/api/v1/mqtt-pipeline/ws`，开发代理启用 WebSocket；断线时每 5 秒读取采样窗口。超过 15 秒的采样标记过期，缺少有效时间或数值的窗口不能发起诊断。数据来源、时效与回答方式保留在必要的详情/消息“详情”中，主界面不重复堆叠来源标签。数字场景是设备目录分组示意，不代表工厂平面或物理连接。研究图表与实时监测分开，且只渲染后端已提供的数据。
+
+人工确认与下发指令是两次独立操作。当前后端尚未提供指令回执查询接口，页面不会把下发成功或观察期解释为设备执行成功或故障恢复。
+
+前端检查：在 `frontend/` 运行 `npm run test`、`npm run typecheck`、`npm run build`。采样契约测试使用 Node 内置测试运行器与已有 TypeScript 依赖，不需要额外测试库。
 
 ### 3.3 `simulators/` —— 虚拟设备模拟器
 
@@ -353,7 +366,7 @@ start-local.bat
 `backend/.env` 当前内容：
 
 ```ini
-DEEPSEEK_API_KEY=sk-********          # 大模型 Key（仅用于报告解读）
+DEEPSEEK_API_KEY=sk-********          # 后端大模型 Key（会诊解读与 Pico）
 DEEPSEEK_BASE_URL=https://api.deepseek.com
 DEEPSEEK_MODEL=deepseek-chat
 DEEPSEEK_MOCK=true                    # true=离线模拟（当前默认），不调用真实大模型
@@ -445,7 +458,7 @@ SECRET_KEY=industrial-diagnosis-2026-secret-key-7f3a
 9. **人机闭环的三条分支语义不同**（详见第 7 节）：`confirm+execute` 推进状态机并下发指令；`revise` **只改写报告内容、刻意不推进状态机**（避免"改个错别字就把事件推进下一步"），另写一条 `EventTimeline` 留痕；`reject` 必填理由后退回告警态。改动这三处逻辑时请保持该语义。
 10. **新增图表必须带说明**：统一复用 `components/ChartNote.tsx` 的 `desc / dataSource / insight` 三字段；ECharts 的 `xAxis/yAxis` 要显式写 `axisLabel / axisLine / axisTick / splitLine`，`grid.bottom` 留 60+ 像素给轴名，否则坐标轴会被挤掉不出显示（参考 `pages/Timeline/index.tsx` 的 `axisCommon()`）。
 11. **本机启动优先用 `start-local.bat`**：它会依次拉起 MySQL → 后端 → 前端并自动开浏览器；换机器只需改脚本顶部三个路径变量（Python / Node / MySQL）。脚本已针对 `npm.cmd` 路径含空格、项目根路径含中文两处做了兼容性修复（`start /d` 避免引号嵌套、Vite 加 `host: '0.0.0.0'` 同时监听 IPv4/IPv6）。
-12. **会诊接口走 `/command-loop/events` 而非 `/multi-agent/consult`**：前端 `ChatWindow` 页面是先 `createEvent` 建事件再由后端 command_loop 内部调 consult 并推进状态机；直接调 `/multi-agent/consult` 只跑会诊不走状态机。
+12. **会诊接口走 `/command-loop/events` 而非 `/multi-agent/consult`**：前端工厂原位诊断面板（`features/factory/panels/DiagnosisPanel.tsx`）先 `createEvent` 建事件，再由后端 command_loop 内部调 consult 并推进状态机；直接调 `/multi-agent/consult` 只跑会诊不走状态机。
 
 ---
 
@@ -457,11 +470,32 @@ SECRET_KEY=industrial-diagnosis-2026-secret-key-7f3a
 - [ ] 「AI 诊断」能发起一次会诊并出报告（Mock 或真实 Key 均可）
 - [ ] 会诊报告的「确认执行 / 修改建议 / 拒绝」三个按钮都能走通，状态机能推进到「观察期」并回显指令编号
 - [ ] 「事件时间线」传感器曲线横轴刻度可见，通道下拉可切换，三张卡的「说明」能点开
-- [ ] 算法实验室图表正常渲染
+- [ ] 研究中心目录、真实数据图表与证据来源正常渲染
+- [ ] 工厂场景、工具区诊断/事件/报告与 Pico 连续形变正常
+- [ ] Pico 当前设备问答、全厂排行、研究引用、自动导航、主题及管理员表单预填正常
 - [ ] （如需实时）MQTT broker 与模拟器已启动
 
 ---
 
+## 11. Pico Agent MVP
+
+Pico 分为当前上下文问答、业务与研究检索、页面操作三层。页面快照来自 Workspace 与真实路由，不上传 DOM、表单内容或凭证。切换页面、设备或标签后会取消旧请求；同一 Provider 保留 Dock 与工具工作台的共享对话。
+
+可用的只读工具共九项：`get_device_overview`、`get_device_telemetry`、`list_device_events`、`get_event_detail`、`get_report_summary`、`search_devices`、`search_events`、`search_research_topics`、`get_research_evidence`。研究索引对应五个方向、十三个真实研究点及固定项目知识资料，不依赖向量数据库。模型输出只允许有界工具计划，不能执行 SQL、shell、任意文件读取或外部 URL。
+
+可直接演示：
+
+- 在工厂选中设备后问“这台设备怎么样”；未选择设备时会要求明确目标，不默认第一台。
+- 问“健康评分最低的三台设备”“最近有哪些设备出现异常”“SDE 和粒子滤波怎么用于剩余寿命预测”。指标来自目录、事件或固定研究接口；离线、仿真、过期及缺失数据保留说明。
+- 说“打开研究中心”“打开驱动电机 A 的详细信息”“把页面换成深色”“换回浅色”。这些明确请求会自动执行；普通信息提问不自动导航。
+- 管理员说“帮我新增一台设备，编号 motor-008，名称驱动电机 C，健康评分92”。Pico 打开 `/admin/devices` 的原新增表单并填入已知字段；类型保持空白，等待人工补齐。明确编辑请求使用 `/manage/devices/:id` 的原编辑表单。两者都不自动保存。
+
+页面动作协议只允许 `navigate`、`set_theme`、`prefill_device_form`，前后端逐项校验。导航使用固定 `route_id` 映射；设备和事件验证存在性；管理入口及表单预填重新查询真实账号权限。独立执行器等待实际路由、主题或表单接收结果，成功后才更新回复。写入、删除、阈值修改、事件确认/处置和设备控制均不属于 Pico 的自主能力。
+
+模型复用后端 `multi_agent/llm_client.py`。要接入线上模型，在后端配置有效的 `DEEPSEEK_API_KEY`、`DEEPSEEK_MODEL`、`DEEPSEEK_BASE_URL`，设置 `DEEPSEEK_MOCK=false` 并重启；凭证不得进入前端或 Git。Pico 只读规划预算为7秒、事实回答10秒且不重试，前端请求总超时25秒。无 Key 或失败时保留确定性查询、有限命令与字段解析，复杂请求可能需要澄清，降级不会冒充线上推理。模型规划路径可通过受控 SDK 测试验证，不能据此宣称实际线上调用通过。
+
+验证命令：前端目录运行 `npm test`、`npm run typecheck`、`npm run build`；后端虚拟环境运行 `python -m pytest -q`。真实浏览器还需覆盖自动导航、主题、设备详情、未保存预填、普通账号权限、未知目标、前进后退与上下文取消。
+
 *本 README 内容全部核对自项目源码（`backend/app/main.py`、`config.py`、`docker-compose.yml`、`frontend/src/App.tsx`、`services/api.ts`、各页面与组件）与运行配置，力求与代码一致。如与运行环境不符，以实际代码为准。*
 
-**文档最后更新：2026-10-15**（目录结构与本仓库实际内容对齐，移除不存在的文档引用）。
+**文档最后更新：2026-10-21**（V2.3 交互与动效基础，以及 Pico Agent MVP 三阶段能力）。

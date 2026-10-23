@@ -1,115 +1,59 @@
-import * as echarts from 'echarts'
-
-// 深色科技大屏统一图表主题名（echarts-for-react 的 theme 属性引用）
-export const TECH_DARK_THEME = 'tech-dark'
-
-// 语义色（与全局 CSS / Antd token 保持一致）
-const axisLine = 'rgba(148, 163, 184, 0.55)'
-const splitLine = 'rgba(148, 163, 184, 0.18)'
-const labelColor = '#ffffff'
-
-// 通用坐标轴样式：保证深色背景下坐标轴、刻度、标签清晰可见（横轴不丢失）
-export const AXIS_LABEL_COLOR = '#ffffff'
-export const AXIS_NAME_COLOR = '#ffffff'
-export const AXIS_LINE_COLOR = 'rgba(148, 163, 184, 0.55)'
-export const AXIS_SPLIT_COLOR = 'rgba(148, 163, 184, 0.15)'
-
-// 轴名称统一样式：纯白、无描边无阴影（echarts 默认 nameTextStyle 为深色，
-// 深色背景下不可见；显式关闭描边，避免出现"白边裹深色字"的渲染效果）
-const axisNameStyle = {
-  color: '#ffffff',
-  fontSize: 12,
-  fontWeight: 500 as const,
-  textBorderColor: 'rgba(0,0,0,0)',
-  textBorderWidth: 0,
-  shadowBlur: 0,
-  shadowColor: 'rgba(0,0,0,0)',
-}
-
-// X 轴基础样式（显式显示轴线 / 刻度 / 标签 / 轴名，避免被深色背景吞掉）
+/** 图表只保留布局/字号默认值；文字和表面颜色由当前 AntD 主题提供。 */
 export function xAxisBase(extra: Record<string, unknown> = {}) {
   return {
-    nameTextStyle: axisNameStyle,
-    axisLine: { show: true, lineStyle: { color: AXIS_LINE_COLOR } },
-    axisTick: { show: true, lineStyle: { color: AXIS_LINE_COLOR } },
-    axisLabel: { color: AXIS_LABEL_COLOR, fontSize: 11 },
+    nameTextStyle: { fontSize: 11 },
+    axisLine: { show: true },
+    axisTick: { show: false },
+    axisLabel: { fontSize: 11, hideOverlap: true },
     splitLine: { show: false },
     ...extra,
   }
 }
-
-// Y 轴基础样式（保留淡横向网格线，便于读数）
 export function yAxisBase(extra: Record<string, unknown> = {}) {
+  return { ...xAxisBase(), splitLine: { show: true }, ...extra }
+}
+
+export interface ChartTokens {
+  colorText: string
+  colorTextSecondary: string
+  colorBgElevated: string
+  colorBorder: string
+  colorBorderSecondary: string
+  colorPrimary: string
+  colorInfo: string
+  colorSuccess: string
+  colorWarning: string
+  colorError: string
+  fontFamily: string
+}
+
+/** 返回真实颜色值供 Canvas 使用，避免把无法解析的 CSS var 传给绘图器。 */
+export function createChartTheme(token: ChartTokens) {
+  const axis = {
+    nameTextStyle: { color: token.colorTextSecondary, fontSize: 11 },
+    axisLabel: { color: token.colorTextSecondary, fontSize: 11, hideOverlap: true },
+    axisLine: { lineStyle: { color: token.colorBorder } },
+    axisTick: { show: false },
+    splitLine: { lineStyle: { color: token.colorBorderSecondary } },
+  }
   return {
-    nameTextStyle: axisNameStyle,
-    axisLine: { show: true, lineStyle: { color: AXIS_LINE_COLOR } },
-    axisTick: { show: true, lineStyle: { color: AXIS_LINE_COLOR } },
-    axisLabel: { color: AXIS_LABEL_COLOR, fontSize: 11 },
-    splitLine: { show: true, lineStyle: { color: AXIS_SPLIT_COLOR } },
-    ...extra,
+    backgroundColor: 'transparent',
+    color: [token.colorInfo, token.colorSuccess, token.colorWarning, token.colorPrimary, '#8676a0', '#a56f89'],
+    textStyle: { color: token.colorText, fontFamily: token.fontFamily },
+    title: { textStyle: { color: token.colorText }, subtextStyle: { color: token.colorTextSecondary } },
+    legend: { textStyle: { color: token.colorTextSecondary }, pageTextStyle: { color: token.colorTextSecondary } },
+    tooltip: {
+      backgroundColor: token.colorBgElevated,
+      borderColor: token.colorBorder,
+      borderRadius: 0,
+      textStyle: { color: token.colorText },
+      extraCssText: 'box-shadow: 0 8px 24px rgba(0,0,0,.12);',
+    },
+    visualMap: { textStyle: { color: token.colorTextSecondary } },
+    categoryAxis: { ...axis, splitLine: { show: false } },
+    valueAxis: axis,
+    logAxis: axis,
+    timeAxis: { ...axis, splitLine: { show: false } },
+    dataZoom: { textStyle: { color: token.colorTextSecondary }, borderColor: token.colorBorder },
   }
 }
-
-/**
- * 深色科技主题：透明背景 + 冷灰轴线 + 青蓝数据配色。
- * 覆盖所有 echarts-for-react 实例的默认浅色外观。
- */
-const techDarkTheme = {
-  color: [
-    '#22d3ee',
-    '#38bdf8',
-    '#52c41a',
-    '#faad14',
-    '#f5222d',
-    '#a78bfa',
-    '#f472b6',
-    '#2dd4bf',
-  ],
-  backgroundColor: 'transparent',
-  textStyle: { color: labelColor },
-  title: {
-    textStyle: { color: '#e6edf7' },
-    subtextStyle: { color: '#8fa3bd' },
-  },
-  legend: { textStyle: { color: '#b6c4d9' } },
-  tooltip: {
-    backgroundColor: '#101b30',
-    borderColor: 'rgba(148, 163, 184, 0.28)',
-    textStyle: { color: '#e6edf7' },
-    extraCssText: 'box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); border-radius: 8px;',
-  },
-  categoryAxis: {
-    axisLine: { lineStyle: { color: axisLine } },
-    axisTick: { lineStyle: { color: axisLine } },
-    axisLabel: { color: labelColor },
-    nameTextStyle: { color: labelColor },
-    splitLine: { show: false },
-  },
-  valueAxis: {
-    axisLine: { lineStyle: { color: axisLine } },
-    axisLabel: { color: labelColor },
-    nameTextStyle: { color: labelColor },
-    splitLine: { lineStyle: { color: splitLine } },
-  },
-  logAxis: {
-    axisLine: { lineStyle: { color: axisLine } },
-    axisLabel: { color: labelColor },
-    nameTextStyle: { color: labelColor },
-    splitLine: { lineStyle: { color: splitLine } },
-  },
-  timeAxis: {
-    axisLine: { lineStyle: { color: axisLine } },
-    axisLabel: { color: labelColor },
-    nameTextStyle: { color: labelColor },
-    splitLine: { lineStyle: { color: splitLine } },
-  },
-}
-
-// 全局注册一次（在 main.tsx 中调用）
-export function registerTechDarkTheme() {
-  echarts.registerTheme(TECH_DARK_THEME, techDarkTheme)
-}
-
-// 模块加载即注册：本文件被 HMR 热更新后立即重新注册主题，
-// 避免主题改动后浏览器仍使用旧主题（轴名等文字颜色不生效的根因）。
-registerTechDarkTheme()

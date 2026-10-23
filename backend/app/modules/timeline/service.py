@@ -55,15 +55,29 @@ def _ts(t) -> Optional[str]:
     return t.isoformat(timespec="seconds") if t else None
 
 
-def _downsample(values: list, max_points: int) -> tuple[list[float], int, int, bool]:
-    """按步长降采样，返回 (采样结果, 点数, 步长, 是否降采样)。"""
+def _numeric_or_none(value: Any) -> Optional[float]:
+    """把真实观测值转成有限浮点数；缺失或非法值保留为空点，不伪造 0。"""
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) else None
+
+
+def _downsample(values: list, max_points: int) -> tuple[list[Optional[float]], int, int, bool]:
+    """按步长降采样，返回 (采样结果, 点数, 步长, 是否降采样)。
+
+    缺失/非法观测保留为 None，前端据此断线显示，而不是崩溃或被补造成 0。
+    """
     n = len(values)
     if n == 0:
         return [], 0, 1, False
     if n <= max_points:
-        return [float(v) for v in values], n, 1, False
+        return [_numeric_or_none(v) for v in values], n, 1, False
     stride = math.ceil(n / max_points)
-    out = [float(values[i]) for i in range(0, n, stride)]
+    out = [_numeric_or_none(values[i]) for i in range(0, n, stride)]
     return out, len(out), stride, True
 
 
@@ -179,7 +193,7 @@ class TimelineService:
         latent_available = all(k in present_keys for k in _LATENT_KEYS)
         if latent_available:
             latent_series = {
-                k: [float(d.get(k, 0.0)) for d in sensor_data if isinstance(d, dict)]
+                k: [_numeric_or_none(d.get(k)) for d in sensor_data if isinstance(d, dict)]
                 for k in _LATENT_KEYS
             }
             # 与传感器曲线同点数，便于前端同轴叠加
@@ -187,10 +201,11 @@ class TimelineService:
                 v, _, _, _ = _downsample(latent_series[k], max_points)
                 latent_series[k] = v
         elif simulate_latent:
+            health_score = _numeric_or_none(diag.get("health_score"))
             latent_series = _simulate_latent(
                 event.id,
                 str(diag.get("fault_type", "normal")),
-                float(diag.get("health_score", 100.0)),
+                100.0 if health_score is None else health_score,
                 points or DEFAULT_MAX_POINTS,
             )
         else:

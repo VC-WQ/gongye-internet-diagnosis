@@ -1,5 +1,6 @@
 """FastAPI 应用入口。"""
 import asyncio
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -23,12 +24,15 @@ from app.modules.edge_inference.router import router as edge_router
 from app.modules.feedback.router import router as feedback_router
 from app.modules.mqtt_pipeline.router import router as mqtt_router
 from app.modules.multi_agent.router import router as agent_router
+from app.modules.pico.router import router as pico_router
 from app.modules.report.router import router as report_router
 from app.modules.records.router import router as records_router
 from app.modules.threshold.router import router as threshold_router
 from app.modules.timeline.router import router as timeline_router
 from app.modules.vision.router import router as vision_router
 from app.modules.viz.router import router as viz_router
+
+logger = logging.getLogger(__name__)
 
 
 def _seed_devices() -> None:
@@ -74,11 +78,19 @@ async def lifespan(app: FastAPI):
     """应用生命周期管理。"""
     # 启动时创建数据表
     Base.metadata.create_all(bind=engine)
+    from app.modules.mqtt_pipeline.store import ensure_runtime_columns
+
+    ensure_runtime_columns()
     # 首次启动写入设备目录与默认管理员
     _seed_devices()
     _seed_admin()
     # 注入主事件循环，使 MQTT 线程能够跨线程推送 WebSocket
     mqtt_pipeline_service.attach_event_loop(asyncio.get_running_loop())
+    # 启动即订阅真实 MQTT 数据；Broker 暂不可用时自动重连，不影响服务启动
+    try:
+        mqtt_pipeline_service.start()
+    except Exception as exc:
+        logger.warning("MQTT 数据管道未启动（实时数据暂不可用）：%s", exc)
     yield
     # 关闭时释放资源（MQTT 客户端、模型进程、数据库连接池）
     mqtt_pipeline_service.stop()
@@ -105,6 +117,7 @@ for router in (
     edge_router,
     anomaly_router,
     agent_router,
+    pico_router,
     command_router,
     feedback_router,
     report_router,

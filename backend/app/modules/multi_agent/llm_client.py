@@ -41,12 +41,22 @@ class LLMClient:
             )
         return self._client
 
-    def chat(self, system: str, prompt: str) -> str | None:
+    def chat(
+        self, system: str, prompt: str, *, timeout: float | None = None,
+        max_retries: int | None = None,
+    ) -> str | None:
         """调用 DeepSeek 返回文本；失败或不可用返回 None（触发降级）。"""
         if not self.available:
             return None
         try:
             client = self._get_client()
+            options = {}
+            if timeout is not None:
+                options["timeout"] = timeout
+            if max_retries is not None:
+                options["max_retries"] = max_retries
+            if options:
+                client = client.with_options(**options)
             resp = client.chat.completions.create(
                 model=settings.deepseek_model,
                 messages=[
@@ -58,7 +68,8 @@ class LLMClient:
             content = resp.choices[0].message.content
             return content.strip() if content else None
         except Exception as exc:  # noqa: BLE001 — LLM 失败必须降级，不能抛出
-            logger.warning("DeepSeek 调用失败，降级为模板：%s", exc)
+            # 连接异常可能含 URL 或凭证；日志只保留类型。
+            logger.warning("DeepSeek 调用失败，降级为模板：%s", type(exc).__name__)
             return None
 
 

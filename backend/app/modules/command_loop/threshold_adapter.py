@@ -14,6 +14,8 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
+from app.models import User
+from app.modules.auth.deps import get_current_user, require_admin
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -187,7 +189,7 @@ threshold_adapter = ThresholdAdapter()
 # ---------------------------------------------------------------------------
 # 路由
 # ---------------------------------------------------------------------------
-router = APIRouter(prefix="/threshold/suggestions", tags=["阈值自适应"])
+router = APIRouter(prefix="/threshold/suggestions", tags=["阈值自适应"], dependencies=[Depends(get_current_user)])
 
 
 class _OperatorBody(BaseModel):
@@ -205,12 +207,12 @@ def list_suggestions(
 
 
 @router.post("/{suggestion_id}/accept")
-def accept(suggestion_id: int, body: _OperatorBody, db: Session = Depends(get_db)) -> dict:
+def accept(suggestion_id: int, body: _OperatorBody, db: Session = Depends(get_db), current_user: User = Depends(require_admin)) -> dict:
     """采纳建议（写审计：采纳人 + 时间戳）。"""
-    return threshold_adapter.accept(db, suggestion_id, body.operator)
+    return threshold_adapter.accept(db, suggestion_id, current_user.username)
 
 
 @router.post("/{suggestion_id}/reject")
-def reject(suggestion_id: int, body: _OperatorBody, db: Session = Depends(get_db)) -> dict:
+def reject(suggestion_id: int, body: _OperatorBody, db: Session = Depends(get_db), current_user: User = Depends(require_admin)) -> dict:
     """拒绝建议。"""
-    return threshold_adapter.reject(db, suggestion_id, body.operator)
+    return threshold_adapter.reject(db, suggestion_id, current_user.username)

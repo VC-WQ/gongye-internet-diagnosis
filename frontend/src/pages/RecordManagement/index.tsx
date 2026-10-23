@@ -1,94 +1,96 @@
 import { useEffect, useState } from 'react'
-import { Button, Card, Descriptions, Modal, Popconfirm, Space, Table, Tag, message } from 'antd'
-import { deleteRecord, getRecord, listRecords } from '../../services/api'
+import { Button, Card, Select, Space, Table, message } from 'antd'
+import { Navigate } from 'react-router-dom'
+import { deleteRecord, listRecords } from '../../services/api'
+import { useResource } from '../../hooks/useResource'
+import { usePageQuery } from '../../hooks/usePageQuery'
+import { useSpatialNavigate } from '../../hooks/useSpatialNavigate'
+import { useDeviceCatalog } from '../../services/realtime'
+import { formatTime, LoadState, numberText, StatusTag } from '../../components/BusinessUI'
+import { BatchControls, BatchResult, type DeleteFailure } from '../../features/management/BatchControls'
+import { deleteSelected } from '../../features/management/batchDelete'
 
 interface RecordItem {
   id: number
   device_id: string
-  fault_type: string
-  fault_label: string
-  confidence: number
-  health_score: number
-  status_state: string
-  severity: string
-  timestamp: string
+  fault_label?: string
+  confidence?: number
+  health_score?: number
+  status_state?: string
+  timestamp?: string
 }
 
 export default function RecordManagement() {
-  const [data, setData] = useState<RecordItem[]>([])
-  const [total, setTotal] = useState(0)
-  const [page, setPage] = useState(1)
-  const [detail, setDetail] = useState<Record<string, unknown> | null>(null)
-
-  const load = (p = page) => {
-    listRecords({ offset: (p - 1) * 10, limit: 10 }).then((r) => {
-      setData(r.items as RecordItem[])
-      setTotal(r.total)
-    })
-  }
+  const { params, update } = usePageQuery()
+  const navigate = useSpatialNavigate()
+  const catalog = useDeviceCatalog()
+  const page = Math.max(1, Number(params.get('page')) || 1)
+  const deviceId = params.get('device') ?? undefined
+  const legacyId = params.get('record') ?? params.get('event')
+  const data = useResource(`admin-records:${deviceId ?? 'all'}:${page}`, () => listRecords({ device_id: deviceId, offset: (page - 1) * 10, limit: 10 }))
+  const [editing, setEditing] = useState(false)
+  const [selected, setSelected] = useState<number[]>([])
+  const [busy, setBusy] = useState(false)
+  const [result, setResult] = useState<{ deleted: number; failed: DeleteFailure[] }>({ deleted: 0, failed: [] })
   useEffect(() => {
-    load(1)
-  }, [])
-
-  const onView = async (id: number) => {
-    const d = await getRecord(id)
-    setDetail(d)
+    const lastPage = Math.max(1, Math.ceil((data.data?.total ?? 0) / 10))
+    if (data.data && !data.loading && page > lastPage)
+      update({ page: lastPage > 1 ? String(lastPage) : undefined }, true)
+  }, [data.data, data.loading, page])
+  if (legacyId && /^[1-9]\d*$/.test(legacyId)) {
+    const next = new URLSearchParams(params)
+    next.delete('record'); next.delete('event')
+    return <Navigate replace to={`/manage/records/${legacyId}${next.size ? `?${next}` : ''}`} />
   }
-  const onDelete = async (id: number) => {
+  const open = (record: RecordItem) => navigate(`/manage/records/${record.id}`)
+  const remove = async () => {
+    setBusy(true)
     try {
-      await deleteRecord(id)
-      message.success('已删除')
-      load()
-    } catch {
-      message.error('删除失败')
-    }
+      const value = await deleteSelected(selected, deleteRecord)
+      setSelected(value.failed.map(({ id }) => id))
+      setResult({ deleted: value.deleted.length, failed: value.failed })
+      if (!value.failed.length) message.success(`已删除 ${value.deleted.length} 条诊断记录`)
+      data.refresh()
+    } finally { setBusy(false) }
   }
-
-  const columns = [
-    { title: 'ID', dataIndex: 'id', width: 60 },
-    { title: '设备', dataIndex: 'device_id' },
-    { title: '故障类型', dataIndex: 'fault_label', render: (v: string) => <Tag color="orange">{v ?? '—'}</Tag> },
-    { title: '置信度', dataIndex: 'confidence', render: (v: number | null) => (v != null ? (v * 100).toFixed(1) + '%' : '—') },
-    { title: '健康分', dataIndex: 'health_score', render: (v: number | null) => (v != null ? Math.round(v) : '—') },
-    { title: '时间', dataIndex: 'timestamp', render: (v: string) => (v ? new Date(v).toLocaleString() : '—') },
-    {
-      title: '操作',
-      render: (_: unknown, r: RecordItem) => (
-        <Space>
-          <Button size="small" onClick={() => onView(r.id)}>
-            详情
-          </Button>
-          <Popconfirm title="确认删除该记录？" onConfirm={() => onDelete(r.id)}>
-            <Button size="small" danger>
-              删除
-            </Button>
-          </Popconfirm>
-        </Space>
-      ),
-    },
-  ]
-
+  const cancel = () => { setEditing(false); setSelected([]); setResult({ deleted: 0, failed: [] }) }
   return (
-    <Card title="诊断记录管理">
-      <Table
-        rowKey="id"
-        dataSource={data}
-        columns={columns}
-        pagination={{ current: page, pageSize: 10, total, onChange: (p) => { setPage(p); load(p) } }}
-      />
-      <Modal title="诊断记录详情" open={!!detail} onCancel={() => setDetail(null)} footer={null} width={700}>
-        {detail && (
-          <Descriptions column={1} bordered size="small">
-            <Descriptions.Item label="设备">{String(detail.device_id)}</Descriptions.Item>
-            <Descriptions.Item label="故障类型">{String(detail.fault_label ?? '—')}</Descriptions.Item>
-            <Descriptions.Item label="置信度">{detail.confidence != null ? ((detail.confidence as number) * 100).toFixed(1) + '%' : '—'}</Descriptions.Item>
-            <Descriptions.Item label="健康分">{detail.health_score != null ? String(Math.round(detail.health_score as number)) : '—'}</Descriptions.Item>
-            <Descriptions.Item label="报告摘要">
-              <div style={{ whiteSpace: 'pre-wrap' }}>{String(((detail.report as Record<string, unknown> | undefined)?.summary) ?? '—')}</div>
-            </Descriptions.Item>
-          </Descriptions>
-        )}
-      </Modal>
+    <Card className="management-list">
+      <div className="management-toolbar">
+        <Select
+          aria-label="管理记录设备筛选" allowClear showSearch optionFilterProp="label"
+          placeholder="全部设备" value={deviceId}
+          onChange={(id) => update({ device: id, page: undefined })}
+          options={(catalog.data ?? []).map((item) => ({ value: item.id, label: `${item.name} · ${item.id}` }))}
+        />
+        <Space wrap>
+          <Button onClick={data.refresh}>刷新</Button>
+          <BatchControls editing={editing} count={selected.length} busy={busy} onEdit={() => setEditing(true)} onCancel={cancel} onDelete={remove} />
+        </Space>
+      </div>
+      <p className="management-hint">{editing ? '仅删除选中记录；失败项保留以便重试。' : '点击记录行查看完整报告、智能体结论与事件时间线。'}</p>
+      <BatchResult {...result} />
+      <LoadState loading={data.loading && !data.data} error={data.error} onRetry={data.refresh}>
+        <Table<RecordItem>
+          rowKey="id" dataSource={(data.data?.items ?? []) as RecordItem[]} scroll={{ x: 800 }} loading={busy}
+          rowSelection={editing ? { selectedRowKeys: selected, onChange: (keys) => setSelected(keys.map(Number)), preserveSelectedRowKeys: true } : undefined}
+          onRow={(record) => ({
+            tabIndex: editing ? undefined : 0, className: editing ? '' : 'management-row-link',
+            onClick: () => { if (!editing) open(record) },
+            onKeyDown: (event) => { if (!editing && event.target === event.currentTarget && ['Enter', ' '].includes(event.key)) { event.preventDefault(); open(record) } },
+            'aria-label': editing ? undefined : `查看诊断记录 ${record.id}`,
+          })}
+          pagination={{ current: page, pageSize: 10, total: data.data?.total ?? 0, showSizeChanger: false, onChange: (value) => update({ page: value > 1 ? String(value) : undefined }) }}
+          columns={[
+            { title: '编号', dataIndex: 'id' }, { title: '设备', dataIndex: 'device_id' },
+            { title: '故障类型', dataIndex: 'fault_label', render: (value) => value ?? '—' },
+            { title: '置信度', dataIndex: 'confidence', render: (value) => typeof value === 'number' ? `${(value * 100).toFixed(1)}%` : '—' },
+            { title: '健康评分', dataIndex: 'health_score', render: (value) => numberText(value, 0) },
+            { title: '状态', dataIndex: 'status_state', render: (value) => <StatusTag status={value} event /> },
+            { title: '时间', dataIndex: 'timestamp', render: formatTime },
+          ]}
+        />
+      </LoadState>
     </Card>
   )
 }

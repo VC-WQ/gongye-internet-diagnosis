@@ -1,6 +1,8 @@
+import { LoadState } from './BusinessUI'
+import { errorText } from '../hooks/useResource'
 import { useEffect, useMemo, useState } from 'react'
 import { Card, Col, Empty, Row, Space, Spin, Statistic } from 'antd'
-import ReactECharts from 'echarts-for-react'
+import ThemedChart from './ThemedChart'
 import { getPumpPhm } from '../services/api'
 import ChartNote from './ChartNote'
 import { xAxisBase, yAxisBase } from '../theme/echarts'
@@ -53,6 +55,7 @@ const FAULT_TYPE_LABEL: Record<string, string> = {
 export default function DigitalTwinPhm() {
   const [data, setData] = useState<PumpPhm>()
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
 
   useEffect(() => {
     let active = true
@@ -60,7 +63,7 @@ export default function DigitalTwinPhm() {
       .then((d) => {
         if (active) setData(d)
       })
-      .catch(() => {})
+      .catch((e) => { if (active) setLoadError(errorText(e)) })
       .finally(() => {
         if (active) setLoading(false)
       })
@@ -78,9 +81,9 @@ export default function DigitalTwinPhm() {
     if (!s.length) return {}
     const ev = data!.degradation.events
     const markLine = ([
-      ev.crit_at != null && { xAxis: ev.crit_at, name: '进入临界', lineStyle: { color: '#fa8c16', type: 'dashed' } },
-      ev.maint_at != null && { xAxis: ev.maint_at, name: '预防维护', lineStyle: { color: '#38bdf8', type: 'dashed' } },
-      ev.fail_at != null && { xAxis: ev.fail_at, name: '失效', lineStyle: { color: '#f5222d', type: 'solid' } },
+      ev.crit_at != null && { xAxis: ev.crit_at, name: '进入临界', lineStyle: { color: '#9a6a25', type: 'dashed' } },
+      ev.maint_at != null && { xAxis: ev.maint_at, name: '预防维护', lineStyle: { color: '#477d9e', type: 'dashed' } },
+      ev.fail_at != null && { xAxis: ev.fail_at, name: '失效', lineStyle: { color: '#bf5965', type: 'solid' } },
     ] as Array<{ xAxis: number; name: string; lineStyle: { color: string; type: string } }>).filter(Boolean)
 
     return {
@@ -94,26 +97,29 @@ export default function DigitalTwinPhm() {
           name: '健康风险 hazard',
           type: 'line',
           showSymbol: false,
-          smooth: true,
+          smooth: false,
           data: s.map((p) => [p.t, p.hazard]),
-          lineStyle: { color: '#f5222d', width: 2 },
+          lineStyle: { color: '#bf5965', width: 2 },
+          itemStyle: { color: '#bf5965' },
           markLine: { silent: true, symbol: 'none', data: markLine },
         },
         {
           name: '故障概率(7天)',
           type: 'line',
           showSymbol: false,
-          smooth: true,
+          smooth: false,
           data: s.map((p) => [p.t, p.prob]),
-          lineStyle: { color: '#fa8c16' },
+          lineStyle: { color: '#9a6a25' },
+          itemStyle: { color: '#9a6a25' },
         },
         {
           name: '振动(归一化)',
           type: 'line',
           showSymbol: false,
-          smooth: true,
+          smooth: false,
           data: s.map((p) => [p.t, p.vib_n]),
-          lineStyle: { color: '#52c41a', type: 'dotted' },
+          lineStyle: { color: '#348875', type: 'dotted' },
+          itemStyle: { color: '#348875' },
         },
       ],
     }
@@ -134,7 +140,7 @@ export default function DigitalTwinPhm() {
           radius: ['25%', '65%'],
           center: ['50%', '45%'],
           roseType: 'radius',
-          itemStyle: { borderRadius: 4 },
+          itemStyle: { borderRadius: 0 },
           label: { formatter: '{b}\n{c}' },
           data: dist.map((d) => ({
             name: FAULT_TYPE_LABEL[d.name] ?? d.name,
@@ -163,7 +169,7 @@ export default function DigitalTwinPhm() {
           type: 'scatter',
           symbolSize: 4,
           data: pts.map((p) => [p[0], p[1]]),
-          itemStyle: { color: '#38bdf8', opacity: 0.6 },
+          itemStyle: { color: '#477d9e', opacity: 0.6 },
         },
         {
           name: '理想线 y=x',
@@ -173,7 +179,8 @@ export default function DigitalTwinPhm() {
             [0, 0],
             [maxV, maxV],
           ],
-          lineStyle: { color: '#94a3b8', type: 'dashed' },
+          lineStyle: { color: '#6e7d8b', type: 'dashed' },
+          itemStyle: { color: '#6e7d8b' },
         },
       ],
     }
@@ -186,10 +193,10 @@ export default function DigitalTwinPhm() {
     const r = data?.maintenance_roi
     if (!r) return {}
     const items = [
-      { name: '平均预防维护成本', value: r.avg_maintenance_cost, color: '#38bdf8' },
-      { name: '平均预期节省', value: r.avg_expected_savings, color: '#52c41a' },
-      { name: '平均停机损失', value: r.avg_downtime_loss, color: '#fa8c16' },
-      { name: '平均累计损失(不干预)', value: r.avg_cumulative_loss, color: '#f5222d' },
+      { name: '平均预防维护成本', value: r.avg_maintenance_cost, color: '#477d9e' },
+      { name: '平均预期节省', value: r.avg_expected_savings, color: '#348875' },
+      { name: '平均停机损失', value: r.avg_downtime_loss, color: '#9a6a25' },
+      { name: '平均累计损失(不干预)', value: r.avg_cumulative_loss, color: '#bf5965' },
     ]
     return {
       tooltip: { trigger: 'axis', valueFormatter: (v: number) => `$${v.toLocaleString()}` },
@@ -213,13 +220,13 @@ export default function DigitalTwinPhm() {
   const mae = data?.ttf_prediction?.metrics?.mae_hours
 
   return (
-    <Spin spinning={loading}>
+    <LoadState loading={loading} error={loadError} onRetry={() => window.location.reload()}><Spin spinning={false}>
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={24} style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 16, fontWeight: 600, color: '#22d3ee' }}>
+          <div style={{ fontSize: 16, fontWeight: 600, color: "var(--status-info)" }}>
             数字孪生预测性维护（DigitalTwin 仿真数据集实证）
           </div>
-          <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>
+          <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>
             {data ? `${data.overview.n_trajectories} 条运行轨迹 / ${data.overview.n_steps.toLocaleString()} 时间步 · 数字孪生预测 TTF 平均误差仅 ${mae}h，预防维护 ROI ${roi}x` : ''}
           </div>
         </Col>
@@ -237,9 +244,9 @@ export default function DigitalTwinPhm() {
             }
           >
             {data ? (
-              <ReactECharts theme="tech-dark" option={degOption} style={{ height: 300 }} />
+              <ThemedChart option={degOption} style={{ height: 300 }} />
             ) : (
-              <Empty description="数据准备中" />
+              <Empty description="暂无实验结果" />
             )}
           </Card>
         </Col>
@@ -257,9 +264,9 @@ export default function DigitalTwinPhm() {
             }
           >
             {data ? (
-              <ReactECharts theme="tech-dark" option={distOption} style={{ height: 300 }} />
+              <ThemedChart option={distOption} style={{ height: 300 }} />
             ) : (
-              <Empty description="数据准备中" />
+              <Empty description="暂无实验结果" />
             )}
           </Card>
         </Col>
@@ -275,7 +282,7 @@ export default function DigitalTwinPhm() {
                     title="平均绝对误差"
                     value={mae}
                     suffix="小时"
-                    valueStyle={{ fontSize: 18, color: '#52c41a' }}
+                    valueStyle={{ fontSize: 18, color: "var(--status-ok)" }}
                   />
                   <ChartNote
                     desc="预测剩余寿命 TTF 与真实值的散点对比，越贴近 y=x 理想线预测越准。"
@@ -293,9 +300,9 @@ export default function DigitalTwinPhm() {
             }
           >
             {data ? (
-              <ReactECharts theme="tech-dark" option={ttfOption} style={{ height: 260 }} />
+              <ThemedChart option={ttfOption} style={{ height: 260 }} />
             ) : (
-              <Empty description="数据准备中" />
+              <Empty description="暂无实验结果" />
             )}
           </Card>
         </Col>
@@ -311,7 +318,7 @@ export default function DigitalTwinPhm() {
                     title="ROI"
                     value={roi}
                     suffix="x"
-                    valueStyle={{ fontSize: 18, color: '#22d3ee' }}
+                    valueStyle={{ fontSize: 18, color: "var(--status-info)" }}
                   />
                   <ChartNote
                     desc="预防维护成本、预期节省、停机损失、不干预累计损失四项对比，量化预测性维护的经济价值。"
@@ -329,13 +336,13 @@ export default function DigitalTwinPhm() {
             }
           >
             {data ? (
-              <ReactECharts theme="tech-dark" option={roiOption} style={{ height: 260 }} />
+              <ThemedChart option={roiOption} style={{ height: 260 }} />
             ) : (
-              <Empty description="数据准备中" />
+              <Empty description="暂无实验结果" />
             )}
           </Card>
         </Col>
       </Row>
-    </Spin>
+    </Spin></LoadState>
   )
 }

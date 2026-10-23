@@ -1,0 +1,51 @@
+.pico-workbench {
+  display: flex;
+  flex-direction: column;
+  height: min(680px, calc(100dvh - 210px));
+  min-height: 430px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.pico-workbench .pico-header {
+  flex: none;
+}
+.pico-workbench .pico-header__avatar { width: var(--pico-preview-size, 84px); height: var(--pico-preview-size, 84px); }
+.pico-workbench .pico-conversation {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.pico-lab {
+  margin-top: 18px;
+  padding: 16px 18px 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.pico-lab__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.pico-lab__head h2 {
+  font-size: 14px;
+  font-weight: 600;
+}
+.pico-lab__hint {
+  margin-bottom: 12px;
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+.pico-lab__presentation { display: flex; align-items: center; flex-wrap: wrap; gap: 16px 24px; margin-top: 14px; font-size: 11px; color: var(--muted); }
+.pico-lab__presentation label { display: inline-flex; align-items: center; gap: 8px; }
+.pico-lab__presentation input[type='range'] { width: 120px; accent-color: var(--brand); }
+.pico-lab__presentation input[type='checkbox'] { accent-color: var(--brand); }
+.pico-lab__presentation select { padding: 5px 8px; border: 1px solid var(--line); border-radius: 0; background: var(--surface); color: var(--text); }
+.pico-lab__presentation output { min-width: 28px; font-variant-numeric: tabular-nums; }
+@media (max-width: 760px) {
+  .pico-workbench {
+    height: calc(100dvh - 180px);
+    min-height: 380px;
+  }
+}
