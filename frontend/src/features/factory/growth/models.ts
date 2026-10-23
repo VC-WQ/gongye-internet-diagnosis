@@ -263,7 +263,9 @@ export function buildDeviceModel(kind: ModelKind, accent = DEFAULT_ACCENT, light
     const b = segment(p, 0, 0.28), m = segment(p, 0.18, 0.75)
     const mechanical = segment(p, 0.40, 0.92), detail = segment(p, 0.64, 1)
     base.visible = b > 0
-    base.scale.set(0.35 + b * 0.65, Math.max(0.001, b), 0.35 + b * 0.65)
+    // The camera spring has a small residual tail. The footprint must shrink
+    // with progress too, otherwise a 35%-wide flat platform lingers after the body.
+    base.scale.set(b, Math.max(0.001, b), b)
     body.visible = m > 0
     body.scale.set(0.88 + m * 0.12, Math.max(0.001, m), 0.88 + m * 0.12)
     mechanics.visible = mechanical > 0

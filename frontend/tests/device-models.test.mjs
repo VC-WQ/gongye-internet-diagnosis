@@ -103,6 +103,40 @@ test('growth stages have independent connection pivots and reversible windows, n
   model.dispose()
 })
 
+test('collapsing platform footprint continuously reaches zero without a lingering flat base', () => {
+  for (const kind of kinds) {
+    const model = buildDeviceModel(kind, '#768D9E', true)
+    const platform = model.stages.base.getObjectByName('SharedReferencePlatform')
+    const footprint = () => {
+      model.root.updateMatrixWorld(true)
+      return new THREE.Box3().setFromObject(platform, true).getSize(new THREE.Vector3())
+    }
+    model.applyProgress(1)
+    const full = footprint()
+    let previous = full.clone()
+    for (const p of [0.03, 0.01, 0.001, 0.00001]) {
+      model.applyProgress(p)
+      const size = footprint()
+      for (const axis of ['x', 'z']) {
+        assert.ok(size[axis] < previous[axis], `${kind}/${p}: footprint must keep shrinking`)
+        if (p <= 0.01) assert.ok(size[axis] < full[axis] * 0.01, `${kind}/${p}: no fixed-size footprint in the spring tail`)
+      }
+      previous = size
+    }
+    model.applyProgress(0.01)
+    const collapsed = snapshot(model)
+    model.applyProgress(0.4)
+    model.applyProgress(0.01)
+    assert.deepEqual(snapshot(model), collapsed, 'reversing growth must reuse the same platform pose')
+    model.applyProgress(0)
+    assert.equal(model.root.visible, false)
+    assert.equal(model.stages.base.visible, false)
+    model.applyProgress(1)
+    assert.deepEqual(footprint().toArray(), full.toArray())
+    model.dispose()
+  }
+})
+
 test('interruption sampling is deterministic, preserves user yaw and retains the exact geometry/resources', () => {
   for (const kind of kinds) {
     const model = buildDeviceModel(kind, '#768D9E', false)

@@ -229,9 +229,6 @@
 }
 .device-nav__name .mechanical-text { display:block; width:100%; height:1.4em; min-height:1.4em!important; }
 .device-nav__name .mechanical-text__probe,.device-nav__name .mechanical-text__layer { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.factory-monitor-overview dl { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin:14px 0 18px; }
-.factory-monitor-overview dt { font-size:10px; color:var(--muted); margin-bottom:8px; }
-.factory-monitor-overview dd { margin:0; color:var(--text); font-size:30px; font-weight:400; line-height:1.1; font-variant-numeric:tabular-nums; }
 .device-nav__identity small {
   font-size: 9px;
   color: var(--muted);
