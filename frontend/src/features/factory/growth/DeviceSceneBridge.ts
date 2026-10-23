@@ -1,4 +1,5 @@
 import type { Affine } from './projection'
+import type { FocusFrame } from './focusMotion'
 
 export type ScenePointerInput = Pick<PointerEvent, 'pointerId' | 'clientX' | 'clientY' | 'button' | 'pointerType' | 'target'>
 export interface DeviceAnchor {
@@ -9,6 +10,7 @@ export interface DeviceAnchor {
   sequence: number
   sceneMoving: boolean
   pointerBusy: boolean
+  focus: FocusFrame
 }
 export interface SceneConnection {
   read: (id: string) => DeviceAnchor | null
@@ -17,6 +19,7 @@ export interface SceneConnection {
   gesture: (event: Event) => void
   pointerDown: (event: ScenePointerInput) => void
   clear: () => void
+  rendererReady: () => void
 }
 
 /** A view bridge, not a second source of device identity or camera state. */
@@ -24,8 +27,17 @@ export class DeviceSceneBridge {
   private connection: SceneConnection | null = null
   private readonly listeners = new Set<(now: number) => void>()
   private rotationTransfer: ((event: ScenePointerInput) => ScenePointerInput | null) | null = null
+  readiness: 'cold' | 'ready' | 'unavailable' = 'cold'
+  private focusFrame: FocusFrame = { epoch:0,deviceId:null,progress:1,settled:true,startedAt:0 }
+  setFocus(frame: FocusFrame) { this.focusFrame = frame }
+  focus() { return this.focusFrame }
+  setReadiness(value: 'cold' | 'ready' | 'unavailable') {
+    this.readiness = value
+    if (value !== 'cold') this.connection?.rendererReady()
+  }
   connect(value: SceneConnection) {
     this.connection = value
+    if (this.readiness !== 'cold') value.rendererReady()
     this.afterPaint()
     return () => { if (this.connection === value) this.connection = null }
   }

@@ -14,17 +14,19 @@ export default function CurrentDevicePanel({ device, devices, outsideFilter, onA
   return <section className="factory-panel factory-panel--current" aria-label={device ? '当前设备' : '工厂概况'}>
     <header className="factory-panel__head"><h2><FlipText value={device ? '当前设备' : '工厂概况'} /></h2>{device && <StatusTag animated status={device.status} />}</header>
     <div className="current-device__body">
+      <FlipContent identity={device?.id ?? 'factory'} className="current-device__summary">
       {!device ? <><div className="current-device__name"><FlipText value="全厂设备态势" /></div><p className="factory-note">当前未选择设备。选择场景模型或目录设备后，查看对应摘要与实时采样。</p>
         <div className="current-device__health"><strong><FlipValue value={String(devices.length)} /></strong><span>台登记设备</span></div>
         <p className="factory-note">状态数量来自设备目录；未将缺失采样当作正常运行。</p></>
       : <><div className="current-device__name"><FlipText value={visual.get(device).displayAlias ?? device.name} /></div>
         <FlipContent identity={device.id} className="current-device__meta" snapshot={`${device.id} · ${TYPE_LABEL[device.device_type] ?? device.device_type}`} />
         {visual.get(device).displayAlias && <p className="factory-note">真实名称：{device.name}</p>}
-        <DeviceAppearanceEditor key={device.id} device={device} />
         <div className="current-device__health"><strong style={{ color: STATUS_META[device.status]?.hex }}><FlipValue value={numberText(device.health_score, 0)} /></strong><span>/ 100 · 目录健康评分</span></div>
         <p className="current-device__updated">目录更新 {formatTime(device.last_updated)}</p>
         {outsideFilter && <p className="factory-note">当前设备不在筛选结果中，已保留选中状态。</p>}
         </>}
+      </FlipContent>
+      {device && <DeviceAppearanceEditor key={device.id} device={device} />}
       <div className="current-device__actions"><Button disabled={!device} onClick={onAnalyze}><FlipText value={device ? '设备详情' : '先选择设备'} /></Button><Button type="primary" disabled={!device} onClick={onDiagnose}><FlipText value={device ? '智能诊断' : '选择后诊断'} /></Button></div>
     </div>
   </section>

@@ -21,7 +21,7 @@
 
 `FlipText` / `FlipValue` 用于短文本或值：固定裁切窗口，旧值向上、新值从下进入，WAAPI 从中断姿态衔接，revision 拒绝旧完成。辅助技术只读最新值。尺寸预留由真实文本测量获得。
 
-`FlipContent snapshot="..."` 明确用于纯文本（当前设备编号与类型），复用完整交接。复杂 chart/form/provider 不复制；默认保留单 live 子树的局部进入效果，**不把它称为完整双层交接**。业务交互不因为动画而延迟或复制。
+`FlipContent snapshot="..."` 明确用于纯文本（当前设备编号与类型），复用完整交接。当前默认复杂内容使用单实例的旧展示退出、最新展示进入；退出 DTO 冻结并 inert/aria-hidden，真实 Workspace 与数据订阅立即切换。不要包裹 Provider 或可写表单来保留旧业务状态；详见 `CONTENT_MOTION.md`。chart/form/provider 不复制。
 
 `FlipSelection` 是单独的实测轨道，接受受控 selector；只在尺寸实际变化时由 RO 重定位，避免初次通知取消动画。动态 reduced-motion 立即取消自有动画并按真实选中位置落位。
 

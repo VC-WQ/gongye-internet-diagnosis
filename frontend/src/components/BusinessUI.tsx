@@ -30,7 +30,7 @@ export const EVENT_META: Record<string, { label: string; color: string }> = {
 export function StatusTag({
   status,
   event = false,
-  animated = false,
+  animated = true,
 }: {
   status?: string | null
   event?: boolean
@@ -52,7 +52,7 @@ export function PageHeading({
   return (
     <div className="page-heading">
       <div>
-        <h1>{title}</h1>
+        <h1><FlipText value={title} /></h1>
         {meta && <div className="page-meta">{meta}</div>}
       </div>
       <div className="page-actions">{actions}</div>

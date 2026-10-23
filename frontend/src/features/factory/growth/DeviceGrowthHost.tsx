@@ -20,7 +20,7 @@ export default function DeviceGrowthHost(props: GrowthLayerProps) {
     setFailed(false)
     void import('./DeviceGrowthLayer').then(module => {
       if (current) setLayer(() => module.default)
-    }).catch(() => { if (current) setFailed(true) })
+    }).catch(() => { if (current) { setFailed(true); props.bridge.setReadiness('unavailable') } })
     return () => { current = false }
   }, [Layer, wanted])
   return Layer ? <Layer {...props} /> : failed && wanted ? <div className="device-growth__unavailable" role="status">

@@ -2,6 +2,7 @@ import { Card, Table } from 'antd'
 import { getSelfEvalMetrics, getThresholdEffects } from '../../services/api'
 import { useResource } from '../../hooks/useResource'
 import { LoadState, numberText } from '../../components/BusinessUI'
+import FlipValue from '../../motion/FlipValue'
 interface Effect {
   suggestion_id: number
   device_id: string
@@ -32,19 +33,19 @@ export default function SystemEval() {
         <div className="metric-strip">
           <div>
             <span>诊断准确率</span>
-            <strong>{pct(metrics.data?.accuracy)}</strong>
+            <strong><FlipValue value={pct(metrics.data?.accuracy)} /></strong>
           </div>
           <div>
             <span>误报率</span>
-            <strong>{pct(metrics.data?.false_alarm_rate)}</strong>
+            <strong><FlipValue value={pct(metrics.data?.false_alarm_rate)} /></strong>
           </div>
           <div>
             <span>漏报率</span>
-            <strong>{pct(metrics.data?.miss_rate)}</strong>
+            <strong><FlipValue value={pct(metrics.data?.miss_rate)} /></strong>
           </div>
           <div>
             <span>平均诊断延迟</span>
-            <strong>{numberText(metrics.data?.avg_latency_seconds)}</strong>
+            <strong><FlipValue value={numberText(metrics.data?.avg_latency_seconds)} /></strong>
             <small>秒</small>
           </div>
         </div>

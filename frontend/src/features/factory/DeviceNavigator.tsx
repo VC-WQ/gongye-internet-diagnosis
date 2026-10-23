@@ -3,6 +3,8 @@ import DeviceIcon from './growth/DeviceIcon'
 import { Empty, Input } from 'antd'
 import { useRef } from 'react'
 import FlipSelection from '../../motion/FlipSelection'
+import FlipValue from '../../motion/FlipValue'
+import FlipText from '../../motion/FlipText'
 import { STATUS_META } from '../../components/BusinessUI'
 import type { Device } from '../../services/api'
 
@@ -30,7 +32,7 @@ export default function DeviceNavigator({
       <header className="factory-panel__head">
         <h2>设备</h2>
         <span className="factory-panel__count">
-          {devices.length}/{total}
+          <FlipValue value={`${devices.length}/${total}`} />
         </span>
       </header>
       <Input
@@ -68,7 +70,7 @@ export default function DeviceNavigator({
                   aria-hidden
                 />
                 <DeviceIcon icon={visual.get(device).iconKey} color={visual.get(device).accentColor} />
-                <span className="device-nav__name">{visual.get(device).displayAlias ?? device.name}</span>
+                <span className="device-nav__name"><FlipText value={visual.get(device).displayAlias ?? device.name} /></span>
               </span>
 
             </button>

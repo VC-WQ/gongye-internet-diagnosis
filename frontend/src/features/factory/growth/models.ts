@@ -73,6 +73,46 @@ export function buildDeviceModel(kind: ModelKind, accent = DEFAULT_ACCENT, light
     value.quaternion.setFromUnitVectors(UP, direction.normalize())
     return value
   }
+  const turned = (stage: THREE.Group, name: string, profile: readonly (readonly [number, number])[], position: Position, axis: Axis = 'x', finish = shell) => {
+    const value = mesh(stage, name, new THREE.LatheGeometry(profile.map(([r, y]) => new THREE.Vector2(r, y)), 28), finish, position)
+    if (axis === 'x') value.rotation.z = -Math.PI / 2
+    if (axis === 'z') value.rotation.x = Math.PI / 2
+    return value
+  }
+  const instances = (stage: THREE.Group, name: string, geometry: THREE.BufferGeometry, finish: THREE.Material,
+    placements: { position: Position; rotation?: Position }[]) => {
+    const value = new THREE.InstancedMesh(ownGeometry(geometry), finish, placements.length)
+    value.name = name
+    const transform = new THREE.Object3D()
+    placements.forEach(({ position, rotation = [0,0,0] }, index) => {
+      transform.position.set(position[0],position[1]-stage.position.y,position[2])
+      transform.rotation.set(...rotation); transform.updateMatrix()
+      value.setMatrixAt(index,transform.matrix)
+    })
+    value.computeBoundingBox(); value.computeBoundingSphere()
+    stage.add(value)
+    return value
+  }
+  const softBox = (stage: THREE.Group, name: string, size: Position, position: Position, finish = shell) => {
+    const bevel=.012,r=.035,x=-size[0]/2+bevel,y=-size[1]/2+bevel,w=size[0]-2*bevel,h=size[1]-2*bevel
+    const outline=new THREE.Shape()
+    outline.moveTo(x+r,y);outline.lineTo(x+w-r,y);outline.quadraticCurveTo(x+w,y,x+w,y+r)
+    outline.lineTo(x+w,y+h-r);outline.quadraticCurveTo(x+w,y+h,x+w-r,y+h)
+    outline.lineTo(x+r,y+h);outline.quadraticCurveTo(x,y+h,x,y+h-r)
+    outline.lineTo(x,y+r);outline.quadraticCurveTo(x,y,x+r,y)
+    const geometry=new THREE.ExtrudeGeometry(outline,{depth:size[2]-2*bevel,steps:1,bevelEnabled:true,bevelSegments:1,bevelSize:bevel,bevelThickness:bevel,curveSegments:3})
+    geometry.translate(0,0,-size[2]/2+bevel)
+    return mesh(stage,name,geometry,finish,position)
+  }
+  const contactPatch = (name: string, x: number, z: number) => {
+    const finish = new THREE.MeshBasicMaterial({ color:'#152029',transparent:true,opacity:light ? .08 : .13,depthWrite:false })
+    materials.add(finish)
+    const geometry = new THREE.CircleGeometry(1,28)
+    for(const size of [.72,.94]) {
+      const shadow=mesh(base,name,geometry,finish,[0,.002,0])
+      shadow.rotation.x=-Math.PI/2;shadow.scale.set(x*size,z*size,1)
+    }
+  }
   const feet = (length = 1.35, depth = 0.64) => {
     for (const x of [-length / 2, length / 2]) for (const z of [-depth / 2, depth / 2])
       box(body, 'MountingFoot', [0.22, 0.12, 0.19], [x, 0.06, z], dark)
@@ -96,68 +136,123 @@ export function buildDeviceModel(kind: ModelKind, accent = DEFAULT_ACCENT, light
   box(base, 'PlatformAccent', [0.55, 0.018, 0.035], [0.37, -0.017, 0.92], trim)
 
   if (actualKind === 'pump') {
+    // A horizontal end-suction pump: motor -> guarded coupling -> stepped
+    // volute housing, with a bored inlet and vertical flanged delivery pipe.
+    // The platform and completed envelope are deliberately unchanged.
     feet(1.28, 0.58)
-    cylinder(body, 'PumpMotor', 0.28, 0.84, [-0.30, 0.40, 0], 'x')
-    cylinder(body, 'PumpRearCover', 0.30, 0.07, [-0.75, 0.40, 0], 'x', dark)
-    cylinder(body, 'PumpCasing', 0.34, 0.30, [0.43, 0.47, 0], 'x', shell)
-    ring(body, 'PumpVolute', 0.275, 0.09, [0.43, 0.47, 0], 'x', trim)
-    cylinder(mechanics, 'PumpCoupling', 0.115, 0.35, [0.12, 0.40, 0], 'x', metal)
-    cylinder(mechanics, 'PumpIntake', 0.115, 0.25, [0.68, 0.47, 0], 'x', metal)
-    cylinder(mechanics, 'PumpIntakeFlange', 0.18, 0.055, [0.80, 0.47, 0], 'x', dark)
-    pipe(mechanics, 'PumpOutlet', [0.43, 0.72, 0], [0.43, 1.29, 0], 0.10, metal)
-    cylinder(mechanics, 'PumpOutletFlange', 0.19, 0.07, [0.43, 1.31, 0], 'y', dark)
-    for (let i = 0; i < 6; i++) ring(details, 'PumpCoolingRib', 0.29, 0.022, [-0.64 + i * 0.12, 0.40, 0], 'x', dark)
-    box(details, 'PumpNameplate', [0.23, 0.12, 0.018], [-0.29, 0.48, 0.285], trim)
-    for (const z of [-0.23, 0.23]) cylinder(details, 'PumpCasingBolt', 0.032, 0.045, [0.60, 0.47, z], 'x', metal, 8)
+    box(body, 'PumpMotorCradle', [0.58, 0.11, 0.40], [-0.38, 0.145, 0], dark)
+    box(body, 'PumpCasingCradle', [0.30, 0.12, 0.45], [0.43, 0.15, 0], dark)
+    turned(body, 'PumpMotor', [[0,-.40],[.24,-.40],[.28,-.35],[.28,.34],[.24,.40],[0,.40]], [-.32,.43,0])
+    turned(body, 'PumpRearCover', [[0,-.05],[.25,-.05],[.285,-.025],[.285,.035],[.27,.05],[0,.05]], [-.76,.43,0], 'x', dark)
+    turned(body, 'PumpCasing', [[0,-.17],[.23,-.17],[.32,-.12],[.34,-.06],[.34,.08],[.29,.15],[0,.15]], [.43,.49,0])
+    turned(body, 'PumpCasingSeam', [[.33,-.008],[.346,-.008],[.346,.008],[.33,.008],[.33,-.008]], [.46,.49,0], 'x', dark)
+    cylinder(mechanics, 'PumpCoupling', .10, .32, [.12,.43,0], 'x', metal)
+    const guard = mesh(mechanics, 'PumpCouplingGuard', new THREE.CylinderGeometry(.17,.17,.26,20,1,true,Math.PI,Math.PI), trim, [.13,.43,0])
+    guard.rotation.z = -Math.PI / 2
+    cylinder(mechanics, 'PumpIntakeNeck', .118, .20, [.66,.49,0], 'x', metal)
+    const inletProfile = [[.09,-.03],[.18,-.03],[.18,.03],[.09,.03],[.09,-.03]] as const
+    turned(mechanics, 'PumpIntakeFlange', inletProfile, [.79,.49,0], 'x', metal)
+    // Recessed bore, not a bright solid cap. No externally downloaded textures.
+    cylinder(mechanics, 'PumpIntakeBore', .088, .009, [.755,.49,0], 'x', recess)
+    pipe(mechanics, 'PumpOutlet', [.43,.76,0], [.43,1.29,0], .10, metal)
+    turned(mechanics, 'PumpOutletFlange', [[.075,-.035],[.18,-.035],[.19,-.02],[.19,.02],[.18,.035],[.075,.035],[.075,-.035]], [.43,1.31,0], 'y', metal)
+    cylinder(mechanics, 'PumpOutletBore', .073, .009, [.43,1.275,0], 'y', recess)
+    instances(details, 'PumpCoolingFins', new THREE.BoxGeometry(.62,.035,.055), shell,
+      Array.from({length:10},(_,i) => {
+        const a = i*Math.PI/5
+        return { position:[-.33,.43+Math.cos(a)*.288,Math.sin(a)*.288] as Position,rotation:[a,0,0] as Position }
+      }))
+    box(details, 'PumpTerminalBox', [.24,.16,.22], [-.39,.785,0], dark)
+    box(details, 'PumpTerminalLid', [.27,.025,.25], [-.39,.878,0], metal)
+    box(details, 'PumpNameplate', [.23,.105,.012], [-.30,.49,.315], trim)
+    instances(details, 'PumpFlangeFasteners', new THREE.CylinderGeometry(.024,.024,.036,6), dark,
+      Array.from({length:6},(_,i) => {
+        const a = i*Math.PI/3,r=.14
+        return [
+          { position:[.827,.49+Math.cos(a)*r,Math.sin(a)*r] as Position, rotation:[0,0,-Math.PI/2] as Position },
+          { position:[.43+Math.cos(a)*r,1.35,Math.sin(a)*r] as Position },
+        ]
+      }).flat())
+    for (const z of [-.23,.23]) cylinder(details, 'PumpCasingBolt', .027,.035,[.60,.49,z],'x',metal,6)
+    contactPatch('PumpContactShade',.78,.43)
   } else if (actualKind === 'motor') {
     feet(1.10, 0.60)
-    cylinder(body, 'MotorHousing', 0.36, 1.10, [-0.05, 0.52, 0], 'x')
-    cylinder(body, 'MotorRearCover', 0.38, 0.07, [-0.64, 0.52, 0], 'x', dark)
-    cylinder(body, 'MotorDriveCover', 0.38, 0.08, [0.54, 0.52, 0], 'x', metal)
-    box(mechanics, 'MotorTerminalBox', [0.46, 0.38, 0.40], [-0.18, 1.12, 0], dark)
-    box(mechanics, 'MotorTerminalLid', [0.51, 0.045, 0.45], [-0.18, 1.335, 0], trim)
-    cylinder(mechanics, 'MotorDriveShaft', 0.09, 0.28, [0.68, 0.52, 0], 'x', metal)
-    for (let i = 0; i < 12; i++) {
-      const angle = i * Math.PI / 6
-      const fin = box(details, 'MotorCoolingFin', [0.97, 0.06, 0.12], [-0.05, 0.52 + Math.cos(angle) * 0.39, Math.sin(angle) * 0.39], dark)
-      fin.rotation.x = angle
-    }
-    ring(details, 'MotorAccentBand', 0.365, 0.02, [0.34, 0.52, 0], 'x', trim)
-    box(details, 'MotorNameplate', [0.29, 0.13, 0.02], [-0.19, 0.57, 0.43], metal)
+    box(body,'MotorMountCradle',[.64,.12,.48],[-.12,.15,0],dark)
+    turned(body,'MotorHousing',[[0,-.54],[.29,-.54],[.345,-.47],[.345,.43],[.30,.51],[0,.51]],[-.06,.52,0])
+    turned(body,'MotorRearCover',[[0,-.055],[.30,-.055],[.365,-.025],[.365,.035],[.33,.055],[0,.055]],[-.65,.52,0],'x',dark)
+    turned(body,'MotorDriveCover',[[0,-.045],[.31,-.045],[.36,-.015],[.36,.025],[.28,.055],[0,.055]],[.50,.52,0],'x',metal)
+    cylinder(mechanics,'MotorTerminalRiser',.13,.18,[-.18,.92,0],'y',dark)
+    softBox(mechanics,'MotorTerminalBox',[.44,.36,.38],[-.18,1.11,0],shell)
+    box(mechanics,'MotorTerminalLid',[.48,.045,.42],[-.18,1.315,0],metal)
+    cylinder(mechanics,'MotorCableGland',.07,.14,[.11,1.11,0],'x',dark,12)
+    cylinder(mechanics,'MotorDriveShaft',.09,.28,[.68,.52,0],'x',metal)
+    box(mechanics,'MotorShaftKey',[.17,.026,.035],[.70,.608,0],dark)
+    instances(details,'MotorCoolingFins',new THREE.BoxGeometry(.82,.035,.09),shell,
+      Array.from({length:12},(_,i)=>{
+        const a=i*Math.PI/6
+        return {position:[-.08,.52+Math.cos(a)*.37,Math.sin(a)*.37] as Position,rotation:[a,0,0] as Position}
+      }))
+    instances(details,'MotorRearGrille',new THREE.BoxGeometry(.012,.025,.57),metal,
+      Array.from({length:8},(_,i)=>({position:[-.711,.52,0] as Position,rotation:[i*Math.PI/8,0,0] as Position})))
+    instances(details,'MotorDriveFasteners',new THREE.CylinderGeometry(.023,.023,.032,6),dark,
+      Array.from({length:6},(_,i)=>{
+        const a=i*Math.PI/3
+        return {position:[.558,.52+Math.cos(a)*.285,Math.sin(a)*.285] as Position,rotation:[0,0,-Math.PI/2] as Position}
+      }))
+    turned(details,'MotorAccentBand',[[.343,-.012],[.35,-.012],[.35,.012],[.343,.012],[.343,-.012]],[.29,.52,0],'x',trim)
+    box(details,'MotorNameplate',[.26,.105,.012],[-.19,.57,.421],metal)
+    contactPatch('MotorContactShade',.74,.43)
   } else if (actualKind === 'compressor') {
     feet(1.30, 0.66)
-    box(body, 'CompressorCabinet', [1.20, 1.20, 0.80], [-0.12, 0.71, 0])
+    softBox(body, 'CompressorCabinet', [1.20, 1.20, 0.80], [-0.12, 0.71, 0])
+    box(body,'CompressorSkirt',[1.22,.085,.82],[-.12,.15,0],dark)
     box(body, 'CompressorHood', [1.26, 0.10, 0.86], [-0.12, 1.36, 0], dark)
-    cylinder(body, 'CompressorPressureVessel', 0.16, 0.92, [0.62, 0.69, 0.06], 'y', metal)
+    turned(body,'CompressorPressureVessel',[[0,-.46],[.11,-.46],[.16,-.40],[.16,.40],[.11,.46],[0,.46]],[.62,.69,.06],'y',metal)
     cylinder(mechanics, 'CompressorVesselCap', 0.18, 0.06, [0.62, 1.18, 0.06], 'y', dark)
     pipe(mechanics, 'CompressorRiser', [-0.35, 1.36, 0], [-0.35, 1.54, 0])
     pipe(mechanics, 'CompressorTopPipe', [-0.35, 1.54, 0], [0.62, 1.54, 0])
     pipe(mechanics, 'CompressorVesselPipe', [0.62, 1.54, 0], [0.62, 1.20, 0.06])
     cylinder(mechanics, 'CompressorValve', 0.10, 0.045, [0.78, 1.20, 0.06], 'x', trim)
-    for (let i = 0; i < 8; i++) box(details, 'CompressorVent', [0.075, 0.55, 0.035], [-0.58 + i * 0.12, 0.64, 0.425], recess)
+    instances(details,'CompressorVentSlots',new THREE.BoxGeometry(.062,.48,.018),recess,
+      Array.from({length:8},(_,i)=>({position:[-.57+i*.11,.60,.415] as Position})))
+    box(details,'CompressorDoorSeam',[.012,1.02,.012],[.24,.73,.407],dark)
+    box(details,'CompressorDoorHandle',[.035,.19,.035],[.17,.96,.436],metal)
+    box(details,'CompressorControlPanel',[.29,.20,.024],[-.39,1.06,.42],dark)
+    box(details,'CompressorControlDisplay',[.18,.055,.008],[-.39,1.10,.438],metal)
+    instances(details,'CompressorControlButtons',new THREE.CylinderGeometry(.018,.018,.012,10),metal,
+      [-.47,-.39,-.31].map(x=>({position:[x,1.015,.442] as Position,rotation:[Math.PI/2,0,0] as Position})))
     ring(details, 'CompressorGaugeRim', 0.105, 0.022, [0.19, 1.15, 0.43], 'z', metal)
-    cylinder(details, 'CompressorGauge', 0.092, 0.015, [0.19, 1.15, 0.44], 'z', dark)
+    cylinder(details, 'CompressorGauge', 0.092, 0.015, [0.19, 1.15, 0.44], 'z', shell)
+    const needle=box(details,'CompressorGaugeNeedle',[.009,.065,.008],[.175,1.168,.453],dark)
+    needle.rotation.z=-.5
     box(details, 'CompressorIdentification', [0.48, 0.075, 0.02], [-0.22, 1.20, 0.415], trim)
+    contactPatch('CompressorContactShade',.78,.44)
   } else {
     feet(1.05, 0.60)
-    box(body, 'GenericCabinet', [1.20, 1.02, 0.85], [0, 0.58, 0])
-    box(body, 'GenericUpperHousing', [0.48, 0.34, 0.60], [-0.20, 1.26, 0], dark)
+    softBox(body, 'GenericCabinet', [1.20, 1.02, 0.85], [0, 0.58, 0])
+    box(body,'GenericLowerPlinth',[1.22,.075,.84],[0,.12,0],dark)
+    softBox(body, 'GenericUpperHousing', [0.48, 0.34, 0.60], [-0.20, 1.26, 0], dark)
     pipe(mechanics, 'GenericSideRiser', [0.69, 0.25, 0], [0.69, 1.00, 0], 0.065)
     pipe(mechanics, 'GenericSideConnection', [0.51, 1.00, 0], [0.69, 1.00, 0], 0.065)
     pipe(mechanics, 'GenericHandleLeft', [-0.37, 1.43, 0], [-0.37, 1.54, 0], 0.035, dark)
     pipe(mechanics, 'GenericHandleRight', [-0.03, 1.43, 0], [-0.03, 1.54, 0], 0.035, dark)
     pipe(mechanics, 'GenericHandleTop', [-0.37, 1.54, 0], [-0.03, 1.54, 0], 0.035, dark)
-    for (let i = 0; i < 5; i++) box(details, 'GenericVent', [0.58, 0.035, 0.025], [0.03, 0.41 + i * 0.12, 0.435], recess)
-    box(details, 'GenericIdentification', [0.46, 0.13, 0.02], [0.06, 0.96, 0.438], trim)
-    for (const x of [-0.47, 0.47]) cylinder(details, 'GenericFastener', 0.035, 0.025, [x, 0.89, 0.44], 'z', metal, 8)
+    box(details,'GenericServicePanel',[.98,.76,.015],[0,.60,.433],metal)
+    instances(details,'GenericVentSlots',new THREE.BoxGeometry(.58,.026,.022),recess,
+      Array.from({length:5},(_,i)=>({position:[.03,.38+i*.095,.451] as Position})))
+    box(details, 'GenericIdentification', [0.40, 0.085, 0.012], [0.06, 0.89, 0.449], trim)
+    instances(details,'GenericPanelFasteners',new THREE.CylinderGeometry(.025,.025,.024,6),dark,
+      [-.43,.43].flatMap(x=>[.28,.92].map(y=>({position:[x,y,.453] as Position,rotation:[Math.PI/2,0,0] as Position}))))
+    contactPatch('GenericContactShade',.74,.46)
   }
 
   let meshes = 0, vertices = 0, triangles = 0
   root.traverse(object => {
     if (!(object instanceof THREE.Mesh)) return
     meshes++
-    vertices += object.geometry.getAttribute('position').count
-    triangles += (object.geometry.index?.count ?? object.geometry.getAttribute('position').count) / 3
+    const copies = object instanceof THREE.InstancedMesh ? object.count : 1
+    vertices += object.geometry.getAttribute('position').count * copies
+    triangles += (object.geometry.index?.count ?? object.geometry.getAttribute('position').count) / 3 * copies
   })
   const stats: DeviceModelStats = Object.freeze({ kind: actualKind, meshes, geometries: geometries.size, materials: materials.size, vertices, triangles })
   let disposed = false

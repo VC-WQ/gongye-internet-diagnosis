@@ -1,6 +1,6 @@
 # 登录面板与工厂设备三维生长
 
-基线：V2.6 整合提交 `6c5aea12ffdef3dca0310a82d1f966a261286f14`。本增量不修改登录 A/B/C 外壳时间轴、研究中心、Pico Agent、设备 API、工厂路径/碰撞/相机算法或后端。
+登录与三维层最初基于 V2.6 整合提交 `6c5aea12ffdef3dca0310a82d1f966a261286f14`。当前维护分支为 `frontend-agent`；登录 A/B/C 外壳、认证、工厂路径/碰撞和原相机弹簧保持原职责，聚焦与模型协调规则已更新如下。
 
 ## 登录
 
@@ -14,9 +14,10 @@
 
 - `FactoryScene` 继续拥有 SVG、布局、相机与原输入控制器；`DeviceSceneBridge` 在同一 paint 完成后发布实际锚点，不轮询 DOM。
 - `projection.ts` 从 SVG 和设备 screen CTM 计算相对仿射变换，再校准正交相机。模型底部四角与原非对称平台一致；Canvas 可视区排除底部 44px 控件。DPR 仅影响绘制缓冲区，最高 1.5。
-- `GrowthMotion` 唯一持有展示进度/速度及 activeId。Workspace selected ID 始终是业务身份；A 回收时查询、诊断和 Pico 已使用最新 B。零进度才交换模型身份，A→B→A 在零点前可保留 A。
+- Workspace selected ID 始终是唯一业务身份；A 回收时查询、诊断和 Pico 已使用最新 B。`VisualGrowthCoordinator` 最多持有四个短暂展示实例，各自使用 `GrowthMotion` 的进度/速度；A→B 同时开始 B 与 A 退场，A→B→A 在零点前复用 A，不复制业务 Provider。
+- `CameraFocusProgress` 测量原弹簧的剩余位移及速度，在原 paint 发布单调进度。模型沿此进度装配，并在相机实际停稳同帧到达 100%。首次懒加载只延后视觉聚焦至 renderer ready，不延后 Workspace 选择；加载失败释放原 2D 聚焦。快速超容量请求只保留最新目标，最小旧轮廓连续退至零后释放，回到相机协调时重取当前姿态。
 - `models.ts` 提供 compressor、pump、motor、generic 程序化 Mesh；固定底座，主体转台，base/body/mechanics/details 重叠生长。未知类型显示“通用示意”，不是数字孪生或真实设备结构承诺。
-- `DeviceGrowthHost` 首次合法可见选择才导入运行层。每个工厂路由最多一个 renderer，静止无 Factory 自驱 RAF；SVG 移动时同步跟随原 paint。没有外部资产请求或设备级异步模型 Promise。
+- `DeviceGrowthHost` 首次合法可见选择才导入运行层。每个工厂路由最多一个 renderer，静止无 Factory 自驱 RAF；SVG 移动时同步跟随原 paint，短暂旧模型按各自锚点合成到同一 Canvas。几何、材质及实例资源按所有权释放；重复螺栓/散热片等静态实例化，不在每帧生成几何。没有外部资产请求或设备级异步模型 Promise。
 - 拖动热区只在展开且原 SVG 无 pointer 会话时启用；双指跨边界转交原 SVG 控制器；wheel/gesture 复用原相机。局部左右键/旋转按钮和 Esc 可用。展开资料卡保留真实 ID、类型、状态和有别名时的真实名称。
 
 WebGL 初始化失败、context lost、无效/零尺寸锚点、设备消失或过滤隐藏均撤销热区、还原 SVG。context restored 有界重建；懒模块失败提示重新加载页面，不循环重试。卸载释放本层的几何、材质、监听器及 context，不影响 Pico。

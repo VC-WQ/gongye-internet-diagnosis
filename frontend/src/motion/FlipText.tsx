@@ -19,7 +19,18 @@ export default function FlipText({ value, label, className = '' }: { value: stri
   const settle = () => {
     revision.current++; cancel()
     track.current?.replaceChildren(layer(latest.current))
-    if (windowRef.current) windowRef.current.dataset.handoffState = 'settled'
+    if (windowRef.current) {
+      const root = windowRef.current, measure = probe.current
+      root.dataset.handoffState = 'settled'
+      // Reserve both compositions only while they share the window. A long
+      // title must not leave a permanent blank line after a shorter title wins.
+      if (measure) {
+        root.dataset.reservedWidth = String(measure.offsetWidth)
+        root.dataset.reservedHeight = String(Math.max(1, measure.offsetHeight))
+        root.style.setProperty('--handoff-reserved-width', `${measure.offsetWidth}px`)
+        root.style.minHeight = `${Math.max(1, measure.offsetHeight)}px`
+      }
+    }
   }
   useLayoutEffect(() => {
     const root = windowRef.current!, container = track.current!, measure = probe.current!

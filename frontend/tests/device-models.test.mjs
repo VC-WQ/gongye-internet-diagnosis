@@ -147,3 +147,31 @@ test('accent edits are local and dispose releases every owned resource exactly o
   assert.equal(b.root.children.length, 2)
   b.dispose()
 })
+
+test('refined pump keeps real open flange bores, supported housings and shared fastener resources', () => {
+  const model = buildDeviceModel('pump', '#768D9E', true)
+  model.applyProgress(1)
+  model.root.updateMatrixWorld(true)
+  for (const name of ['PumpIntakeFlange', 'PumpOutletFlange']) {
+    const flange = model.root.getObjectByName(name)
+    const positions = flange.geometry.getAttribute('position')
+    // The local lathe axis is Y. A true flange has no triangles closing the bore.
+    for (let i = 0; i < positions.count; i++) {
+      assert.ok(Math.hypot(positions.getX(i), positions.getZ(i)) > .07, `${name} bore must remain open`)
+    }
+  }
+  for (const [housing, support] of [['PumpMotor', 'PumpMotorCradle'], ['PumpCasing', 'PumpCasingCradle']]) {
+    const body = new THREE.Box3().setFromObject(model.root.getObjectByName(housing), true)
+    const cradle = new THREE.Box3().setFromObject(model.root.getObjectByName(support), true)
+    assert.ok(body.intersectsBox(cradle), `${housing} must have a connected support`)
+  }
+  const fasteners = model.root.getObjectByName('PumpFlangeFasteners')
+  assert.ok(fasteners instanceof THREE.InstancedMesh)
+  assert.equal(fasteners.count, 12)
+  assert.ok([...fasteners.instanceMatrix.array].every(Number.isFinite))
+  assert.ok(model.stats.triangles < 4000, 'industrial detailing must retain the existing pump triangle budget')
+  const resourcesBefore = resources(model.root)
+  for (let i = 0; i < 100; i++) model.applyProgress((i % 10) / 9)
+  assert.deepEqual(resources(model.root).geometry, resourcesBefore.geometry)
+  model.dispose()
+})

@@ -52,8 +52,8 @@ const FAULT_TYPE_LABEL: Record<string, string> = {
  *   ④ 维护价值闭环（横向 bar + ROI）    —— 预测性维护的经济价值
  * 结论落点：数字孪生 = 物理信号 + 数据驱动预测，提前干预换回可量化回报。
  */
-export default function DigitalTwinPhm() {
-  const { data, loading, error: loadError } = useResearchSource<PumpPhm>('digital-twin-phm', getPumpPhm)
+export default function DigitalTwinPhm({ active = true }: { active?: boolean }) {
+  const { data, loading, error: loadError } = useResearchSource<PumpPhm>('digital-twin-phm', getPumpPhm, active)
 
   // -----------------------------------------------------------------------
   // ① 退化轨迹：hazard / 故障概率 / 振动（归一化）随运行小时演化

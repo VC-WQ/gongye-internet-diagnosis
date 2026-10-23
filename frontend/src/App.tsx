@@ -52,6 +52,7 @@ import {
 } from './services/uiPrefs'
 import { LoginTransitionProvider, useLoginTransition } from './motion/LoginTransition'
 import RouteReady from './motion/RouteReady'
+import FlipText from './motion/FlipText'
 
 const FactoryWorkspace = lazy(() => import('./features/factory/FactoryWorkspace'))
 const ToolsHome = lazy(() => import('./features/tools/ToolsHome'))
@@ -264,7 +265,7 @@ function PublicResearchLayout() {
         <span className="brand-mark" aria-hidden><i /><i /><i /></span><span>工业设备<span className="brand-sub">智能诊断平台</span></span>
       </button>
       <PrimaryNav items={[{ key: 'research', label: '研究', path: '/research' }]} active="research" onNavigate={item => navigate(item.path)} />
-      <div className="account"><Button type="text" aria-label="切换深浅主题" onClick={toggleTheme}>{theme === 'dark' ? '浅色' : '深色'}</Button><Button type="text" onClick={() => navigate('/login')}>登录工作空间</Button></div>
+      <div className="account"><Button type="text" aria-label="切换深浅主题" onClick={toggleTheme}><FlipText value={theme === 'dark' ? '浅色' : '深色'} /></Button><Button type="text" onClick={() => navigate('/login')}>登录工作空间</Button></div>
     </header>
     <main id="main-content" className="workspace-route-content business-content" tabIndex={-1}>
       <PageBoundary resetKey={location.pathname}><Suspense fallback={loading()}><Routes>
@@ -501,9 +502,9 @@ function Workspace({ user }: { user: AuthUser }) {
           active={area}
           onNavigate={(item) => navigate(withContext(item.path))}
         />
-        {selected && area === 'factory' && (
-          <span className="workspace-device-context" title={selected.name}>
-            {selected.name}
+        {area === 'factory' && (
+          <span className="workspace-device-context" title={selected?.name ?? '全厂概况'}>
+            <FlipText value={selected?.name ?? '全厂概况'} />
           </span>
         )}
         <div className="account">

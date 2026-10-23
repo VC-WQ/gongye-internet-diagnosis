@@ -1,6 +1,6 @@
-import { useRef } from 'react'
 import '../factory.css'
-import { Empty, Select, Tabs, Tag } from 'antd'
+import { Empty, Select, Tag } from 'antd'
+import Tabs from '../../../motion/ContentTabs'
 import ThemedChart from '../../../components/ThemedChart'
 import SensorChart from '../../../components/SensorChart'
 import DigitalTwinPhm from '../../../components/DigitalTwinPhm'
@@ -25,7 +25,8 @@ import {
 import { useResource } from '../../../hooks/useResource'
 import { CHANNELS, type useDeviceTelemetry } from '../../../services/realtime'
 import FlipValue from '../../../motion/FlipValue'
-import { useContentTransition } from '../../../motion/useContentTransition'
+import FlipText from '../../../motion/FlipText'
+import FlipContent from '../../../motion/FlipContent'
 import {
   DETAIL_TABS,
   DETAIL_LABELS,
@@ -72,8 +73,6 @@ export default function DeviceAnalysisPanel({
   onSelectEvent: (id: number) => void
 }) {
   const deviceId = device?.id ?? ''
-  const summaryRef = useRef<HTMLDivElement>(null)
-  useContentTransition(deviceId, summaryRef)
   const activeChannel = CHANNELS[channel] ? channel : 'vibration'
   const history = useResource(
     `health:${deviceId}`,
@@ -112,15 +111,16 @@ export default function DeviceAnalysisPanel({
   }
   return (
     <div className="analysis-panel">
+      <FlipContent identity={deviceId || 'no-device'}>
       {device && (
-        <div className="analysis-summary" ref={summaryRef}>
+        <div className="analysis-summary">
           <div className="analysis-head">
             <div>
-              <h3>{device.name}</h3>
+              <h3><FlipText value={device.name} /></h3>
               <p>
                 {device.id} ·{' '}
                 {TYPE_LABEL[device.device_type] ?? device.device_type}{' '}
-                <StatusTag status={device.status} />
+                <StatusTag animated status={device.status} />
               </p>
             </div>
             <span className="analysis-head__updated">
@@ -168,6 +168,7 @@ export default function DeviceAnalysisPanel({
           </div>
         </div>
       )}
+      </FlipContent>
       {!device ? (
         <Empty description="选择一台设备" />
       ) : (
@@ -382,7 +383,7 @@ export default function DeviceAnalysisPanel({
                     <p className="factory-note">
                       阈值建议按设备生成，由管理员审批后写入设备配置；普通账号只读。
                     </p>
-                    <ThresholdSuggestions deviceId={device.id} />
+                    <ThresholdSuggestions deviceId={device.id} active={tab === 'threshold'} />
                   </>
                 ),
               }
@@ -396,7 +397,7 @@ export default function DeviceAnalysisPanel({
                       <span>离线预测性维护研究</span>
                       <Tag>研究内容</Tag>
                     </div>
-                    <DigitalTwinPhm />
+                    <DigitalTwinPhm active={tab === 'phm'} />
                   </>
                 ),
               }
@@ -428,7 +429,7 @@ export default function DeviceAnalysisPanel({
                           </strong>
                           <small>{formatTime(event.timestamp)}</small>
                         </span>
-                        <StatusTag status={event.status_state} event />
+                        <StatusTag animated status={event.status_state} event />
                       </button>
                     ))}
                   </div>

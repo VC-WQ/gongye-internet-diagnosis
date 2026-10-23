@@ -1,8 +1,9 @@
 import ThemedChart from './ThemedChart'
+import { memo } from 'react'
 import { Empty, theme } from 'antd'
 import { CHANNELS, type Sample } from '../services/realtime'
 
-export default function SensorChart({
+export default memo(function SensorChart({
   samples,
   channel = 'vibration',
   height = 200,
@@ -60,4 +61,4 @@ export default function SensorChart({
       }}
     />
   )
-}
+})

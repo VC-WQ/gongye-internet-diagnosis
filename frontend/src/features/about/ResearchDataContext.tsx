@@ -24,11 +24,11 @@ export function useResearchChoice(key: string) {
 }
 
 /** Reuse the article's validated payload; standalone consumers retain their existing API. */
-export function useResearchSource<T = any>(source: ResearchSource, load: () => Promise<T>) {
+export function useResearchSource<T = any>(source: ResearchSource, load: () => Promise<T>, enabled = true) {
   const shared = useContext(Context)
   const ensure=shared?.ensure
-  useEffect(()=>{ensure?.([source])},[ensure,source])
-  const local = useResource(`research:${source}`, load, 0, !shared)
+  useEffect(()=>{if(enabled)ensure?.([source])},[ensure,source,enabled])
+  const local = useResource(`research:${source}`, load, 0, !shared && enabled)
   if (!shared) return local
   const entry = shared.evidence[source]
   return {

@@ -3,6 +3,7 @@ import { DeviceSceneBridge, type DeviceAnchor, type ScenePointerInput } from '..
 import { relativeAffine } from '../features/factory/growth/projection'
 import DeviceGrowthHost from '../features/factory/growth/DeviceGrowthHost'
 import { useDeviceVisual } from '../features/factory/growth/DeviceVisualProvider'
+import { CameraFocusProgress } from '../features/factory/growth/focusMotion'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Button, Empty, Space } from 'antd'
 import { boundCamera, zoomAt, pinchCamera, type Camera } from '../services/sceneCamera'
@@ -167,9 +168,20 @@ export default function FactoryScene({ devices, visibleIds, selected, onSelect, 
       if(geometryPauseAt!==null){planStart+=(hiddenAt??performance.now())-geometryPauseAt;geometryPauseAt=null}
     }
     let lastFocused: string | undefined
+    const focusProgress = new CameraFocusProgress()
     let anchorSequence = 0
     const anchorCache = new Map<string, DeviceAnchor | null>()
-    const notify = () => { anchorSequence++; anchorCache.clear(); bridge.afterPaint(clock()) }
+    const notify = () => {
+      anchorSequence++; anchorCache.clear()
+      const focusFrame = focusProgress.sample(camera,targetCamera,cameraVelocity,!activeCamera(),clock())
+      bridge.setFocus(focusFrame)
+      host.dataset.focusEpoch = String(focusFrame.epoch)
+      host.dataset.focusDevice = focusFrame.deviceId ?? ''
+      host.dataset.focusProgress = String(focusFrame.progress)
+      host.dataset.focusSettled = String(focusFrame.settled)
+      if (focusFrame.settledAt !== undefined) host.dataset.focusSettledAt = String(focusFrame.settledAt)
+      bridge.afterPaint(clock())
+    }
     const render = () => {
       if (disposed) return
       // React receives immutable business/semantic DTOs, never mutable motion objects.
@@ -334,21 +346,33 @@ export default function FactoryScene({ devices, visibleIds, selected, onSelect, 
     function ensureFrame() {
       if (!frame&&!disposed&&hiddenAt===null&&host) { host.dataset.sceneState='moving'; host.dataset.sceneRaf='active'; frame=requestAnimationFrame(animate) }
     }
-    const move = (value: Camera, immediate=false) => {
+    const move = (value: Camera, immediate=false, focusId: string | null=props.current.selected??null) => {
       targetCamera=boundCamera(value)
+      focusProgress.begin(focusId,camera,targetCamera,cameraVelocity,clock())
       if (immediate||reduced) {
         camera={...targetCamera}; cameraVelocity={x:0,y:0,zoom:0}; paint(); updateGeometry()
       }
-      cameraDirty=true; setZoomLabel(Math.round(targetCamera.zoom*100)); ensureFrame()
+      cameraDirty=true; setZoomLabel(Math.round(targetCamera.zoom*100)); notify();ensureFrame()
     }
     const local = (x:number,y:number) => { const inv=inverse(rootMatrix); return inv?transform({x,y},inv):null }
     const zoom = (factor:number,anchor={x:450,y:330})=>move(zoomAt(targetCamera,factor,anchor))
-    const reset = ()=>move(HOME)
+    const reset = ()=>move(HOME,false,null)
     const focus = (id?:string)=>{
-      if(!id){lastFocused=undefined;return}
+      if(!id){
+        lastFocused=undefined
+        if (focusProgress.read().deviceId !== null) {
+          // URL/back/context cancellation follows the same reversible return
+          // as Esc and the canvas clear button, including a settled camera.
+          reset()
+        }
+        return
+      }
       if(!geometry||!initialized)return
       const sprite=model.get(id)
       if (!sprite?.visible||!props.current.devices.some(d=>d.id===id)) return
+      // The selected business identity already changed. Only its visual focus
+      // waits for the cold lazy renderer; failure releases the original 2D path.
+      if (bridge.readiness === 'cold') return
       const v=viewRef.current
       const signature=`${id}:${v.columns}:${v.x}:${v.y}:${v.width}:${v.height}:${sprite.target.x}:${sprite.target.y}`
       if(lastFocused===signature)return
@@ -434,7 +458,8 @@ export default function FactoryScene({ devices, visibleIds, selected, onSelect, 
             const x = matrix.c * 19.5 + matrix.e, y = matrix.d * 19.5 + matrix.f
             const pad = Math.hypot(matrix.a,matrix.b) * 180
             if (x > -pad && x < width+pad && y > -pad && y < height+pad) result = { deviceId:id,matrix,width,height,
-              sequence:anchorSequence,sceneMoving:activeCamera() || Boolean(plan && clock()-planStart < plan.duration),pointerBusy:pointers.size > 0 }
+              sequence:anchorSequence,sceneMoving:activeCamera() || Boolean(plan && clock()-planStart < plan.duration),pointerBusy:pointers.size > 0,
+              focus:focusProgress.read() }
           }
         }
         anchorCache.set(id,result)
@@ -457,6 +482,7 @@ export default function FactoryScene({ devices, visibleIds, selected, onSelect, 
       },
       wheel, gesture, pointerDown: event => controller.current?.down(event),
       clear: () => { reset(); props.current.onClear?.(); element.focus({preventScroll:true}) },
+      rendererReady: () => focus(props.current.selected),
     })
     const motionChanged=()=>{ reduced=media.matches; if (reduced) { camera={...targetCamera};cameraVelocity={x:0,y:0,zoom:0};replan();ensureFrame() } }
     const visibility=()=>{

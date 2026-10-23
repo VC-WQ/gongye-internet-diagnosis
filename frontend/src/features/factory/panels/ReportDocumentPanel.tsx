@@ -10,6 +10,7 @@ import {
   type EventSummary,
 } from '../../../services/api'
 import { errorText } from '../../../hooks/useResource'
+import FlipContent from '../../../motion/FlipContent'
 
 export default function ReportDocumentPanel({
   device,
@@ -125,6 +126,7 @@ export default function ReportDocumentPanel({
           </Button>
         </Space>
       </div>
+      <FlipContent identity={`${key}:${loading || (Boolean(eventId) && eventLoading) ? 'loading' : error || eventError ? 'error' : text ? 'document' : event ? 'summary' : 'empty'}`}>
       <LoadState
         loading={loading || (Boolean(eventId) && eventLoading)}
         error={error || (eventId ? eventError : undefined)}
@@ -146,6 +148,7 @@ export default function ReportDocumentPanel({
           </div>
         )}
       </LoadState>
+      </FlipContent>
       {eventId && (
         <div className="actions-row">
           <Button onClick={onOpenEvent}>查看事件与证据</Button>

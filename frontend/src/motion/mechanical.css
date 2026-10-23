@@ -7,6 +7,10 @@
 .flip-value { font-variant-numeric: tabular-nums; }
 .flip-content { min-width: 0; }
 .flip-content[data-handoff-mode="text"] { overflow: clip; }
+.flip-content[data-content-phase="exiting"] { pointer-events: none; }
+.content-tabs { min-width: 0; }
+.content-tabs > .ant-tabs .ant-tabs-switch-enter-active { transition: opacity 192ms cubic-bezier(.16,1,.3,1); }
+.content-tabs > .ant-tabs .ant-tabs-switch-leave-active { transition: opacity 128ms cubic-bezier(.4,0,.2,1); pointer-events:none; }
 .selection-rail { position: absolute; left: 0; top: 0; width: 2px; background: var(--brand); pointer-events: none; z-index: 1; }
 .event-presence-row { transition: opacity 180ms var(--ease); }
 .event-presence-row.is-exiting { animation: event-row-out 180ms var(--ease) both; pointer-events: none; }
@@ -14,6 +18,7 @@
 @keyframes event-row-out { to { opacity: 0; transform: translateY(-8px); } }
 @keyframes event-row-in { from { opacity: 0; transform: translateY(8px); } }
 @media (prefers-reduced-motion: reduce) {
+  .content-tabs > .ant-tabs .ant-tabs-switch-enter-active,.content-tabs > .ant-tabs .ant-tabs-switch-leave-active { transition:none; }
   .mechanical-text.is-folding .mechanical-text__old { display: none; animation: none; }
   .mechanical-text.is-folding .mechanical-text__new { animation: none; }
   .event-presence-row { transition: none; animation: none!important; }

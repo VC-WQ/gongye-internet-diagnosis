@@ -1,4 +1,6 @@
 import { Alert, Collapse, Tag } from 'antd'
+import FlipText from '../motion/FlipText'
+import FlipValue from '../motion/FlipValue'
 import type {
   ConsultResult,
   DiagnosisReport,
@@ -37,16 +39,16 @@ export default function DiagnosisSummary({
           </span>
           <StatusTag status={event.status_state} event />
         </div>
-        <h2>{diag?.fault_label ?? event.fault_type ?? '诊断结果'}</h2>
+        <h2><FlipText value={diag?.fault_label ?? event.fault_type ?? '诊断结果'} /></h2>
         <p>{report.summary ?? '暂无诊断摘要'}</p>
         <div className="page-meta">
           <span>
             置信度{' '}
-            {typeof event.confidence === 'number'
+            <FlipValue value={typeof event.confidence === 'number'
               ? `${(event.confidence * 100).toFixed(1)}%`
-              : '—'}
+              : '—'} />
           </span>
-          <span>健康评分 {numberText(event.health_score)}</span>
+          <span>健康评分 <FlipValue value={numberText(event.health_score)} /></span>
           <SourceTag source="history" />
         </div>
       </div>

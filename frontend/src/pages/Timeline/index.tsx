@@ -1,4 +1,5 @@
-import { Select, Tabs, Timeline as AntTimeline } from 'antd'
+import { Select, Timeline as AntTimeline } from 'antd'
+import Tabs from '../../motion/ContentTabs'
 import ThemedChart from '../../components/ThemedChart'
 import { getTimelineEvent } from '../../services/api'
 import { useResource } from '../../hooks/useResource'
@@ -23,13 +24,13 @@ interface TimelineData {
     reason?: string
   }>
 }
-export default function Timeline({ eventId }: { eventId?: number }) {
+export default function Timeline({ eventId, active = true }: { eventId?: number; active?: boolean }) {
   const { params, update } = usePageQuery()
   const data = useResource<TimelineData>(
     `timeline:${eventId}`,
     () => getTimelineEvent(eventId!),
     5000,
-    Boolean(eventId),
+    Boolean(eventId) && active,
   )
   const valid = Object.entries(CHANNELS).filter(([key]) =>
     data.data?.sensor?.series?.[key]?.some(

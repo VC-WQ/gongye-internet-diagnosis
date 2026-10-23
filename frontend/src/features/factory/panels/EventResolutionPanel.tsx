@@ -1,10 +1,13 @@
-import { Button, Empty, Tabs } from 'antd'
+import { Button, Empty } from 'antd'
+import Tabs from '../../../motion/ContentTabs'
 import DiagnosisSummary from '../../../components/DiagnosisSummary'
 import EventActions from '../../../components/EventActions'
 import Timeline from '../../../pages/Timeline'
 import { formatTime, LoadState, StatusTag } from '../../../components/BusinessUI'
 import type { Device, EventSummary } from '../../../services/api'
 import { usePageQuery } from '../../../hooks/usePageQuery'
+import FlipText from '../../../motion/FlipText'
+import FlipContent from '../../../motion/FlipContent'
 
 export default function EventResolutionPanel({
   device,
@@ -21,6 +24,7 @@ export default function EventResolutionPanel({
   onPage,
   page,
   onOpenReport,
+  active = true,
 }: {
   device?: Device
   events: EventSummary[]
@@ -36,6 +40,7 @@ export default function EventResolutionPanel({
   onPage: (page: number) => void
   page: number
   onOpenReport: () => void
+  active?: boolean
 }) {
   const { params, update } = usePageQuery()
   const subview = params.get('tab') === 'timeline' ? 'timeline' : 'resolution'
@@ -101,7 +106,7 @@ export default function EventResolutionPanel({
               <>
                 <div className="section-header">
                   <h2>
-                    事件 #{event.id} · {event.device_id}
+                    <FlipText value={`事件 #${event.id} · ${event.device_id}`} />
                   </h2>
                   <div className="actions-row">
                     <StatusTag status={event.status_state} event />
@@ -124,22 +129,22 @@ export default function EventResolutionPanel({
                       label: '诊断与处置',
                       children: (
                         <>
-                          <DiagnosisSummary event={event} />
-                          <EventActions
+                          <FlipContent identity={String(event.id)}><DiagnosisSummary event={event} /></FlipContent>
+                          {active && subview === 'resolution' && <EventActions
                             key={event.id}
                             event={event}
                             onChanged={() => {
                               onRefreshEvent()
                               onRefresh()
                             }}
-                          />
+                          />}
                         </>
                       ),
                     },
                     {
                       key: 'timeline',
                       label: '证据与时间线',
-                      children: <Timeline eventId={event.id} />,
+                      children: <Timeline eventId={event.id} active={active && subview === 'timeline'} />,
                     },
                   ]}
                 />

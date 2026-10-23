@@ -1,6 +1,7 @@
 import { Empty, Select } from 'antd'
 import FlipText from '../../motion/FlipText'
 import FlipContent from '../../motion/FlipContent'
+import FlipValue from '../../motion/FlipValue'
 import SensorChart from '../../components/SensorChart'
 import { formatTime, SourceTag } from '../../components/BusinessUI'
 import { CHANNELS, type useDeviceTelemetry } from '../../services/realtime'
@@ -11,11 +12,13 @@ export default function LiveMonitorPanel({
   telemetry,
   channel,
   onChannel,
+  devices = [],
 }: {
   device?: Device
   telemetry: ReturnType<typeof useDeviceTelemetry>
   channel: string
   onChannel: (channel: string) => void
+  devices?: Device[]
 }) {
   return (
     <section className="factory-panel factory-panel--monitor" aria-label="实时监测">
@@ -36,12 +39,21 @@ export default function LiveMonitorPanel({
 
         </div>
       </header>
+      <FlipContent identity={`${device?.id ?? 'factory'}:${channel}:${telemetry.error ? 'error' : 'ready'}`}>
       {!device ? (
-        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="全厂监测：选择设备后显示对应传感器窗口" />
+        devices.length ? <div className="factory-monitor-overview">
+          <dl aria-label="全厂设备目录概况">
+            <div><dt>登记设备</dt><dd><FlipValue value={String(devices.length)} /></dd></div>
+            <div><dt>退化</dt><dd><FlipValue value={String(devices.filter(item => item.status === 'degraded').length)} /></dd></div>
+            <div><dt>告警</dt><dd><FlipValue value={String(devices.filter(item => item.status === 'fault').length)} /></dd></div>
+          </dl>
+          <p className="factory-note">目录汇总。选择设备后查看对应的传感器窗口。</p>
+          <div className="factory-caption">设备状态来自目录，不将缺失采样计为正常。</div>
+        </div> : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无登记设备" />
       ) : telemetry.error ? (
         <p className="factory-note factory-note--error">{telemetry.error}</p>
       ) : (
-        <FlipContent identity={`${device.id}:${channel}`}>
+        <>
           <SensorChart
             samples={telemetry.samples}
             channel={channel}
@@ -59,8 +71,9 @@ export default function LiveMonitorPanel({
             </span>
             <span><SourceTag source={telemetry.source} /> · {telemetry.samples.length} 点</span>
           </div>
-        </FlipContent>
+        </>
       )}
+      </FlipContent>
     </section>
   )
 }

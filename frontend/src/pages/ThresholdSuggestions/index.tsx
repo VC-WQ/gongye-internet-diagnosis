@@ -18,15 +18,19 @@ interface Suggestion {
 }
 export default function ThresholdSuggestions({
   deviceId,
+  active = true,
 }: {
   deviceId?: string
+  active?: boolean
 }) {
-  const account = useResource('account', getMe)
-  const canManage = account.data?.role === 'admin'
+  const account = useResource('account', getMe, 0, active)
+  const canManage = active && account.data?.role === 'admin'
   const resource = useResource<Suggestion[]>(
     `threshold-suggestions:${deviceId ?? 'all'}`,
     () =>
       listThresholdSuggestions(deviceId ? { device_id: deviceId } : undefined),
+    0,
+    active,
   )
   const [acting, setActing] = useState<number>()
   const act = async (id: number, accept: boolean) => {

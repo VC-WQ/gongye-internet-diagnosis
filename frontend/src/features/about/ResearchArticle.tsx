@@ -1,6 +1,8 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { Drawer } from 'antd'
 import { PageHeading } from '../../components/BusinessUI'
+import FlipText from '../../motion/FlipText'
+import FlipValue from '../../motion/FlipValue'
 import { useResearchData } from './useResearchData'
 import { ResearchDataProvider } from './ResearchDataContext'
 import { ResearchNavigationProvider } from './ResearchLink'
@@ -45,7 +47,7 @@ export default function ResearchArticle({ topicId, pointId }: { topicId?: string
         <ResearchTree active={timeline.active} requested={timeline.requested} />
         <div ref={runway} className="research-runway" data-research-article data-route-module="research-article" style={{ '--stage-count': RESEARCH_SCENES.length - 1 } as CSSProperties}>
           <section ref={stage} className="research-stage" data-research-stage aria-label="研究叙事舞台" data-stage-active={current.id}>
-            <header className="research-stage__bar"><h2 tabIndex={-1} data-stage-heading>{current.title}</h2><span>{String(frame.active + 1).padStart(2, '0')} / {RESEARCH_SCENES.length}</span><button type="button" disabled={frame.active === 0} aria-label="上一个研究场景" onClick={event => timeline.choose(RESEARCH_SCENES[Math.max(0, frame.active - 1)].id, event.detail === 0)}>↑</button><button type="button" disabled={frame.active === RESEARCH_SCENES.length - 1} aria-label="下一个研究场景" onClick={event => timeline.choose(RESEARCH_SCENES[Math.min(RESEARCH_SCENES.length - 1, frame.active + 1)].id, event.detail === 0)}>↓</button></header>
+            <header className="research-stage__bar"><h2 tabIndex={-1} data-stage-heading><FlipText value={current.title} /></h2><span><FlipValue value={`${String(frame.active + 1).padStart(2, '0')} / ${RESEARCH_SCENES.length}`} /></span><button type="button" disabled={frame.active === 0} aria-label="上一个研究场景" onClick={event => timeline.choose(RESEARCH_SCENES[Math.max(0, frame.active - 1)].id, event.detail === 0)}>↑</button><button type="button" disabled={frame.active === RESEARCH_SCENES.length - 1} aria-label="下一个研究场景" onClick={event => timeline.choose(RESEARCH_SCENES[Math.min(RESEARCH_SCENES.length - 1, frame.active + 1)].id, event.detail === 0)}>↓</button></header>
             <div className="research-stage__viewport">
               {layers.map(index => {
                 const incoming = index !== frame.base

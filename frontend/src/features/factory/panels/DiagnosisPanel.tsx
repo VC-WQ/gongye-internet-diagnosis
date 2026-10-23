@@ -22,6 +22,8 @@ import { errorText } from '../../../hooks/useResource'
 import { useWorkspace } from '../../../services/workspace'
 import { useSpatialNavigate } from '../../../hooks/useSpatialNavigate'
 import { toolPath } from '../../../services/workspaceMode'
+import FlipText from '../../../motion/FlipText'
+import FlipContent from '../../../motion/FlipContent'
 
 interface VisionEvidence {
   available: boolean
@@ -182,7 +184,7 @@ export default function DiagnosisPanel({
         <>
           <div className="diagnosis-panel__object">
             <div>
-              <h3>{device.name}</h3>
+              <h3><FlipText value={device.name} /></h3>
               <p>
                 {device.id} ·{' '}
                 {telemetry.samples.length
@@ -291,6 +293,7 @@ export default function DiagnosisPanel({
             />
           )}
           <div className="diagnosis-panel__result">
+            <FlipContent identity={`${device.id}:${validEvent?.id ?? 'empty'}:${eventError ? 'error' : eventLoading && !validEvent ? 'loading' : 'ready'}`}>
             <LoadState
               loading={eventLoading && !validEvent}
               error={eventError}
@@ -322,6 +325,7 @@ export default function DiagnosisPanel({
                 </>
               )}
             </LoadState>
+            </FlipContent>
           </div>
         </>
       )}

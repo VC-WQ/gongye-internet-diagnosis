@@ -5,6 +5,7 @@ import {
 } from '../../services/workspaceMode'
 import { STATUS_META } from '../../components/BusinessUI'
 import FlipValue from '../../motion/FlipValue'
+import FlipText from '../../motion/FlipText'
 
 export default function StatusOverview({
   counts,
@@ -55,11 +56,11 @@ export default function StatusOverview({
           title="实时采样推送状态"
         >
           <i aria-hidden />
-          {connection === 'connected'
+          <FlipText value={connection === 'connected'
             ? '推送已连接'
             : connection === 'connecting'
               ? '正在连接'
-              : '推送中断 · 定时刷新'}
+              : '推送中断 · 定时刷新'} />
         </span>
 
       </div>

@@ -14,6 +14,9 @@ import { useDeviceCatalog } from '../../services/realtime'
 import { usePageQuery } from '../../hooks/usePageQuery'
 import { errorText } from '../../hooks/useResource'
 import { LoadState, StatusTag } from '../../components/BusinessUI'
+import FlipContent from '../../motion/FlipContent'
+import FlipText from '../../motion/FlipText'
+import FlipValue from '../../motion/FlipValue'
 export default function FaultInjection() {
   const catalog = useDeviceCatalog()
   const { params, update } = usePageQuery()
@@ -86,17 +89,19 @@ export default function FaultInjection() {
           </Button>
         </Space>
       </LoadState>
+      <FlipContent identity={`${deviceId ?? 'none'}:${result ? `${result.id}:${result.last_updated}` : 'empty'}`}>
       {result && (
         <Descriptions style={{ marginTop: 28 }} column={3}>
-          <Descriptions.Item label="设备">{result.name}</Descriptions.Item>
+          <Descriptions.Item label="设备"><FlipText value={result.name} /></Descriptions.Item>
           <Descriptions.Item label="健康评分">
-            {result.health_score ?? '—'}
+            <FlipValue value={String(result.health_score ?? '—')} />
           </Descriptions.Item>
           <Descriptions.Item label="目录状态">
             <StatusTag status={result.status} />
           </Descriptions.Item>
         </Descriptions>
       )}
+      </FlipContent>
       <Modal
         title="应用仿真状态"
         open={open}

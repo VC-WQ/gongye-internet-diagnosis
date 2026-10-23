@@ -74,7 +74,7 @@ export default function FactoryWorkspace() {
             onSelect={id => workspace.setDevice(id)} selectedOutsideFilter={outsideFilter} />
         </aside>
         <aside className="factory-board__monitor" data-factory-entry="monitor" data-route-module="factory-monitor">
-          <LiveMonitorPanel device={selected} telemetry={telemetry} channel={workspace.channel ?? 'vibration'} onChannel={workspace.setChannel} />
+          <LiveMonitorPanel device={selected} devices={devices} telemetry={telemetry} channel={workspace.channel ?? 'vibration'} onChannel={workspace.setChannel} />
         </aside>
         <section className="factory-board__scene" aria-label="工厂设备场景" data-factory-entry="scene" data-route-module="factory-scene">
           {catalog.loading && !catalog.data ? <div className="factory-panel factory-scene-loading"><Skeleton active paragraph={{ rows: 8 }} /></div>

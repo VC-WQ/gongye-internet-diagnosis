@@ -6,6 +6,7 @@ import { InboxOutlined, ThunderboltOutlined } from '@ant-design/icons'
 import { detectVision, getVisionComparison, getVisionModels, getVisionSamples } from '../services/api'
 import ChartNote from './ChartNote'
 import { VisionSession } from '../services/visionSession'
+import FlipContent from '../motion/FlipContent'
 
 const cardBodyStyle = { padding: 12 }
 
@@ -326,6 +327,7 @@ export default function VisionDetect() {
               ) : null
             }
           >
+            <FlipContent identity={resultFrame ? `result:${resultFrame.revision}` : 'empty'}>
             {result ? (
               <Row gutter={12}>
                 <Col span={12}>
@@ -371,6 +373,7 @@ export default function VisionDetect() {
             ) : (
               <Empty description="上传图片并点击「开始检测」后查看结果" />
             )}
+            </FlipContent>
           </Card>
         </Col>
 
