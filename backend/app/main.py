@@ -41,6 +41,8 @@ def _seed_devices() -> None:
     设备目录与 simulators/virtual_device.py 中的默认 6 台异构设备保持一致，
     健康分与状态按设备退化程度差异化，供前端大屏展示不同状态层次。
     """
+    if not settings.seed_demo_devices:
+        return
     db = SessionLocal()
     try:
         if db.query(Device).count() > 0:
@@ -60,14 +62,17 @@ def _seed_devices() -> None:
 
 
 def _seed_admin() -> None:
-    """首次启动时写入默认管理员账号（username=admin, password=admin123）。"""
+    """初始化管理员；生产必须显式提供口令，已有账户始终由管理流程维护。"""
     from app.modules.auth.security import hash_password
 
     db = SessionLocal()
     try:
         if db.query(User).count() > 0:
             return
-        db.add(User(username="admin", password_hash=hash_password("admin123"), role="admin"))
+        if settings.runtime_environment == "production" and not settings.bootstrap_admin_password:
+            logger.warning("未配置管理员初始化口令，未创建演示管理员")
+            return
+        db.add(User(username=settings.bootstrap_admin_username, password_hash=hash_password(settings.bootstrap_admin_password or "admin123"), role="admin"))
         db.commit()
     finally:
         db.close()

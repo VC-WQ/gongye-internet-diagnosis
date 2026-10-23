@@ -5,6 +5,12 @@ services:
     ports:
       - "8000:8000"
     environment:
+      - RUNTIME_ENVIRONMENT=${RUNTIME_ENVIRONMENT:-production}
+      - SECRET_KEY=${SECRET_KEY:?Configure a unique SECRET_KEY before starting Compose}
+      - BOOTSTRAP_ADMIN_USERNAME=${BOOTSTRAP_ADMIN_USERNAME:-admin}
+      - BOOTSTRAP_ADMIN_PASSWORD=${BOOTSTRAP_ADMIN_PASSWORD:-}
+      - SEED_DEMO_DEVICES=${SEED_DEMO_DEVICES:-false}
+      - DEEPSEEK_MOCK=${DEEPSEEK_MOCK:-false}
       - DATABASE_URL=sqlite:////app/data/industrial_diagnosis.db
       - MQTT_HOST=mqtt
       - MQTT_PORT=1883
