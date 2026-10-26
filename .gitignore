@@ -27,3 +27,5 @@ scripts/*.log
 scripts/ch2_verify.txt
 scripts/ch3_routes.txt
 tools/dev-scripts/e2e_results.json
+# Training validation scratch output; curated research assets remain tracked.
+data/neu_det_export/curve_tmp_*/
