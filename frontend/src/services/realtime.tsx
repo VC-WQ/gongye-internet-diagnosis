@@ -2,6 +2,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -141,18 +142,22 @@ export function useDeviceTelemetry(device?: string, enabled = true) {
       ].slice(-64),
     }))
   }, [current, device, enabled])
-  const rest = Array.isArray(resource.data)
+  const rest = useMemo(() => Array.isArray(resource.data)
     ? resource.data
         .map((p: unknown) => parseSample(p, device))
         .filter((p): p is Sample => Boolean(p))
-    : []
-  const joined = new Map<number, Sample>()
-  rest.forEach((p) => joined.set(p.timestamp, p))
-  if (live.device === device)
-    live.points.forEach((p) => joined.set(p.timestamp, p))
-  const samples = Array.from(joined.values())
-    .sort((a, b) => a.timestamp - b.timestamp)
-    .slice(-64)
+    : [], [resource.data, device])
+  // Connection/age ticks update stale metadata without rebuilding an unchanged
+  // window. This also preserves SensorChart's memo boundary between samples.
+  const samples = useMemo(() => {
+    const joined = new Map<number, Sample>()
+    rest.forEach((p) => joined.set(p.timestamp, p))
+    if (live.device === device)
+      live.points.forEach((p) => joined.set(p.timestamp, p))
+    return Array.from(joined.values())
+      .sort((a, b) => a.timestamp - b.timestamp)
+      .slice(-64)
+  }, [rest, live.device, live.points, device])
   const last = samples[samples.length - 1]
   const stale = Boolean(last && now - last.timestamp > 15000)
   const source =

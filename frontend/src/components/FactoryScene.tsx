@@ -171,6 +171,10 @@ export default function FactoryScene({ devices, visibleIds, selected, onSelect, 
     const focusProgress = new CameraFocusProgress()
     let anchorSequence = 0
     const anchorCache = new Map<string, DeviceAnchor | null>()
+    // Filtering removes business/DOM identity immediately. A bounded visual
+    // lease lets an already-grown model finish its collapse on the same focus
+    // seam, even after its outgoing SVG node leaves the clip and unmounts.
+    const retiringAnchors = new Map<string, Point>()
     const notify = () => {
       anchorSequence++; anchorCache.clear()
       const focusFrame = focusProgress.sample(camera,targetCamera,cameraVelocity,!activeCamera(),clock())
@@ -279,7 +283,12 @@ export default function FactoryScene({ devices, visibleIds, selected, onSelect, 
       // Sample BEFORE overwriting desired flags; old completion never owns the new generation.
       advance(clock())
       const known=new Set(p.devices.map(d=>d.id))
-      for (const sprite of model.values()) sprite.visible=known.has(sprite.id)&&p.visibleIds.has(sprite.id)
+      for (const sprite of model.values()) {
+        const visible=known.has(sprite.id)&&p.visibleIds.has(sprite.id)
+        if (sprite.visible&&!visible&&nodes.current.get(sprite.id)?.classList.contains('is-growth'))
+          retiringAnchors.set(sprite.id,{...sprite.current})
+        sprite.visible=visible
+      }
       const slots=createSlots(p.devices.length,viewRef.current.columns)
       p.devices.forEach((device,index)=>{
         const existing=model.get(device.id)
@@ -449,15 +458,23 @@ export default function FactoryScene({ devices, visibleIds, selected, onSelect, 
         if (anchorCache.has(id)) return anchorCache.get(id) ?? null
         const node = nodes.current.get(id), item = model.get(id)
         let result: DeviceAnchor | null = null
-        if (node?.isConnected && item?.visible && item.present && props.current.visibleIds.has(id)) {
-          const raw = node.getScreenCTM(), source = element.getScreenCTM(), box = element.viewBox.baseVal
+        const retiring = retiringAnchors.get(id)
+        if (retiring || node?.isConnected && item?.visible && item.present && props.current.visibleIds.has(id)) {
+          // Keep the outgoing world position, never a frozen screen transform:
+          // both the existing exit path and the returning camera remain live.
+          if (retiring && item) Object.assign(retiring,item.current)
+          const basis = retiring ? group.getScreenCTM() : node!.getScreenCTM()
+          const raw = basis && retiring ? { ...matrixValue(basis),
+            e:basis.a*retiring.x+basis.c*retiring.y+basis.e,
+            f:basis.b*retiring.x+basis.d*retiring.y+basis.f } : basis
+          const source = element.getScreenCTM(), box = element.viewBox.baseVal
           const style = getComputedStyle(element), width = parseFloat(style.width), height = parseFloat(style.height)
-          const matrix = raw && source ? relativeAffine(matrixValue(source), matrixValue(raw),
+          const matrix = raw && source ? relativeAffine(matrixValue(source), raw,
             { x:box.x, y:box.y, width:box.width, height:box.height }, width, height) : null
           if (matrix) {
             const x = matrix.c * 19.5 + matrix.e, y = matrix.d * 19.5 + matrix.f
             const pad = Math.hypot(matrix.a,matrix.b) * 180
-            if (x > -pad && x < width+pad && y > -pad && y < height+pad) result = { deviceId:id,matrix,width,height,
+            if (retiring || x > -pad && x < width+pad && y > -pad && y < height+pad) result = { deviceId:id,matrix,width,height,
               sequence:anchorSequence,sceneMoving:activeCamera() || Boolean(plan && clock()-planStart < plan.duration),pointerBusy:pointers.size > 0,
               focus:focusProgress.read() }
           }
@@ -466,6 +483,7 @@ export default function FactoryScene({ devices, visibleIds, selected, onSelect, 
         return result
       },
       blend: (id,p) => {
+        if (p <= 0) retiringAnchors.delete(id)
         const node = nodes.current.get(id)
         if (!node) return
         if (p <= 0) {
@@ -501,7 +519,7 @@ export default function FactoryScene({ devices, visibleIds, selected, onSelect, 
       element.removeEventListener('wheel',wheel)
       for (const name of ['gesturestart','gesturechange','gestureend']) element.removeEventListener(name,gesture)
       for (const id of pointers.keys()) if (element.hasPointerCapture(id)) element.releasePointerCapture(id)
-      pointers.clear();nodes.current.clear();model.clear();basis.clear();plan=null
+      pointers.clear();nodes.current.clear();model.clear();basis.clear();retiringAnchors.clear();plan=null
     }
   },[])
 

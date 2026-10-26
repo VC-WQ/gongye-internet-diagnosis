@@ -6,13 +6,29 @@ import type { Device } from '../../services/api'
 import FlipValue from '../../motion/FlipValue'
 import FlipText from '../../motion/FlipText'
 import FlipContent from '../../motion/FlipContent'
+import { useRef } from 'react'
+import { useContentTransition } from '../../motion/useContentTransition'
+
+/** The outgoing entrance is presentation only. Its old Popover/form unmounts
+ * as soon as business selection changes, including any portal outside inert. */
+function AppearanceEntrance({ device }: { device?: Device }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const transition = useContentTransition(device?.id ?? 'factory', device, ref)
+  const shown = transition.content
+  const current = shown && shown.id === device?.id && !transition.exiting
+  return <div ref={ref} className="current-device__appearance" data-content-phase={transition.phase}
+    data-content-identity={transition.identity} data-content-target={transition.targetIdentity}>
+    {shown && (current ? <DeviceAppearanceEditor key={shown.id} device={shown} />
+      : <Button size="small" disabled aria-hidden tabIndex={-1}>外观设置</Button>)}
+  </div>
+}
 
 export default function CurrentDevicePanel({ device, devices, outsideFilter, onAnalyze, onDiagnose }: {
   device?: Device; devices: Device[]; outsideFilter: boolean; onAnalyze: () => void; onDiagnose: () => void
 }) {
   const visual = useDeviceVisual()
   return <section className="factory-panel factory-panel--current" aria-label={device ? '当前设备' : '工厂概况'}>
-    <header className="factory-panel__head"><h2><FlipText value={device ? '当前设备' : '工厂概况'} /></h2>{device && <StatusTag animated status={device.status} />}</header>
+    <header className="factory-panel__head"><h2><FlipText value={device ? '当前设备' : '工厂概况'} /></h2><FlipContent identity={device?.id ?? 'factory'}>{device && <StatusTag animated status={device.status} />}</FlipContent></header>
     <div className="current-device__body">
       <FlipContent identity={device?.id ?? 'factory'} className="current-device__summary">
       {!device ? <><div className="current-device__name"><FlipText value="全厂设备态势" /></div><p className="factory-note">当前未选择设备。选择场景模型或目录设备后，查看对应摘要与实时采样。</p>
@@ -26,7 +42,7 @@ export default function CurrentDevicePanel({ device, devices, outsideFilter, onA
         {outsideFilter && <p className="factory-note">当前设备不在筛选结果中，已保留选中状态。</p>}
         </>}
       </FlipContent>
-      {device && <DeviceAppearanceEditor key={device.id} device={device} />}
+      <AppearanceEntrance device={device} />
       <div className="current-device__actions"><Button disabled={!device} onClick={onAnalyze}><FlipText value={device ? '设备详情' : '先选择设备'} /></Button><Button type="primary" disabled={!device} onClick={onDiagnose}><FlipText value={device ? '智能诊断' : '选择后诊断'} /></Button></div>
     </div>
   </section>

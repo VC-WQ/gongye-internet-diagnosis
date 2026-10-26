@@ -4,8 +4,47 @@ import test from 'node:test'
 import ts from 'typescript'
 const source = await readFile(new URL('../src/services/workspaceMode.ts', import.meta.url), 'utf8')
 const { outputText } = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 } })
-const { legacyRedirect, factoryPath, factoryState, upperLevelPath, isSafeInternalPath, workspaceLink, normalizeStatus, normalizePanel, normalizeTool, areaFromPath, deviceDetailPath, toolPath, recordDetailPath, navigationContextPath } = await import(`data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`)
+const { legacyRedirect, factoryPath, factoryState, upperLevelPath, isSafeInternalPath, workspaceLink, normalizeStatus, normalizePanel, normalizeTool, areaFromPath, deviceDetailPath, toolPath, recordDetailPath, navigationContextPath, deviceSelectionPatch, statusFilterPatch } = await import(`data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`)
 const parsed = path => new URL(path, 'http://localhost')
+const applyPatch = (query, patch) => {
+  const next = new URLSearchParams(query)
+  for (const [key, value] of Object.entries(patch)) value ? next.set(key, value) : next.delete(key)
+  return next
+}
+
+test('every status switch clears the device and every dependent identity while retaining search', () => {
+  for (const device of ['compressor-001', 'pump-002']) {
+    for (const status of ['healthy', 'degraded', 'fault', 'offline', 'all']) {
+      const before = new URLSearchParams({ device, status: device === 'pump-002' ? 'degraded' : 'healthy', event: '8', panel: 'device', detail: 'acoustic', tab: 'history', evidence: 'event:8', channel: 'temperature', page: '3', q: '泵 A' })
+      const after = applyPatch(before, statusFilterPatch(status))
+      assert.equal(after.get('status'), status === 'all' ? null : status)
+      assert.equal(after.get('q'), '泵 A')
+      for (const key of ['device', 'event', 'panel', 'detail', 'tab', 'evidence', 'channel', 'page']) assert.equal(after.has(key), false, `${status}: ${key}`)
+      assert.equal(factoryState(after.toString()).deviceId, undefined)
+      assert.equal(after.toString().includes(device), false)
+    }
+  }
+})
+
+test('toggling the active status to all clears selection and leaves the canonical overview', () => {
+  const after = applyPatch('device=compressor-001&status=degraded', statusFilterPatch('all'))
+  assert.equal(after.toString(), '')
+  assert.equal(factoryPath({ status: factoryState(after.toString()).statusFilter }), '/dashboard')
+  assert.equal(applyPatch('device=compressor-001&status=degraded&q=电机', statusFilterPatch('all')).toString(), 'q=%E7%94%B5%E6%9C%BA')
+})
+
+test('device deselection and filter reset share one cleanup contract across rapid switches', () => {
+  const devicePatch = deviceSelectionPatch()
+  for (const [key, value] of Object.entries(devicePatch)) assert.equal(statusFilterPatch('degraded')[key], value)
+  let query = new URLSearchParams('q=保留关键词&device=pump-001&event=8&channel=vibration')
+  for (let i = 0; i < 50; i++) {
+    query = applyPatch(query, deviceSelectionPatch(i % 2 ? 'pump-002' : 'compressor-001'))
+    query = applyPatch(query, statusFilterPatch(['healthy', 'degraded', 'fault', 'offline', 'all'][i % 5]))
+    assert.equal(query.get('device'), null)
+    assert.equal(query.get('q'), '保留关键词')
+  }
+  assert.deepEqual([...query.keys()], ['q'])
+})
 
 test('factory legacy list retains search, status and device without creating a detail sidebar', () => {
   const result = parsed(legacyRedirect('/devices', '?device=pump-001&event=9&q=泵&status=fault&page=2&tab=history&channel=temperature'))
@@ -72,6 +111,14 @@ test('canonical routes are idempotent and unknown tools retain a usable parent',
   assert.equal(legacyRedirect('/tools/not-a-tool'),'/tools')
   assert.equal(legacyRedirect('/admin/whatever'),'/admin/users')
   assert.equal(legacyRedirect('/unknown'),undefined)
+})
+
+test('valid factory query key order never triggers a scene-unmounting compatibility redirect', () => {
+  for (const query of ['?q=A&status=healthy', '?status=healthy&q=A', '?q=A&device=pump-001&status=healthy', '?device=pump-001&q=A&status=healthy'])
+    assert.equal(legacyRedirect('/dashboard', query), undefined, query)
+  // Actual unsupported/legacy state is still cleaned or routed to its owner.
+  assert.equal(legacyRedirect('/dashboard', '?q=A&status=healthy&redirect=evil'), '/dashboard?status=healthy&q=A')
+  assert.equal(parsed(legacyRedirect('/dashboard', '?q=A&device=pump-001&panel=device')).pathname, '/manage/devices/pump-001')
 })
 
 test('invalid encoding and unsupported factory parameters are removed safely', () => {

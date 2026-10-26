@@ -11,11 +11,13 @@ import {
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   areaFromPath,
+  deviceSelectionPatch,
   factoryPath,
   normalizeDetail,
   normalizePanel,
   normalizeStatus,
   safeDecode,
+  statusFilterPatch,
   workspaceLink,
   type Area,
   type DetailTab,
@@ -108,9 +110,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const setDevice = useCallback(
     (id?: string, opts?: { replace?: boolean }) =>
       update(
-        { device: id, event: undefined, page: undefined,
-          ...(!id ? { panel: undefined, detail: undefined, tab: undefined, evidence: undefined, channel: undefined } : {}),
-        },
+        deviceSelectionPatch(id),
         opts?.replace ?? true,
       ),
     [update],
@@ -143,11 +143,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const setStatusFilter = useCallback(
     (status: StatusFilter) =>
       update(
-        {
-          status: status === 'all' ? undefined : status,
-          event: undefined,
-          page: undefined,
-        },
+        statusFilterPatch(status),
         true,
       ),
     [update],

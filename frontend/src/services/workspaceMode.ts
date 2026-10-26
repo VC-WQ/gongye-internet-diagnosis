@@ -139,6 +139,21 @@ export function normalizeStatus(value: string | null | undefined): StatusFilter 
     : 'all'
 }
 
+/** One URL patch owns the device identity and its dependent presentation state. */
+export function deviceSelectionPatch(device?: string): Record<string, string | undefined> {
+  return {
+    device,
+    event: undefined,
+    page: undefined,
+    ...(!device ? { panel: undefined, detail: undefined, tab: undefined, evidence: undefined, channel: undefined } : {}),
+  }
+}
+
+/** Filtering starts a fresh factory overview; unrelated search remains intact. */
+export function statusFilterPatch(status: StatusFilter): Record<string, string | undefined> {
+  return { ...deviceSelectionPatch(), status: status === 'all' ? undefined : status }
+}
+
 export function normalizePanel(value: string | null | undefined): FactoryPanel {
   return FACTORY_PANELS.includes(value as FactoryPanel)
     ? (value as FactoryPanel)
@@ -317,8 +332,14 @@ export function legacyRedirect(
     }
     // 已经是 canonical 形态时不重定向，避免循环。
     const canonical = migrateFactoryPanel(source, normalizePanel(source.get('panel')))
-    const current = `/dashboard${search ? `?${new URLSearchParams(search)}` : ''}`
-    return canonical === current ? undefined : canonical
+    const [canonicalPath, canonicalQuery = ''] = canonical.split('?')
+    const canonicalParams = new URLSearchParams(canonicalQuery)
+    const currentParams = new URLSearchParams(search)
+    canonicalParams.sort(); currentParams.sort()
+    // URLSearchParams updates preserve insertion order. Search/filter actions
+    // may reorder valid keys; that is not a migration and must not unmount the
+    // scene through FactoryRoute's temporary <Navigate> branch.
+    return canonicalPath === path && canonicalParams.toString() === currentParams.toString() ? undefined : canonical
   }
 
   if (path.startsWith('/device/')) {
