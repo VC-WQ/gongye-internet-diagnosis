@@ -320,6 +320,17 @@ export default function PicoConversation({
     if (message.role !== 'assistant') return null
     return (
       <>
+        {message.taskStatus && (
+          <div className="pico-task-state" role="status" data-task-status={message.taskStatus}>
+            {{ running: '正在查询与规划', awaiting_ui: '正在执行并验证页面', completed: '任务完成', partial: '部分完成', failed: '执行失败', needs_input: '等待补充信息', cancelled: '任务已取消', unverified: 'UNVERIFIED · 真实模型未验证' }[message.taskStatus]}
+          </div>
+        )}
+        {Boolean(message.taskTrace?.length) && (
+          <details className="pico-task-trace">
+            <summary>查看任务进度与实际结果（{message.taskTrace!.length}）</summary>
+            <ol>{message.taskTrace!.map((step, index) => <li key={`${step.step}:${index}`} data-task-step={step.step} data-step-status={step.status}>{step.step ? `第 ${step.step} 步 · ` : ''}{step.message}</li>)}</ol>
+          </details>
+        )}
         {message.actionResults && message.actionResults.length > 0 && (
           <ol className="pico-action-results" aria-label="页面操作执行结果">
             {message.actionResults.map((step, index) => (
@@ -388,7 +399,7 @@ export default function PicoConversation({
   }
 
   return (
-    <div className={`pico-conversation pico-conversation--${variant}`}>
+    <div className={`pico-conversation pico-conversation--${variant}`} data-pico-exclude>
       <div
         className="pico-conversation__messages"
         ref={listRef}

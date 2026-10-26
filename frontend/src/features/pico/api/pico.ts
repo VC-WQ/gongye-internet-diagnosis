@@ -1,5 +1,6 @@
 import api from '../../../services/api'
-import type { PicoChatResponse, PicoContextSnapshot, PicoResolvedContext } from '../core/types'
+import type { PicoChatResponse, PicoContextSnapshot, PicoResolvedContext, PicoTaskResponse, PicoActionResult } from '../core/types'
+import type { PicoPageSnapshot } from '../core/pageSnapshot'
 
 export interface PicoChatPayload {
   message: string
@@ -28,3 +29,11 @@ export const postPicoChat = (payload: PicoChatPayload, signal?: AbortSignal) =>
     // Planner (7s) + answer (10s), both without retry, plus bounded local queries.
     .post<PicoChatResponse>('/pico/chat', payload, { signal, timeout: 25000 })
     .then((r) => r.data)
+
+export const startPicoTask = (payload: PicoChatPayload & { page_snapshot: PicoPageSnapshot; client_task_id: string }, signal: AbortSignal) =>
+  api.post<PicoTaskResponse>('/pico/tasks', payload, { signal, timeout: 20000 }).then(r => r.data)
+
+export const continuePicoTask = (id: string, payload: { context: PicoContextSnapshot; page_snapshot: PicoPageSnapshot; expected_step: number; observation?: PicoActionResult }, signal: AbortSignal) =>
+  api.post<PicoTaskResponse>(`/pico/tasks/${encodeURIComponent(id)}/continue`, payload, { signal, timeout: 20000 }).then(r => r.data)
+
+export const cancelPicoTask = (id: string) => api.delete(`/pico/tasks/${encodeURIComponent(id)}`, { timeout: 3000 }).catch(() => undefined)

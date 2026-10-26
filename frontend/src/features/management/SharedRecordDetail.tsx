@@ -7,6 +7,7 @@ import { useSpatialNavigate } from '../../hooks/useSpatialNavigate'
 import { getEvent } from '../../services/api'
 import Timeline from '../../pages/Timeline'
 import './management.css'
+import { usePicoPageAdapter } from '../pico/core/usePicoPageAdapter'
 
 export default function SharedRecordDetail() {
   const { eventId } = useParams<{ eventId: string }>()
@@ -14,6 +15,14 @@ export default function SharedRecordDetail() {
   const id = eventId && /^[1-9]\d*$/.test(eventId) ? Number(eventId) : undefined
   const resource = useResource(`shared-record:${eventId}`, () => getEvent(id!), 10000, Boolean(id))
   const event = resource.data
+  usePicoPageAdapter({
+    state: resource.error ? 'error' : id && !event ? 'loading' : event ? 'ready' : 'empty',
+    entities: event ? [{ kind: 'event', id: String(event.id), name: `${event.device_id} · 诊断记录 #${event.id}`, selected: true }] : [],
+    visible_data: event ? [
+      { label: '历史诊断评分', value: event.health_score ?? null, entity_id: String(event.id), observed_at: String(event.timestamp), source: `/api/v1/command-loop/events/${event.id}` },
+      { label: '事件状态', value: event.status_state, entity_id: String(event.id), source: `/api/v1/command-loop/events/${event.id}` },
+    ] : [],
+  })
   return (
     <div className="management-record-detail">
       <PageHeading

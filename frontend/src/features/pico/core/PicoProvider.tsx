@@ -13,7 +13,9 @@ import { useDeviceCatalog } from '../../../services/realtime'
 import { speakChinese, stopChineseSpeech } from '../../../services/speech'
 import { useWorkspace } from '../../../services/workspace'
 import { errorText } from '../../../hooks/useResource'
-import { postPicoChat } from '../api/pico'
+import { cancelPicoTask, continuePicoTask, postPicoChat, startPicoTask } from '../api/pico'
+import { buildPicoPageSnapshot } from './pageSnapshot'
+import { runPicoTask } from './taskRunner'
 import { NotificationGate } from './notificationGate'
 import { buildContextTitle } from './presentation'
 import { usePicoActionExecutor } from './usePicoActionExecutor'
@@ -68,6 +70,12 @@ const PicoContext = createContext<PicoValue | null>(null)
 let sequence = 0
 const nextId = (prefix: string) => `${prefix}-${Date.now()}-${++sequence}`
 
+function stopVisibleTasks(messages: PicoMessage[], status: 'cancelled' | 'failed' = 'cancelled'): PicoMessage[] {
+  return messages.map(message => message.taskStatus === 'running' || message.taskStatus === 'awaiting_ui'
+    ? { ...message, taskStatus: status, actionResults: message.actionResults?.map(result => result.status === 'running' ? { ...result, status: 'cancelled' } : result) }
+    : message)
+}
+
 function isCancel(error: unknown): boolean {
   return (
     typeof error === 'object' &&
@@ -109,6 +117,7 @@ export function PicoProvider({ children }: { children: ReactNode }) {
   const requestRef = useRef(0)
   const abortRef = useRef<AbortController | null>(null)
   const executionRef = useRef<PicoExecutionGuard>()
+  const taskRef = useRef<string>()
   const openRef = useRef(false)
   openRef.current = open
   const workbenchRef = useRef(false)
@@ -193,9 +202,12 @@ export function PicoProvider({ children }: { children: ReactNode }) {
     if (executionRef.current?.accept(actionExecutor.currentState())) return
     requestRef.current += 1
     abortRef.current?.abort()
+    if (taskRef.current) void cancelPicoTask(taskRef.current)
+    taskRef.current = undefined
     executionRef.current = undefined
     busyRef.current = false
     setBusy(false)
+    setMessages(previous => stopVisibleTasks(previous))
     stopSpeaking()
   }, [
     contextKey,
@@ -218,6 +230,7 @@ export function PicoProvider({ children }: { children: ReactNode }) {
     () => () => {
       requestRef.current += 1
       abortRef.current?.abort()
+      if (taskRef.current) void cancelPicoTask(taskRef.current)
       stopChineseSpeech()
       deviceFormDraftChannel.clear()
     },
@@ -262,9 +275,12 @@ export function PicoProvider({ children }: { children: ReactNode }) {
     if (notification.severity === 'critical' && busyRef.current) {
       requestRef.current += 1
       abortRef.current?.abort()
+      if (taskRef.current) void cancelPicoTask(taskRef.current)
+      taskRef.current = undefined
       executionRef.current = undefined
       busyRef.current = false
       setBusy(false)
+      setMessages(previous => stopVisibleTasks(previous))
     }
     setEmotion(notification.severity === 'critical' ? 'alert' : 'curious')
     const prefix =
@@ -289,6 +305,8 @@ export function PicoProvider({ children }: { children: ReactNode }) {
   const cancel = useCallback(() => {
     requestRef.current += 1
     abortRef.current?.abort()
+    if (taskRef.current) void cancelPicoTask(taskRef.current)
+    taskRef.current = undefined
     executionRef.current = undefined
     busyRef.current = false
     setBusy(false)
@@ -297,7 +315,7 @@ export function PicoProvider({ children }: { children: ReactNode }) {
     setTalking(false)
     setSpeakingId(undefined)
     setMessages((previous) => [
-      ...previous,
+      ...stopVisibleTasks(previous),
       { id: nextId('cancel'), role: 'system', text: '已停止本次请求。' },
     ])
   }, [])
@@ -344,6 +362,41 @@ export function PicoProvider({ children }: { children: ReactNode }) {
 
       void (async () => {
         try {
+          const taskId = crypto.randomUUID()
+          taskRef.current = taskId
+          const guard = new PicoExecutionGuard(executionOrigin)
+          executionRef.current = guard
+          const taskMessageId = nextId('task')
+          let taskShown = false
+          const readPage = () => {
+            const current = contextRef.current
+            const context = current.snapshot
+            return { context, page_snapshot: buildPicoPageSnapshot(context, current.url.split('?')[1] ?? '') }
+          }
+          const task = await runPicoTask(taskId, {
+            start: page => startPicoTask({ message: (content + (options?.override ? `（本次明确目标：${options.override.device_id ?? ''}${options.override.event_id ? ` 事件 #${options.override.event_id}` : ''}）` : '')).slice(0, 500), history, client_task_id: taskId, ...page }, controller.signal),
+            resume: (previous, page, observation) => continuePicoTask(taskId, { ...page, expected_step: previous.step, ...(observation ? { observation } : {}) }, controller.signal),
+            readPage,
+            valid: () => requestRef.current === requestId && guard.accept(actionExecutor.currentState()),
+            execute: action => actionExecutor.execute(action, controller.signal, guard),
+            update: (response, actionResults) => {
+              if (response.status === 'unverified') return
+              const message: PicoMessage = { id: taskMessageId, role: 'assistant', text: response.text, references: response.references, meta: response.meta, actionResults, taskStatus: response.status, taskTrace: response.trace }
+              setMessages(previous => taskShown ? previous.map(item => item.id === taskMessageId ? message : item) : [...previous, message])
+              taskShown = true
+            },
+          }, controller.signal)
+          taskRef.current = undefined
+          if (task.status !== 'unverified') {
+            executionRef.current = undefined
+            setEmotion(task.status === 'completed' ? 'happy' : 'confused')
+            if (!openRef.current && !workbenchRef.current) setUnread(true)
+            if (autoReadRef.current && task.status === 'completed') speak(task.text, taskMessageId)
+            return
+          }
+          // Preserve the proven, finite legacy features when no real planner is configured.
+          // This response is explicitly labelled UNVERIFIED; it is never a live task success.
+          executionRef.current = undefined
           const response: PicoChatResponse = await postPicoChat(
             {
               message: content,
@@ -372,13 +425,14 @@ export function PicoProvider({ children }: { children: ReactNode }) {
             {
               id: response.message_id,
               role: 'assistant',
-              text: response.text,
+              text: `${task.text}\n有限降级回答：\n${response.text}`,
               emotion: response.emotion,
               references: response.references,
               actions: response.actions,
               meta: response.meta,
               // 上下文快照只保留在不可见元数据中，供正确性检查；不再逐条渲染。
               contextLabel: snapshotLabel,
+              taskStatus: 'unverified',
             },
           ])
           let answerText = response.text
@@ -409,14 +463,17 @@ export function PicoProvider({ children }: { children: ReactNode }) {
           )
             speak(answerText, response.message_id)
         } catch (error) {
-          if (requestRef.current !== requestId || contextRef.current.key !== captured.key || isCancel(error)) return
+          if (requestRef.current !== requestId || controller.signal.aborted || isCancel(error)) return
+          if (taskRef.current) void cancelPicoTask(taskRef.current)
           setMessages((previous) => [
-            ...previous,
-            { id: nextId('error'), role: 'system', text: errorText(error) },
+            ...stopVisibleTasks(previous, 'failed'),
+            { id: nextId('error'), role: 'system', text: error instanceof Error && !('isAxiosError' in error) ? error.message : errorText(error), taskStatus: 'failed' },
           ])
           setEmotion('confused')
         } finally {
           if (requestRef.current === requestId) {
+            taskRef.current = undefined
+            executionRef.current = undefined
             busyRef.current = false
             setBusy(false)
           }

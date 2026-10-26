@@ -1,6 +1,7 @@
 import { parsePicoUiAction, picoUiActionPath, PicoActionRegistry, PicoExecutionGuard, picoNavigationIdentity, type PicoExecutionState } from './uiActions'
 import type { PicoActionResult, PicoUiAction } from './types'
 import type { DeviceFormAck, DeviceFormDraft } from '../../management/deviceFormDraft'
+import { statusFilterPatch } from '../../../services/workspaceMode'
 
 interface State extends PicoExecutionState { theme: string; dockOpen: boolean }
 export interface PicoExecutorDependencies {
@@ -12,6 +13,7 @@ export interface PicoExecutorDependencies {
   getDevice: (id: string, signal?: AbortSignal) => Promise<{ id: string }>
   getEvent: (id: number, signal?: AbortSignal) => Promise<{ id: number; device_id: string }>
   offerDraft: (draft: DeviceFormDraft, signal: AbortSignal) => Promise<DeviceFormAck>
+  factoryDeviceVisible?: (id: string) => boolean
 }
 
 const aborted = () => Object.assign(new Error('本次操作已取消，未继续执行。'), { name: 'AbortError' })
@@ -128,14 +130,32 @@ export class PicoActionExecutor {
       const user = await bounded(this.deps.getMe(signal), signal)
       check()
       if (!user.is_active) throw new Error('当前账号不可用，本步未执行。')
-      const admin = action.type === 'prefill_device_form' || (action.type === 'navigate' && (action.route_id === 'device_management' || (action.route_id === 'tools' && action.params.tool === 'simulation')))
+      const admin = action.type === 'prefill_device_form' || (action.type === 'navigate' && (['device_management', 'user_management', 'record_management'].includes(action.route_id) || (action.route_id === 'tools' && action.params.tool === 'simulation')))
       if (admin && user.role !== 'admin') throw new Error('当前账号没有此管理操作的权限，本步未执行。')
       let message: string
       if (action.type === 'set_theme') {
         this.deps.setTheme(action.theme)
         await wait(() => this.deps.current().theme === action.theme)
         message = `已切换为${action.theme === 'dark' ? '深色' : '浅色'}主题。`
+      } else if (action.type === 'set_factory_filter') {
+        const state = this.deps.current()
+        const query = new URLSearchParams(state.url.startsWith('/dashboard?') ? state.url.split('?')[1] : '')
+        Object.entries(statusFilterPatch(action.status)).forEach(([key, value]) => value ? query.set(key, value) : query.delete(key))
+        if (action.q !== undefined) { if (action.q) query.set('q', action.q); else query.delete('q') }
+        await navigate(`/dashboard${query.size ? `?${query}` : ''}`)
+        message = '已更新工厂筛选并清除旧设备选择。'
+      } else if (action.type === 'select_factory_device') {
+        if (this.deps.current().url.split('?')[0] !== '/dashboard') throw new Error('当前页面不是工厂，请先打开工厂并读取设备列表。')
+        const target = await bounded(this.deps.getDevice(action.device_id, signal), signal)
+        check()
+        if (target.id !== action.device_id || !this.deps.factoryDeviceVisible?.(action.device_id)) throw new Error('设备不在当前筛选列表中，请重新读取页面后选择。')
+        const query = new URLSearchParams(this.deps.current().url.split('?')[1] ?? '')
+        query.set('device', action.device_id)
+        query.delete('event')
+        await navigate(`/dashboard?${query}`)
+        message = `已选中设备 ${action.device_id}，并验证页面选择。`
       } else if (action.type === 'navigate') {
+        let navigationAction = action
         const deviceId = action.route_id === 'device_detail' || action.route_id === 'records' || action.route_id === 'tools' ? action.params.device_id : undefined
         if (deviceId) {
           const target = await bounded(this.deps.getDevice(deviceId, signal), signal)
@@ -146,13 +166,16 @@ export class PicoActionExecutor {
           const event = await bounded(this.deps.getEvent(action.params.event_id, signal), signal)
           check()
           if (event.id !== action.params.event_id || (action.params.device_id && event.device_id !== action.params.device_id)) throw new Error('事件身份不匹配，未打开其他记录。')
+          // The report page resolves its owner into the URL. Authorize that final
+          // identity before navigation, rather than cancelling on its own effect.
+          if (action.route_id === 'report') navigationAction = { ...action, params: { ...action.params, device_id: event.device_id } }
         }
-        await navigate(picoUiActionPath(action))
-        const names = { factory: '工厂', tools: '工具页面', research: '研究中心', device_detail: '设备详情', event_detail: '诊断记录', report: '事件报告', device_management: '设备管理', records: '诊断记录列表' }
+        await navigate(picoUiActionPath(navigationAction))
+        const names = { factory: '工厂', tools: '工具页面', research: '研究中心', device_detail: '设备详情', event_detail: '诊断记录', report: '事件报告', device_management: '设备管理', user_management: '用户管理', record_management: '诊断记录管理', device_directory: '设备选择', records: '诊断记录列表' }
         message = `已打开${names[action.route_id]}。`
         if (action.route_id === 'tools' && action.params.tool === 'diagnosis') message = '已打开智能诊断页面，尚未提交诊断。请检查设备与参数后自行发起。'
         if (action.route_id === 'records' && deviceId) message = `已按设备 ${deviceId} 筛选诊断记录。`
-      } else {
+      } else if (action.type === 'prefill_device_form') {
         if (action.mode === 'edit') {
           const target = await bounded(this.deps.getDevice(action.device_id!, signal), signal)
           check()
@@ -166,6 +189,8 @@ export class PicoActionExecutor {
         const ack = await this.deps.offerDraft({ actionId: action.action_id, mode: action.mode, deviceId: action.device_id, fields: action.fields }, signal)
         check()
         message = '已打开设备表单并预填你提供的字段，尚未保存。请检查后自行保存。' + (ack.missing.length ? `还需补充${ack.missing.join('、')}。` : '')
+      } else {
+        throw new Error('此动作不属于平台能力目录。')
       }
       check()
       return { action_id: action.action_id, status: 'succeeded', message }

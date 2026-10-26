@@ -29,6 +29,7 @@ export function usePicoActionExecutor(key: string, open: boolean, setOpen: (valu
     closeDock: () => functions.current.setOpen(false),
     getDevice, getEvent, getMe,
     offerDraft: (draft, signal) => deviceFormDraftChannel.offer(draft, signal),
+    factoryDeviceVisible: id => Array.from(document.querySelectorAll('[role="listbox"] [data-pico-entity-id]')).some(node => node.getAttribute('data-pico-entity-id') === id && !node.closest('[hidden], [inert]')),
   })
   return executor.current
 }

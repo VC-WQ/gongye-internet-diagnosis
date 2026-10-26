@@ -8,7 +8,8 @@ const read = path => readFile(new URL(path, import.meta.url), 'utf8')
 const catalogue = code(await read('../src/features/about/research.ts'))
 const actionsUrl = code((await read('../src/features/pico/core/uiActions.ts')).replace("'../../about/research'", JSON.stringify(catalogue)))
 const { parsePicoUiAction, picoUiActionPath, picoNavigationIdentity, PicoExecutionGuard } = await import(actionsUrl)
-const { PicoActionExecutor } = await import(code((await read('../src/features/pico/core/PicoActionExecutor.ts')).replace("'./uiActions'", JSON.stringify(actionsUrl))))
+const workspaceUrl = code(await read('../src/services/workspaceMode.ts'))
+const { PicoActionExecutor } = await import(code((await read('../src/features/pico/core/PicoActionExecutor.ts')).replace("'./uiActions'", JSON.stringify(actionsUrl)).replace("'../../../services/workspaceMode'", JSON.stringify(workspaceUrl))))
 const { DeviceFormDraftChannel } = await import(code(await read('../src/features/management/deviceFormDraft.ts')))
 const action = (type, extra = {}) => ({ type, action_id: 'unit-action', ...extra })
 const nav = (route_id, params = {}) => action('navigate', { route_id, params })
@@ -26,6 +27,24 @@ test('operation paths use canonical V2.3 routes and strict event/analysis identi
   assert.equal(picoUiActionPath(nav('event_detail', { event_id: 7 })), '/manage/records/7')
   assert.equal(picoUiActionPath(nav('research', { topic_id: 'health', point_id: 'rul' })), '/research/health/rul')
   assert.equal(picoUiActionPath(nav('report', { event_id: 7, device_id: 'pump-002' })), '/tools/events?event=7&section=report&device=pump-002')
+})
+
+test('factory actions preserve literal search and clear device context before selecting a real visible entity', async () => {
+  const f=fixture({factoryDeviceVisible:id=>id==='pump-002'})
+  Object.assign(f.state,{url:'/dashboard?device=motor-001&status=healthy&q=old&channel=current',deviceId:'motor-001'})
+  const guard=f.guard()
+  assert.equal((await f.executor.execute(action('set_factory_filter',{status:'degraded',q:' 泵 '}),new AbortController().signal,guard)).status,'succeeded')
+  const url=new URL(f.state.url,'http://localhost');assert.equal(url.searchParams.get('q'),' 泵 ');assert.equal(url.searchParams.get('device'),null);assert.equal(url.searchParams.get('channel'),null)
+  assert.equal((await f.executor.execute({...action('select_factory_device',{device_id:'pump-002'}),action_id:'select-visible'},new AbortController().signal,guard)).status,'succeeded')
+  assert.equal(f.state.deviceId,'pump-002')
+  assert.equal((await f.executor.execute({...action('select_factory_device',{device_id:'motor-001'}),action_id:'reject-hidden'},new AbortController().signal,guard)).status,'failed')
+})
+
+test('report navigation binds the validated owner before committing a self-navigation guard',async()=>{
+  const f=fixture()
+  const guard=f.guard()
+  const result=await f.executor.execute(nav('report',{event_id:7}),new AbortController().signal,guard)
+  assert.equal(result.status,'succeeded');assert.equal(new URL(f.state.url,'http://localhost').searchParams.get('device'),'motor-001');assert.equal(guard.accept(f.state),true)
 })
 
 function fixture(overrides = {}) {

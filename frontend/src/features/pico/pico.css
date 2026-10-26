@@ -543,3 +543,8 @@
     max-width: 92%;
   }
 }
+.pico-task-state { font-size: 12px; font-weight: 600; margin-block: 8px; color: var(--text-secondary, #6b6861); }
+.pico-task-state[data-task-status="failed"], .pico-task-state[data-task-status="partial"] { color: var(--color-warning, #946519); }
+.pico-task-trace { margin-block: 8px; font-size: 12px; line-height: 1.65; }
+.pico-task-trace summary { cursor: pointer; }
+.pico-task-trace ol { padding-inline-start: 20px; }

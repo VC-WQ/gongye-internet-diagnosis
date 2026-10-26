@@ -15,6 +15,7 @@ import { useSpatialNavigate } from '../../hooks/useSpatialNavigate'
 import { deviceDetailPath, recordDetailPath, toolPath, STATUS_FILTERS, type StatusFilter } from '../../services/workspaceMode'
 import { useFactoryEntrance } from '../../motion/useFactoryEntrance'
 import './factory.css'
+import { usePicoPageAdapter } from '../pico/core/usePicoPageAdapter'
 
 /** The factory is an overview. Analysis and tasks have their own shared routes. */
 export default function FactoryWorkspace() {
@@ -32,6 +33,17 @@ export default function FactoryWorkspace() {
   const outsideFilter = Boolean(selected && !filtered.some(device => device.id === selected.id))
   const telemetry = useDeviceTelemetry(selected?.id)
   const events = useResource(`factory-events:${selected?.id ?? 'all'}`, () => listEvents({ device_id: selected?.id, limit: 20 }), 10000)
+  usePicoPageAdapter({
+    state: catalog.error ? 'error' : !catalog.data ? 'loading' : filtered.length ? 'ready' : 'empty',
+    entities: filtered.map(device => ({ kind: 'device', id: device.id, name: device.name, selected: device.id === selected?.id })),
+    visible_data: [
+      { label: '筛选后的设备数', value: filtered.length, source: '/api/v1/devices' },
+      { label: '全厂登记设备数', value: devices.length, source: '/api/v1/devices' },
+      ...filtered.map(device => ({ label: '目录状态', value: device.status, entity_id: device.id, source: '/api/v1/devices' })),
+      ...(selected ? [{ label: '当前设备目录健康评分', value: selected.health_score ?? null, unit: '/100', entity_id: selected.id, source: `/api/v1/devices/${selected.id}` }] : []),
+      ...(selected ? [{ label: '有效采样点数', value: telemetry.samples.length, entity_id: selected.id, source: '/api/v1/mqtt-pipeline/window' }] : []),
+    ],
+  })
   const root = useRef<HTMLDivElement>(null)
   useFactoryEntrance(root)
   useLayoutEffect(() => {

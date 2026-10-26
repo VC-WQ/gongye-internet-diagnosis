@@ -26,6 +26,11 @@ export function validatePicoDeviceFields(value: unknown, mode: 'create' | 'edit'
 /** Runtime exact-key validation is mandatory even when the network has TS types. */
 export function parsePicoUiAction(value: unknown): PicoUiAction | null {
   if (!isRecord(value) || typeof value.action_id !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(value.action_id)) return null
+  if (value.type === 'set_factory_filter') {
+    return keysOnly(value, ['type', 'action_id', 'status', 'q']) && ['all', ...STATUSES].includes(value.status as string) &&
+      (value.q === undefined || (typeof value.q === 'string' && value.q.length <= 80 && !/[\u0000-\u001f]/.test(value.q))) ? value as unknown as PicoUiAction : null
+  }
+  if (value.type === 'select_factory_device') return keysOnly(value, ['type', 'action_id', 'device_id']) && entity(value.device_id) ? value as unknown as PicoUiAction : null
   if (value.type === 'set_theme') {
     return keysOnly(value, ['type', 'action_id', 'theme']) && ['light', 'dark'].includes(value.theme as string) ? value as unknown as PicoUiAction : null
   }
@@ -37,7 +42,7 @@ export function parsePicoUiAction(value: unknown): PicoUiAction | null {
   if (value.type !== 'navigate' || !keysOnly(value, ['type', 'action_id', 'route_id', 'params']) || !isRecord(value.params)) return null
   const params = value.params
   switch (value.route_id) {
-    case 'factory': case 'device_management':
+    case 'factory': case 'device_management': case 'user_management': case 'record_management': case 'device_directory':
       return keysOnly(params, []) ? value as unknown as PicoUiAction : null
     case 'records':
       return keysOnly(params, ['device_id']) && (params.device_id === undefined || entity(params.device_id)) ? value as unknown as PicoUiAction : null
@@ -64,6 +69,9 @@ export function picoUiActionPath(action: Extract<PicoUiAction, { type: 'navigate
     case 'tools': return (action.params.tool ? `/tools/${action.params.tool}` : '/tools') + (action.params.device_id ? `?device=${encodeURIComponent(action.params.device_id)}` : '')
     case 'research': return '/research' + (action.params.topic_id ? `/${action.params.topic_id}` : '') + (action.params.point_id ? `/${action.params.point_id}` : '')
     case 'device_management': return '/admin/devices'
+    case 'user_management': return '/admin/users'
+    case 'record_management': return '/admin/records'
+    case 'device_directory': return '/manage/devices'
     case 'records': return '/manage/records' + (action.params.device_id ? `?device=${encodeURIComponent(action.params.device_id)}` : '')
     case 'device_detail': return `/manage/devices/${encodeURIComponent(action.params.device_id)}` + (action.params.tab && action.params.tab !== 'realtime' ? `?detail=${action.params.tab}` : '')
     case 'event_detail': return `/manage/records/${action.params.event_id}`

@@ -40,7 +40,7 @@ export interface PicoDeviceFields {
 }
 
 type PicoNavigateAction = { type: 'navigate'; action_id: string } & (
-  | { route_id: 'factory' | 'device_management'; params: Record<string, never> }
+  | { route_id: 'factory' | 'device_management' | 'user_management' | 'record_management' | 'device_directory'; params: Record<string, never> }
   | { route_id: 'records'; params: { device_id?: string } }
   | { route_id: 'tools'; params: { tool?: 'diagnosis' | 'events' | 'simulation' | 'vision' | 'pico' | 'evaluation' | 'settings'; device_id?: string } }
   | { route_id: 'research'; params: { topic_id?: string; point_id?: string } }
@@ -50,6 +50,8 @@ type PicoNavigateAction = { type: 'navigate'; action_id: string } & (
 
 export type PicoUiAction =
   | PicoNavigateAction
+  | { type: 'set_factory_filter'; action_id: string; status: 'all' | 'healthy' | 'degraded' | 'fault' | 'offline'; q?: string }
+  | { type: 'select_factory_device'; action_id: string; device_id: string }
   | { type: 'set_theme'; action_id: string; theme: 'light' | 'dark' }
   | { type: 'prefill_device_form'; action_id: string; mode: 'create' | 'edit'; device_id?: string; fields: PicoDeviceFields }
 
@@ -107,6 +109,23 @@ export interface PicoMessage {
   meta?: PicoMeta
   contextLabel?: string
   actionResults?: PicoActionResult[]
+  taskStatus?: PicoTaskStatus
+  taskTrace?: PicoTaskTrace[]
+}
+
+export type PicoTaskStatus = 'running' | 'awaiting_ui' | 'completed' | 'partial' | 'failed' | 'needs_input' | 'cancelled' | 'unverified'
+export interface PicoTaskTrace { step: number; kind: string; name: string; status: string; message: string }
+export interface PicoTaskResponse {
+  task_id: string
+  status: PicoTaskStatus
+  step: number
+  tool_calls: number
+  text: string
+  ui_action?: PicoUiAction | null
+  references: PicoReference[]
+  meta: PicoMeta
+  context_revision: number
+  trace: PicoTaskTrace[]
 }
 
 export interface PicoNotification {

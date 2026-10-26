@@ -57,6 +57,7 @@ export default function DeviceNavigator({
           devices.map((device) => (
             <button
               key={device.id}
+              data-pico-entity-id={device.id}
               type="button"
               role="option"
               aria-selected={device.id === selectedId}

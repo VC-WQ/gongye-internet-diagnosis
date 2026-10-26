@@ -14,6 +14,7 @@ import { sharedLife } from './stagePlots'
 import { RESEARCH_SCENES, stageFrame } from './stageTimeline'
 import { useStageTimeline } from './useStageTimeline'
 import './stage.css'
+import { usePicoPageAdapter } from '../pico/core/usePicoPageAdapter'
 
 /** The route instance and data scope survive scene changes; heavy details are released on close. */
 export default function ResearchArticle({ topicId, pointId }: { topicId?: string; pointId?: string }) {
@@ -30,6 +31,15 @@ export default function ResearchArticle({ topicId, pointId }: { topicId?: string
   const { evidence, refresh, ensure } = useResearchData(includeRuntime,wanted)
   const openDetails = useCallback((id: string) => setDetailId(id), [])
   const current = RESEARCH_SCENES[frame.active]
+  const currentSources = sceneSources(current)
+  usePicoPageAdapter({
+    state: currentSources.some(source => !evidence[source] || evidence[source]?.status === 'loading') ? 'loading' : 'ready',
+    entities: current.topic ? [{ kind: 'research', id: current.point ? `${current.topic.id}/${current.point.id}` : current.topic.id, name: current.title, selected: true }] : [],
+    visible_data: [
+      { label: '当前研究内容', value: current.summary, source: '页面研究目录' },
+      ...currentSources.map(source => ({ label: `证据可用性 ${source}`, value: evidence[source]?.status ?? 'loading', source: `研究数据登记:${source}` })),
+    ],
+  })
   const detail = RESEARCH_SCENES.find(scene => scene.id === detailId)
   const activeRef = useRef(current.id)
   useLayoutEffect(() => {
@@ -74,7 +84,7 @@ export default function ResearchArticle({ topicId, pointId }: { topicId?: string
         // Restore to its current trigger rather than a detached DOM reference.
         if (!open) (stage.current?.querySelector<HTMLElement>('[data-stage-scene]:not([aria-hidden="true"]) .stage-scene__source button') ?? stage.current?.querySelector<HTMLElement>('[data-stage-heading]'))?.focus({ preventScroll: true })
       }} width="min(1180px, 100vw)" destroyOnClose rootClassName="research-detail-drawer">
-        {detail && <ResearchDetails key={detail.id} scene={detail} evidence={evidence} refresh={refresh} includeRuntime={includeRuntime} />}
+        {detail && <div data-pico-output="research-details" data-pico-summary="研究详情"><ResearchDetails key={detail.id} scene={detail} evidence={evidence} refresh={refresh} includeRuntime={includeRuntime} /></div>}
       </Drawer>
     </ResearchNavigationProvider>
   </ResearchDataProvider>

@@ -8,6 +8,7 @@ import { listEvents, type EventSummary } from '../../services/api'
 import { useDeviceCatalog } from '../../services/realtime'
 import { useTableMotion } from '../../motion/useTableMotion'
 import './management.css'
+import { usePicoPageAdapter } from '../pico/core/usePicoPageAdapter'
 
 export default function SharedRecords() {
   const navigate = useSpatialNavigate()
@@ -18,6 +19,11 @@ export default function SharedRecords() {
   const resource = useResource(`shared-records:${deviceId ?? 'all'}:${page}`, () => listEvents({ device_id: deviceId, offset: (page - 1) * 20, limit: 21 }))
   const tableMotion = useTableMotion((resource.data ?? []).slice(0, 20).map(item => item.id).join('|'))
   const legacyId = params.get('event') ?? params.get('record')
+  usePicoPageAdapter({
+    state: resource.error ? 'error' : !resource.data ? 'loading' : resource.data.length ? 'ready' : 'empty',
+    entities: (resource.data ?? []).slice(0, 20).map(event => ({ kind: 'event', id: String(event.id), name: `${event.device_id} · ${event.agent_diagnosis?.fault_label ?? event.fault_type ?? '诊断记录'}`, selected: false })),
+    visible_data: (resource.data ?? []).slice(0, 20).map(event => ({ label: '历史诊断评分', value: event.health_score ?? null, entity_id: String(event.id), observed_at: event.timestamp ?? undefined, source: '/api/v1/command-loop/events' })),
+  })
   if (legacyId && /^[1-9]\d*$/.test(legacyId)) {
     const next = new URLSearchParams(params)
     next.delete('event'); next.delete('record')
@@ -43,6 +49,7 @@ export default function SharedRecords() {
             rowKey="id" dataSource={resource.data?.slice(0, 20) ?? []} pagination={false} scroll={{ x: 800 }}
             onRow={(event) => ({
               tabIndex: 0, className: 'management-row-link', 'aria-label': `查看诊断记录 ${event.id}`,
+              'data-pico-entity-id': String(event.id),
               onClick: () => open(event),
               onKeyDown: (key) => { if (key.target === key.currentTarget && ['Enter', ' '].includes(key.key)) { key.preventDefault(); open(event) } },
             })}

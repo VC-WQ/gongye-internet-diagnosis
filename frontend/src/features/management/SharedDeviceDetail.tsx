@@ -13,6 +13,7 @@ import DeviceEditor from './DeviceEditor'
 import { useDeviceFormDraft } from './useDeviceFormDraft'
 import { deviceFormDraftChannel } from './deviceFormDraft'
 import './management.css'
+import { usePicoPageAdapter } from '../pico/core/usePicoPageAdapter'
 
 export default function SharedDeviceDetail() {
   const { deviceId } = useParams<{ deviceId?: string }>()
@@ -29,6 +30,15 @@ export default function SharedDeviceDetail() {
   const tab = normalizeDetail(params.get('detail'))
   const channel = normalizeChannel(params.get('channel')) ?? 'vibration'
   const legacyDevice = params.get('device')
+  usePicoPageAdapter({
+    state: device.error ? 'error' : deviceId && !device.data ? 'loading' : device.data ? 'ready' : 'empty',
+    entities: device.data ? [{ kind: 'device', id: device.data.id, name: device.data.name, selected: true }] : [],
+    visible_data: device.data ? [
+      { label: '目录健康评分', value: device.data.health_score ?? null, unit: '/100', entity_id: device.data.id, source: `/api/v1/devices/${encodeURIComponent(device.data.id)}` },
+      { label: '目录状态', value: device.data.status, entity_id: device.data.id, source: `/api/v1/devices/${encodeURIComponent(device.data.id)}` },
+      { label: '有效采样点数', value: telemetry.samples.length, entity_id: device.data.id, source: '/api/v1/mqtt-pipeline/window' },
+    ] : [],
+  })
   if (!deviceId && legacyDevice) {
     const next = new URLSearchParams(params)
     next.delete('device')

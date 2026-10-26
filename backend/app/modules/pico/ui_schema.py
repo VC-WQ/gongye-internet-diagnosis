@@ -64,12 +64,12 @@ class ActionBase(StrictModel):
 
 class NavigateAction(ActionBase):
     type: Literal["navigate"]
-    route_id: Literal["factory", "tools", "research", "device_detail", "event_detail", "report", "device_management", "records"]
+    route_id: Literal["factory", "tools", "research", "device_detail", "event_detail", "report", "device_management", "records", "user_management", "record_management", "device_directory"]
     params: Union[EmptyParams, ToolsParams, ResearchParams, DeviceParams, EventParams, RecordsParams] = Field(default_factory=EmptyParams)
 
     @model_validator(mode="after")
     def params_match_route(self):
-        expected = {"factory": EmptyParams, "tools": ToolsParams, "research": ResearchParams, "device_detail": DeviceParams, "event_detail": EventParams, "report": EventParams, "device_management": EmptyParams, "records": RecordsParams}[self.route_id]
+        expected = {"factory": EmptyParams, "tools": ToolsParams, "research": ResearchParams, "device_detail": DeviceParams, "event_detail": EventParams, "report": EventParams, "device_management": EmptyParams, "records": RecordsParams, "user_management": EmptyParams, "record_management": EmptyParams, "device_directory": EmptyParams}[self.route_id]
         self.params = expected.model_validate(self.params.model_dump(exclude_none=True))
         return self
 
@@ -77,6 +77,17 @@ class NavigateAction(ActionBase):
 class SetThemeAction(ActionBase):
     type: Literal["set_theme"]
     theme: Literal["light", "dark"]
+
+
+class SetFactoryFilterAction(ActionBase):
+    type: Literal["set_factory_filter"]
+    status: Literal["all", "healthy", "degraded", "fault", "offline"]
+    q: Annotated[str, Field(max_length=80, pattern=r"^[^\x00-\x1f]*$")] | None = None
+
+
+class SelectFactoryDeviceAction(ActionBase):
+    type: Literal["select_factory_device"]
+    device_id: SafeDeviceId
 
 
 class DeviceFields(StrictModel):
@@ -108,7 +119,7 @@ class PrefillDeviceAction(ActionBase):
         return self
 
 
-PicoUiAction = Annotated[Union[NavigateAction, SetThemeAction, PrefillDeviceAction], Field(discriminator="type")]
+PicoUiAction = Annotated[Union[NavigateAction, SetThemeAction, PrefillDeviceAction, SetFactoryFilterAction, SelectFactoryDeviceAction], Field(discriminator="type")]
 
 
 class PicoUiPlan(StrictModel):
