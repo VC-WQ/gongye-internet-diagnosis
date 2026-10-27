@@ -29,3 +29,6 @@ scripts/ch3_routes.txt
 tools/dev-scripts/e2e_results.json
 # Training validation scratch output; curated research assets remain tracked.
 data/neu_det_export/curve_tmp_*/
+
+# RAG 向量库（运行时由 backend/scripts/build_rag_index.py 生成，不随源码提交）
+data/chroma/

@@ -1,0 +1,7 @@
+{
+  "string": [
+    { "name": "module_desc", "value": "工业设备智能诊断平台" },
+    { "name": "EntryAbility_desc", "value": "工业设备智能诊断平台主入口" },
+    { "name": "EntryAbility_label", "value": "设备诊断" }
+  ]
+}

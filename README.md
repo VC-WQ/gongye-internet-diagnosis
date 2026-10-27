@@ -6,6 +6,17 @@
 
 V2.7 增加精简语义页面快照和有界任务循环：Pico 每次执行一个步骤，取得真实业务结果或页面反馈后再规划。状态筛选统一清理旧设备上下文，三维退出保留到相机复位完成。任务接口、预算、取消、部署边界和复验方法见 [Pico 任务协议](frontend/docs/PICO_TASKS.md)。未配置真实模型时会明确显示 `UNVERIFIED`，并保留有限的原有查询与页面操作能力。
 
+## AI+鸿蒙 端-云-智 三层落地
+
+对应"AI+鸿蒙"多技术融合创新大赛的架构底线，本仓库已贯通完整链路：
+
+- **端（感知与交互）**：React Web 前端（`frontend/`）+ **HarmonyOS ArkTS/ArkUI 应用端**（`harmony/`，运行说明见其内 README），访问同一套后端 API 与数据库。
+- **云（业务中枢）**：FastAPI + SQLAlchemy + SQLite 真实数据库持久化设备/事件/诊断/指令记录；MQTT 接入仿真或真实设备上报。
+- **智（AI 大脑）**：
+  - **真实接入大模型**：`backend/app/modules/multi_agent/llm_client.py` 对接 DeepSeek（OpenAI 兼容），多智能体会诊的物理残差解读/诊断摘要/维护建议由真实模型生成，凭据缺失或超时才降级到模板。
+  - **RAG 知识库（高分项）**：`backend/app/modules/multi_agent/rag_store.py` 基于 Chroma 向量检索，`backend/scripts/build_rag_index.py` 离线构建索引，为诊断提供业务知识增强。
+  - **AI Agent 指令闭环（高分项）**：维护指令经 MQTT 下发到设备（`device/{device_id}/command`），仿真器执行并回执，后端 `mqtt_pipeline` 写回指令状态并留痕事件时间线，形成"故障→会诊→确认→指令→执行回执→恢复观察"闭环；端到端演示脚本见 `scripts/demo_agent_loop.py`。
+
 ## 页面与能力
 
 - **工厂 `/dashboard`**：设备目录、状态筛选、传感器窗口、当前设备和最近事件。SVG 2.5D 工厂布局叠加独立 Three.js 设备模型；这是设备三维示意，不是整厂三维数字孪生。选择、镜头聚焦和模型生长共享视觉进度，支持取消、反向、快速切换、旋转、缩放和减少动画。

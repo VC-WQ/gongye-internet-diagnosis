@@ -1,0 +1,9 @@
+{
+  "name": "entry",
+  "version": "1.0.0",
+  "description": "工业设备智能诊断平台入口模块",
+  "main": "",
+  "author": "",
+  "license": "",
+  "dependencies": {}
+}

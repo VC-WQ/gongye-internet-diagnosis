@@ -207,7 +207,8 @@ class MQTTPipelineService:
 
         # 延迟导入，避免模块级循环依赖
         from app.models import SessionLocal
-        from app.modules.command_loop.models import CommandRecord
+        from app.models.event import Event
+        from app.modules.command_loop.models import CommandRecord, EventTimeline
 
         db = SessionLocal()
         try:
@@ -234,6 +235,23 @@ class MQTTPipelineService:
             params["ack"] = payload
             record.params = params
             record.status = status
+
+            # 回执留痕：写一条不改变状态机状态的审计时间线（使「回执」在时间线可溯）
+            _event_id = event_id if event_id is not None else record.event_id
+            if _event_id is not None:
+                ev = db.get(Event, _event_id)
+                if ev is not None:
+                    cur = ev.status_state or "observing"
+                    ack_label = "指令执行成功" if status == "done" else f"指令{status}"
+                    db.add(EventTimeline(
+                        event_id=ev.id,
+                        device_id=ev.device_id,
+                        from_state=cur,
+                        to_state=cur,
+                        reason=f"仿真设备回执：{ack_label}",
+                        operator="device",
+                    ))
+
             db.commit()
             logger.info("指令回执已入库：%s status=%s", command_id, status)
         except Exception as exc:  # pragma: no cover - 线程内兜底
@@ -253,7 +271,7 @@ class MQTTPipelineService:
         """向指定设备下发指令。"""
         if self.client is None:
             raise RuntimeError("MQTT 数据管道未启动，无法下发指令")
-        topic = f"{settings.mqtt_topic_prefix}/{device_id}/command"
+        topic = settings.mqtt_command_topic.format(device_id=device_id)
         self.client.publish(topic, command)
 
 

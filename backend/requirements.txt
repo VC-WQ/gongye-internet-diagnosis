@@ -20,6 +20,11 @@ scipy==1.13.1
 langgraph==0.2.60
 langchain==0.3.13
 
+# RAG 知识库（向量检索）
+chromadb==0.5.20
+# 可选中文 embedding 增强（需能下载模型；不装则用 chromadb 内置 ONNX）
+# sentence-transformers==3.3.1
+
 # LLM SDK（DeepSeek 兼容 OpenAI）
 openai==3.14.1
 

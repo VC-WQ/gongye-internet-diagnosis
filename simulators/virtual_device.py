@@ -34,6 +34,7 @@ import argparse
 import json
 import math
 import random
+import re
 import time
 from dataclasses import dataclass, field
 from typing import Any, Optional
@@ -117,6 +118,21 @@ class BearingGeometry:
     contact_angle: float = 0.0     # 接触角 φ (度)
 
 
+def _parse_speed_target(text: str) -> Optional[float]:
+    """从指令文本提取目标转速（如「调速到1200」「转速800rpm」「speed 900」）。
+
+    仅当文本出现调速/转速/speed 等关键词时才解析；返回 None 表示无需调速。
+    数值过小（<10）视为误匹配（如「检查1处」），忽略。
+    """
+    if not any(k in text.lower() for k in ("调速", "转速", "speed", "rpm", "r/min", "升速", "降速")):
+        return None
+    m = re.search(r"(\d+(?:\.\d+)?)", text)
+    if not m:
+        return None
+    speed = float(m.group(1))
+    return None if speed < 10 else speed
+
+
 def bearing_fault_frequencies(
     rpm: float, geometry: BearingGeometry = BearingGeometry()
 ) -> dict[str, float]:
@@ -166,6 +182,10 @@ class VirtualDevice:
         self.health_score = 100.0          # 健康评分 0~100
         self.status = "healthy"            # healthy / degraded / fault
         self.faults: list[dict[str, Any]] = []  # 当前活跃故障
+
+        # 受控运行状态（下行指令可切换/覆盖，影响上报的观测值）
+        self.is_running = True                 # 运行 / 停机
+        self.speed_override: Optional[float] = None  # 调速覆盖（None=基准转速）
 
     # ------------------------------------------------------------------
     # 隐状态演化（耦合 SDE，欧拉-丸山离散化）
@@ -283,36 +303,49 @@ class VirtualDevice:
     # 隐状态 -> 观测值映射
     # ------------------------------------------------------------------
     def observe(self) -> dict[str, float]:
-        """将隐状态映射为带噪声的观测值。"""
+        """将隐状态映射为带噪声的观测值。
+
+        受控运行状态会影响观测：
+        - 停机（is_running=False）：转速/电流/振动/声学降至停机水平；
+        - 调速（speed_override）：覆盖基准转速（用于模拟降速/升速指令）。
+        """
         p = self.params
         # 维度化后的损伤程度（可超过 1，表示越过阈值后继续恶化）
         wear_excess = self.wear
         eff_loss = 1.0 - self.efficiency
 
-        vibration = (
-            p.base_vibration
-            + p.c_vib_wear * (wear_excess ** 2)
-            + p.c_vib_heat * max(self.heat, 0.0)
-            + self.rng.gauss(0.0, 0.02)
-        )
         temperature = (
             p.base_temperature
             + p.c_temp_heat * self.heat
             + p.c_temp_wear * wear_excess
             + self.rng.gauss(0.0, 0.5)
         )
-        current = (
-            p.base_current * (1.0 + 0.1 * (p.load - 1.0))
-            + p.c_curr_eff * eff_loss
-            + self.rng.gauss(0.0, 0.05)
-        )
         pressure = (
             p.base_pressure * self.efficiency
             - p.c_pres_eff * wear_excess
             + self.rng.gauss(0.0, 0.03)
         )
-        rpm = p.base_rpm - p.c_rpm_eff * eff_loss + self.rng.gauss(0.0, 2.0)
-        acoustic = p.base_acoustic + p.c_acu_vib * vibration + self.rng.gauss(0.0, 0.5)
+
+        if self.is_running:
+            base_rpm = self.speed_override if self.speed_override is not None else p.base_rpm
+            vibration = (
+                p.base_vibration
+                + p.c_vib_wear * (wear_excess ** 2)
+                + p.c_vib_heat * max(self.heat, 0.0)
+                + self.rng.gauss(0.0, 0.02)
+            )
+            current = (
+                p.base_current * (1.0 + 0.1 * (p.load - 1.0))
+                + p.c_curr_eff * eff_loss
+                + self.rng.gauss(0.0, 0.05)
+            )
+            rpm = base_rpm - p.c_rpm_eff * eff_loss + self.rng.gauss(0.0, 2.0)
+            acoustic = p.base_acoustic + p.c_acu_vib * vibration + self.rng.gauss(0.0, 0.5)
+        else:
+            vibration = abs(self.rng.gauss(0.0, 0.01))       # 停机残余振动
+            current = max(p.base_current * 0.03, 0.0)        # 停机空载电流
+            rpm = 0.0
+            acoustic = p.base_acoustic * 0.55 + self.rng.gauss(0.0, 0.5)
 
         return {
             "vibration": round(max(vibration, 0.0), 4),
@@ -512,37 +545,65 @@ class DeviceFleet:
 
     @staticmethod
     def _apply_command(device: "VirtualDevice", command: str) -> tuple[str, dict]:
-        """按指令关键字对虚拟设备施加维护效果（模拟真实检修动作）。"""
+        """按指令关键字对虚拟设备施加维护效果（模拟真实检修动作）。
+
+        支持指令类别（可叠加）：
+        - 启停：停机 / 启动（切换 is_running，改变转速/电流/振动/声学上报）
+        - 调速：解析目标转速覆盖 speed_override
+        - 更换检修 / 润滑 / 降载：降低磨损或热积累（检修同时部分恢复效率）
+        """
         text = command or ""
         before = {
             "wear": round(device.wear, 4),
             "heat": round(device.heat, 4),
             "efficiency": round(device.efficiency, 4),
+            "is_running": device.is_running,
+            "speed_override": device.speed_override,
         }
+        actions: list[str] = []
 
-        if any(k in text for k in ("更换", "检修", "维修", "replace", "repair")):
-            device.wear = max(0.0, device.wear * 0.3)
-            device.heat = max(0.0, device.heat * 0.4)
-            action = "replace_or_repair"
+        # 1) 启停
+        if any(k in text for k in ("停", "停机", "停止", "stop", "shutdown")):
+            device.is_running = False
+            actions.append("stop")
+        elif any(k in text for k in ("启动", "开机", "复位", "start", "run")):
+            device.is_running = True
+            actions.append("start")
+
+        # 2) 调速（提取目标转速）
+        speed = _parse_speed_target(text)
+        if speed is not None:
+            device.speed_override = min(speed, 6000.0)
+            actions.append("speed_adjust")
+
+        # 3) 维护动作（减损 / 恢复效率）
+        if any(k in text for k in ("更换", "检修", "维修", "replace", "repair", "overhaul")):
+            device.wear = max(0.0, device.wear * 0.25)
+            device.heat = max(0.0, device.heat * 0.3)
+            device.efficiency = min(1.0, device.efficiency + 0.35)
+            actions.append("replace_or_repair")
         elif any(k in text for k in ("润滑", "lubricat")):
             device.wear = max(0.0, device.wear * 0.6)
             device.heat = max(0.0, device.heat * 0.8)
-            action = "lubricate"
-        elif any(k in text for k in ("降载", "降速", "reduce")):
+            device.efficiency = min(1.0, device.efficiency + 0.05)
+            actions.append("lubricate")
+        elif any(k in text for k in ("降载", "降速", "减载", "reduce")):
             device.heat = max(0.0, device.heat * 0.7)
-            action = "reduce_load"
-        else:
+            actions.append("reduce_load")
+        elif not actions:
             # 通用处置：小幅缓解，避免「收到指令但什么都没发生」
             device.wear = max(0.0, device.wear * 0.9)
             device.heat = max(0.0, device.heat * 0.9)
-            action = "generic_maintenance"
+            actions.append("generic_maintenance")
 
         after = {
             "wear": round(device.wear, 4),
             "heat": round(device.heat, 4),
             "efficiency": round(device.efficiency, 4),
+            "is_running": device.is_running,
+            "speed_override": device.speed_override,
         }
-        return "done", {"action": action, "before": before, "after": after}
+        return "done", {"actions": actions, "before": before, "after": after}
 
     def publish(self) -> None:
         """将全集群当前遥测发布到 MQTT。"""
