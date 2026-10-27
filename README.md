@@ -31,6 +31,24 @@ V2.7 增加精简语义页面快照和有界任务循环：Pico 每次执行一�
 
 要求：Node.js 20.19+、Python 3.10/3.11、npm。完整后端依赖包含 PyTorch，首次安装需要较多时间和磁盘空间。MQTT 仅在采集或仿真上报时需要；没有 Broker 时平台仍可启动，并明确显示没有采样。
 
+> 获取代码：本仓库默认分支为 `main`，当前交付分支为 `frontend-agent`。
+>
+> ```sh
+> git clone https://github.com/VC-WQ/gongye-internet-diagnosis.git
+> cd gongye-internet-diagnosis
+> git checkout frontend-agent
+> ```
+
+**Windows 一键安装 / 启动**（在仓库根目录，用 PowerShell 执行；需要本地已装 Python 3.10/3.11 与 Node.js 20.19+）：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/setup_windows.ps1
+# 编辑 backend/.env，填入你自己的 DEEPSEEK_API_KEY 与 BOOTSTRAP_ADMIN_PASSWORD
+powershell -ExecutionPolicy Bypass -File scripts/start_windows.ps1
+```
+
+`setup_windows.ps1` 会创建 `.venv`、安装后端依赖（默认阿里云镜像）、`npm ci` 安装前端依赖、校验 CNN 权重、必要时重建 RAG 索引、按 template 生成 `backend/.env`（不覆盖已存在配置）。手动安装则按以下步骤：
+
 在仓库根目录创建独立虚拟环境：
 
 ```sh
@@ -104,10 +122,17 @@ Compose 默认 `RUNTIME_ENVIRONMENT=production`、`SEED_DEMO_DEVICES=false`。�
 - `backend/app/data/`：研究 API 使用的已登记 JSON，包含信号、分类、寿命、物理孪生、跨域与融合实验；来源、单位、负值和缺失状态由业务契约保留。
 - `backend/app/modules/vision/comparison.json` 与 `data/neu_det_export/`：已有视觉对照及导出图。它们是研究资产，不是可随意删除的临时日志。
 - `backend/data/`：本地运行数据库，默认 SQLite，已排除 Git；数据库可通过 `DATABASE_URL` 切换。
-- `datasets/`、`models/`：本地数据集与权重，不随源码提交。模型缺失时保留现有不可用/降级反馈；静态研究指标不等于本机完成了真实模型推理。
+- `datasets/`：本地训练数据（`processed.npz`、`CWRU12Ingested.npz` 等），**不随源码提交**；正式推理不依赖它们。`models/cnn_bearing.pt`（已训练权重）与 `data/chroma/`（RAG 索引）已随源码提交，克隆即得。
 - `scripts/`：研究复现、数据整理、诊断与启动脚本。研究脚本可能需要独立数据集、额外训练依赖或外部计算环境，不能把脚本存在当作本机已复现。
 
 研究展示不能证明现场泛化、因果关系或部署适用性；仿真、离线实验和现场数据必须分别标注。
+
+### 模型权重、RAG 索引与数据复现（交付/干净环境）
+
+- **1D-CNN 权重** `models/cnn_bearing.pt`：正式推理入口 `backend/app/modules/anomaly_detect/cnn_classifier.py` 的 `FaultClassifier.ensure_weights()` 从该路径懒加载权重执行 4 类故障分类。该权重由 `backend/app/modules/anomaly_detect/train_cnn.py` 在真实 CWRU 数据上训练生成（输入窗口 `(1, 2048)`），**已随源码提交（`.gitignore` 中 `models/*.pt` 已对 `models/cnn_bearing.pt` 白名单放行）**，普通 `git clone` 即可获得。权重缺失时 `classify()` 明确返回 `cnn_source=model_unavailable`（模型不可用降级），不会伪造诊断结果。
+- **RAG 向量索引** `data/chroma/`：**已随源码提交**（持久化路径 `PERSIST_DIR` 由源码运行时按仓库相对位置计算，不含开发机绝对路径，克隆即用）。也可随时用 `cd backend && python scripts/build_rag_index.py` 从 `backend/app/modules/multi_agent/knowledge_base/cwru_fault_modes.md` 重新生成。注意：chromadb 默认使用内置 ONNX embedding（`all-MiniLM-L6-v2`），**首次检索时会从网络下载模型到 `~/.cache/chroma/`**，目标环境需联网或提前缓存；如需中文语义增强，安装 `sentence-transformers` 并设置 `KB_EMBEDDING_MODEL=BAAI/bge-small-zh-v1.5`。索引缺失时 `RagUnavailableError` 会触发关键词检索降级，前端显示降级状态而非伪装成功。
+- **CWRU 数据** `datasets/CWRU/`：`processed.npz`（`X(11754,1,2048)`、`Y`、`file_ids`，训练/评估直接使用，按物理文件分层切分防止数据泄漏）与 `CWRU12Ingested.npz`（切片前打包）。原始 `.mat` 需从 CWRU 官方轴承数据中心手动下载 12kHz 驱动端(DE)数据。`scripts/download_cwru.py`、`scripts/prepare_cwru.py` 依赖非公开的外部 `cwru` 包（download/ingest/load）与原始数据，**仅是数据复现脚本，不是首次安装步骤**；缺少该包时会打印明确说明并退出，交付包已直接提供 `processed.npz`。
+- **视觉检测**：`backend/app/modules/vision/` 提供 YOLOv8s / RT-DETR 推理代码、NEU-DET 训练指标 `comparison.json` 与样例图，但**权重文件 `vision/weights/*_best.pt` 未随包提供**，因此在线目标检测暂不可用；前端会如实显示「当前没有可用的检测模型」，样例图与对照指标为离线训练产物，不代表设备部件现场检测精度。
 
 ## 测试与维护
 

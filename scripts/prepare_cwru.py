@@ -10,7 +10,21 @@ import sys
 from pathlib import Path
 
 import numpy as np
-import cwru
+
+# 前置依赖说明：同 scripts/download_cwru.py，需要外部 `cwru` 包提供的 load 接口。
+# 本脚本仅用于从 CWRU12Ingested.npz 重新切片生成 processed.npz，是研究/复现脚本，
+# 不是首次安装步骤。交付包已直接提供 processed.npz，无需执行本脚本。
+try:
+    import cwru
+except ImportError:
+    print(
+        "缺少外部依赖：`cwru` 包（提供 load 接口）。\n"
+        "本脚本仅用于从 CWRU12Ingested.npz 重新生成 processed.npz，不是首次安装步骤。\n"
+        "当前交付包已直接提供 datasets/CWRU/processed.npz，无需执行本脚本。\n"
+        "若需复现，请在安装了兼容 cwru 包的环境中运行。",
+        file=sys.stderr,
+    )
+    sys.exit(1)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent

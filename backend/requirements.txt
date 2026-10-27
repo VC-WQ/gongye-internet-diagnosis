@@ -15,6 +15,7 @@ paho-mqtt==2.1.0
 torch==2.5.1
 numpy==1.26.4
 scipy==1.13.1
+scikit-learn==1.9.1
 
 # 多Agent框架
 langgraph==0.2.60

@@ -10,7 +10,25 @@ import sys
 from pathlib import Path
 
 import numpy as np
-import cwru
+
+# 前置依赖说明：本脚本是「数据集下载与打包」的研究/复现脚本，需要外部 `cwru`
+# Python 包提供的 download/ingest/load 接口。该包不是公开 PyPI 包，也未列入
+# backend/requirements.txt，仅存在于原始参考环境。正式训练与推理链路
+# （backend/app/modules/anomaly_detect/train_cnn.py + data_loader.py）只依赖
+# 交付包内已生成的 datasets/CWRU/processed.npz，不依赖本脚本。
+try:
+    import cwru
+except ImportError:
+    print(
+        "缺少外部依赖：`cwru` 包（提供 download/ingest/load）。\n"
+        "本脚本仅用于从 CWRU 官方原始 .mat 文件重新构建数据集，不是首次安装步骤。\n"
+        "若需要复现数据准备，请先在官方轴承数据中心（Case Western Bearing Data Center）\n"
+        "手动下载 12kHz 驱动端(DE)原始 .mat 文件，并将其放入 datasets/CWRU/RawFiles/，\n"
+        "再在安装了兼容 cwru 包的环境中运行本脚本。当前交付包已直接提供 processed.npz，\n"
+        "无需执行本脚本。",
+        file=sys.stderr,
+    )
+    sys.exit(1)
 
 
 # ==================== 路径规划 ====================
